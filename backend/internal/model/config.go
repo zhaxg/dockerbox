@@ -23,6 +23,11 @@ type ServerConfig struct {
 	ChunkSizeMB int          `mapstructure:"chunk_size_mb"`
 	DataDir     string       `mapstructure:"data_dir"`
 
+	// Docker settings
+	DockerHost    string   `mapstructure:"docker_host"`     // e.g. tcp://192.168.1.100:2375
+	DockerSocket  string   `mapstructure:"docker_socket"`   // e.g. /var/run/docker.sock
+	ComposePaths  []string `mapstructure:"compose_paths"`   // directories to scan for compose projects
+
 	// Security settings
 	Users          map[string]string `mapstructure:"users"`           // username -> password
 	AllowedOrigins []string          `mapstructure:"allowed_origins"` // WebSocket/CORS allowed origins

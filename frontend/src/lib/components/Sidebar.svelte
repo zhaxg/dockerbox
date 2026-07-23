@@ -1,137 +1,206 @@
 <script lang="ts">
 	/**
-	 * Sidebar component - navigation panel with places and favorites
+	 * Sidebar component - navigation panel with Docker management
 	 */
 	import {
+		LayoutDashboard,
+		Container,
+		Package,
+		Image,
+		FolderOpen,
+		Star,
+		Settings,
 		ChevronDown,
 		Server,
-		Monitor,
-		Download,
-		FileText,
-		Music,
-		Image,
-		Video,
-		Star,
-		X
+		Network
 	} from 'lucide-svelte';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { settingsStore } from '$lib/stores/settings';
+	import { listRoots, type MountPoint } from '$lib/api/files';
+	import { onMount } from 'svelte';
 
-	interface Props {
-		currentPath?: string;
-		onNavigate?: (path: string) => void;
-	}
+	let mountPoints = $state<MountPoint[]>([]);
 
-	let { currentPath = '', onNavigate }: Props = $props();
-
-	// Quick access places
-	const places = [
-		{ name: 'This Server', path: '', icon: Server },
-		{ name: 'Desktop', path: 'desktop', icon: Monitor },
-		{ name: 'Downloads', path: 'downloads', icon: Download },
-		{ name: 'Documents', path: 'documents', icon: FileText },
-		{ name: 'Music', path: 'music', icon: Music },
-		{ name: 'Pictures', path: 'pictures', icon: Image },
-		{ name: 'Videos', path: 'videos', icon: Video }
+	// Navigation items
+	const navItems = [
+		{ name: '概览', path: '/overview', icon: LayoutDashboard },
+		{ name: '容器', path: '/containers', icon: Container },
+		{ name: '镜像', path: '/images', icon: Image },
+		{ name: 'Compose', path: '/compose', icon: Package },
+		{ name: '网络', path: '/networks', icon: Network },
+		{
+			name: '文件',
+			path: '/browse',
+			icon: FolderOpen,
+			children: [
+				{ name: '收藏目录', path: '/browse/favorites', icon: Star, isFavorites: true },
+				{ name: '根目录', path: '/browse', icon: Server }
+			]
+		},
+		{ name: '设置', path: '/settings', icon: Settings }
 	];
 
+	let filesExpanded = $state(true);
+
+	onMount(async () => {
+		try {
+			const data = await listRoots();
+			mountPoints = data.roots || [];
+		} catch (e) {
+			console.error('Failed to load mount points:', e);
+		}
+	});
+
 	function isActive(path: string): boolean {
-		if (path === '' && currentPath === '') return true;
-		return currentPath.startsWith(path) && path !== '';
+		return page.url.pathname.startsWith(path);
 	}
 
 	function handleNavigate(path: string) {
-		onNavigate?.(path);
-	}
-
-	// Collapsed sections state
-	let placesCollapsed = $state(false);
-	let favoritesCollapsed = $state(false);
-
-	const navItemClass =
-		'w-full flex items-center gap-2.5 py-1.5 px-3 pl-5 bg-transparent border-none text-text-primary text-[13px] cursor-pointer text-left transition-colors duration-100 hover:bg-surface-secondary';
-	const navItemActiveClass = 'bg-selection text-white hover:bg-selection-hover';
-
-	function handleUnpin(path: string, event: MouseEvent) {
-		event.stopPropagation();
-		settingsStore.unpinFavoriteFolder(path);
+		goto(resolve(path));
 	}
 </script>
 
 <aside
 	class="flex w-[220px] min-w-[220px] flex-col overflow-x-hidden overflow-y-auto border-r border-border-secondary bg-surface-primary"
 >
-	<!-- Places Section -->
-	<div class="border-b border-border-secondary">
-		<button
-			type="button"
-			class="flex w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-3 py-2.5 text-left text-[11px] font-medium tracking-wide text-text-secondary uppercase hover:text-text-primary"
-			onclick={() => (placesCollapsed = !placesCollapsed)}
-		>
-			<ChevronDown
-				size={14}
-				class="shrink-0 transition-transform duration-150 {placesCollapsed ? '-rotate-90' : ''}"
-			/>
-			<span>Places</span>
-		</button>
-		{#if !placesCollapsed}
-			<div class="pb-2">
-				{#each places as place (place.path)}
-					<button
-						type="button"
-						class="{navItemClass} {isActive(place.path) ? navItemActiveClass : ''}"
-						onclick={() => handleNavigate(place.path)}
-					>
-						<place.icon size={16} class="shrink-0 opacity-80" />
-						<span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{place.name}</span>
-					</button>
-				{/each}
-			</div>
-		{/if}
+	<!-- Logo -->
+	<div class="border-b border-border-secondary px-4 py-3">
+		<h1 class="text-lg font-semibold text-text-primary">BoxBox</h1>
 	</div>
 
-	<!-- Favorites Section -->
-	<div class="border-b border-border-secondary">
-		<button
-			type="button"
-			class="flex w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-3 py-2.5 text-left text-[11px] font-medium tracking-wide text-text-secondary uppercase hover:text-text-primary"
-			onclick={() => (favoritesCollapsed = !favoritesCollapsed)}
-		>
-			<ChevronDown
-				size={14}
-				class="shrink-0 transition-transform duration-150 {favoritesCollapsed ? '-rotate-90' : ''}"
-			/>
-			<span>Favorites</span>
-		</button>
-		{#if !favoritesCollapsed}
-			<div class="pb-2">
-				{#if $settingsStore.favoriteFolders.length === 0}
-					<div class="px-5 py-2 text-xs text-text-muted italic">No favorites yet</div>
-				{:else}
-					{#each $settingsStore.favoriteFolders as fav (fav.path)}
-						<div class="group relative">
-							<button
-								type="button"
-								class="{navItemClass} pr-9 {isActive(fav.path) ? navItemActiveClass : ''}"
-								onclick={() => handleNavigate(fav.path)}
-							>
-								<Star size={16} class="shrink-0 opacity-80" />
-								<span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-									>{fav.name}</span
-								>
-							</button>
-							<button
-								type="button"
-								class="absolute top-1 right-2 flex h-6 w-6 items-center justify-center rounded border-none bg-transparent text-text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:bg-surface-secondary hover:text-text-primary"
-								onclick={(event) => handleUnpin(fav.path, event)}
-								title="Unpin"
-								aria-label="Unpin {fav.name}"
-							>
-								<X size={14} />
-							</button>
-						</div>
+	<!-- Main Navigation -->
+	<nav class="flex-1 overflow-y-auto py-2">
+		{#each navItems as item}
+			{#if item.children}
+				<!-- Navigation item with children (Files) -->
+				<button
+					type="button"
+					class="nav-item {isActive(item.path) ? 'active' : ''}"
+					onclick={() => {
+						filesExpanded = !filesExpanded;
+						handleNavigate(item.path);
+					}}
+				>
+					<item.icon size={18} class="shrink-0 opacity-80" />
+					<span class="flex-1 text-left">{item.name}</span>
+					<ChevronDown
+						size={14}
+						class="shrink-0 transition-transform duration-150 {filesExpanded ? '' : '-rotate-90'}"
+					/>
+				</button>
+
+				{#if filesExpanded}
+				<div class="ml-4">
+				<!-- Favorites section -->
+				{#if item.children[0].isFavorites}
+				<div class="nav-section-title">收藏目录</div>
+				{#each $settingsStore.favoriteFolders as fav}
+				<button
+				type="button"
+				class="nav-item-sub {isActive(fav.path) ? 'active' : ''}"
+				onclick={() => handleNavigate(`/browse${fav.path}`)}
+				>
+				<Star size={14} class="shrink-0 opacity-80" />
+				<span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{fav.name}</span>
+				</button>
+				{/each}
+
+						<!-- Mount points -->
+				 <div class="nav-section-title">挂载目录</div>
+				 {#each mountPoints as mp}
+				 <button
+				 type="button"
+				 class="nav-item-sub {isActive(mp.path) ? 'active' : ''}"
+				 onclick={() => handleNavigate(`/browse${mp.path}`)}
+				 >
+				 <Server size={14} class="shrink-0 opacity-80" />
+				 <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{mp.name}</span>
+				 </button>
+				 {/each}
+				 {/if}
+
+					<!-- Other directories -->
+					{#each item.children.slice(1) as child}
+						<button
+							type="button"
+							class="nav-item-sub {isActive(child.path) ? 'active' : ''}"
+							onclick={() => handleNavigate(child.path)}
+						>
+							<child.icon size={14} class="shrink-0 opacity-80" />
+							<span class="flex-1 text-left">{child.name}</span>
+						</button>
 					{/each}
-				{/if}
-			</div>
-		{/if}
-	</div>
+				</div>
+			{/if}
+			{:else}
+				<!-- Simple navigation item -->
+				<button
+					type="button"
+					class="nav-item {isActive(item.path) ? 'active' : ''}"
+					onclick={() => handleNavigate(item.path)}
+				>
+					<item.icon size={18} class="shrink-0 opacity-80" />
+					<span class="flex-1 text-left">{item.name}</span>
+				</button>
+			{/if}
+		{/each}
+	</nav>
 </aside>
+
+<style>
+	.nav-item {
+		display: flex;
+		width: 100%;
+		cursor: pointer;
+		align-items: center;
+		gap: 10px;
+		border: none;
+		background: transparent;
+		padding: 8px 16px;
+		text-align: left;
+		font-size: 13px;
+		color: var(--color-text-primary);
+		transition: background-color 100ms;
+	}
+	.nav-item:hover {
+		background: var(--color-surface-secondary);
+	}
+	.nav-item.active {
+		background: var(--color-selection);
+		color: white;
+	}
+	.nav-item.active:hover {
+		background: var(--color-selection-hover);
+	}
+	.nav-item-sub {
+		display: flex;
+		width: 100%;
+		cursor: pointer;
+		align-items: center;
+		gap: 8px;
+		border: none;
+		background: transparent;
+		padding: 6px 16px;
+		text-align: left;
+		font-size: 12px;
+		color: var(--color-text-secondary);
+		transition: background-color 100ms;
+	}
+	.nav-item-sub:hover {
+		background: var(--color-surface-secondary);
+		color: var(--color-text-primary);
+	}
+	.nav-item-sub.active {
+		color: var(--color-accent);
+	}
+	.nav-section-title {
+		padding: 4px 16px;
+		font-size: 11px;
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--color-text-muted);
+	}
+</style>

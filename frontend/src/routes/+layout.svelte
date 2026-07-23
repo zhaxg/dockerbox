@@ -10,6 +10,7 @@
 	import { CONFIG } from '$lib/config';
 	import { Spinner, Button } from '$lib/components/ui';
 	import { FolderOpen } from 'lucide-svelte';
+	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { activeJobs, jobsStore } from '$lib/stores/jobs';
 	import { websocketStore } from '$lib/stores/websocket';
 	import {
@@ -35,7 +36,13 @@
 	// Public routes that don't require authentication
 	const publicRoutes = ['/login'];
 	const isWorkspacePage = $derived(
-		page.url.pathname.startsWith('/browse') || page.url.pathname.startsWith('/settings')
+		page.url.pathname.startsWith('/browse') || 
+		page.url.pathname.startsWith('/settings') ||
+		page.url.pathname.startsWith('/overview') ||
+		page.url.pathname.startsWith('/containers') ||
+		page.url.pathname.startsWith('/compose') ||
+		page.url.pathname.startsWith('/images') ||
+		page.url.pathname.startsWith('/networks')
 	);
 	const isLoginPage = $derived(page.url.pathname.startsWith('/login'));
 	const backgroundImageMode = $derived(
@@ -130,7 +137,12 @@
 					<Spinner size="lg" />
 				</div>
 			{:else if isWorkspacePage}
-				{@render children()}
+				<div class="flex h-screen">
+					<Sidebar />
+					<main class="flex-1 overflow-auto">
+						{@render children()}
+					</main>
+				</div>
 			{:else}
 				<div class="flex min-h-screen flex-col bg-surface-primary">
 					{#if $isAuthenticated && !isLoginPage}

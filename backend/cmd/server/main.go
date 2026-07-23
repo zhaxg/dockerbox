@@ -158,6 +158,23 @@ func initializeServer(cfg *model.ServerConfig) (*http.Server, *websocket.Hub, se
 		DataDir: cfg.DataDir,
 	})
 
+	// Create Docker service (optional - may fail if Docker is not available)
+	dockerHost := cfg.DockerHost
+	dockerSocket := cfg.DockerSocket
+	if dockerHost == "" {
+		dockerHost = "tcp://192.168.132.86:2375"
+	}
+	if dockerSocket == "" {
+		dockerSocket = "/var/run/docker.sock"
+	}
+	dockerService, err := service.NewDockerService(service.DockerServiceConfig{
+		SocketPath: dockerSocket,
+		Host:       dockerHost,
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("Docker service not available, Docker features disabled")
+	}
+
 	// Create handlers
 	authHandler := handler.NewAuthHandler(authService)
 	fileHandler := handler.NewFileHandler(fileService)
@@ -167,9 +184,19 @@ func initializeServer(cfg *model.ServerConfig) (*http.Server, *websocket.Hub, se
 	wsHandler := handler.NewWebSocketHandler(hub, authService, cfg.AllowedOrigins)
 	systemHandler := handler.NewSystemHandler(systemService)
 	settingsHandler := handler.NewSettingsHandler(settingsService)
+	var dockerHandler *handler.DockerHandler
+	var sseHandler *handler.SSEHandler
+	if dockerService != nil {
+		composePaths := cfg.ComposePaths
+		if len(composePaths) == 0 {
+			composePaths = []string{"/vol1/1000/docker"}
+		}
+		dockerHandler = handler.NewDockerHandler(dockerService, composePaths)
+		sseHandler = handler.NewSSEHandler(dockerService)
+	}
 
 	// Create router
-	router := createRouter(cfg, authService, authHandler, fileHandler, streamHandler, jobHandler, searchHandler, wsHandler, systemHandler, settingsHandler, mountPoints)
+	router := createRouter(cfg, authService, authHandler, fileHandler, streamHandler, jobHandler, searchHandler, wsHandler, systemHandler, settingsHandler, dockerHandler, sseHandler, mountPoints)
 
 	// Create HTTP server
 	server := &http.Server{
@@ -195,6 +222,8 @@ func createRouter(
 	wsHandler *handler.WebSocketHandler,
 	systemHandler *handler.SystemHandler,
 	settingsHandler *handler.SettingsHandler,
+	dockerHandler *handler.DockerHandler,
+	sseHandler *handler.SSEHandler,
 	mountPoints []model.MountPoint,
 ) chi.Router {
 	r := chi.NewRouter()
@@ -262,7 +291,26 @@ func createRouter(
 			r.Route("/settings", func(r chi.Router) {
 				settingsHandler.RegisterRoutes(r)
 			})
+
+			// Docker operations (optional)
+			if dockerHandler != nil {
+				r.Route("/docker", func(r chi.Router) {
+					dockerHandler.RegisterRoutes(r)
+				})
+			}
+
+			// SSE operations (optional)
+			if sseHandler != nil {
+				r.Route("/sse", func(r chi.Router) {
+					sseHandler.RegisterRoutes(r)
+				})
+			}
 		})
+
+		// Docker exec WebSocket (auth handled in handler)
+		if dockerHandler != nil {
+			r.Get("/docker/containers/{id}/exec", dockerHandler.ExecWebSocket)
+		}
 
 		// WebSocket endpoint (auth handled in handler)
 		r.Get("/ws", wsHandler.ServeWS)

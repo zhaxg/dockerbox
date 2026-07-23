@@ -5,7 +5,6 @@
 	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Sidebar from '$lib/components/Sidebar.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
 	import FileList from '$lib/components/FileList.svelte';
 	import FileGrid from '$lib/components/FileGrid.svelte';
@@ -48,8 +47,21 @@
 		RootsResponse,
 		SearchResponse
 	} from '$lib/api/files';
+	import { page } from '$app/state';
 	import { untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
+
+	// Sync URL path → pathStore so sidebar navigation works
+	$effect(() => {
+		const urlPath = page.url.pathname;
+		if (urlPath.startsWith('/browse')) {
+			const relativePath = urlPath.slice('/browse'.length).replace(/^\/+/, '');
+			if (relativePath !== pathStore.getCurrentPath()) {
+				pathStore.navigateTo(relativePath);
+				listOptionsStore.setPage(1);
+			}
+		}
+	});
 
 	let searchQuery = $state('');
 	let selectedPaths = $state(new Set<string>());
@@ -253,6 +265,7 @@
 		historyStack = newHistory;
 		historyIndex = newHistory.length - 1;
 
+		goto(resolve(`/browse${newPath ? '/' + newPath : ''}`));
 		pathStore.navigateTo(newPath);
 		listOptionsStore.setPage(1);
 		searchQuery = '';
@@ -678,9 +691,6 @@
 	<title>BoxBox</title>
 </svelte:head>
 
-<div class="flex h-screen w-full overflow-hidden bg-surface-primary">
-	<!-- Sidebar -->
-	<Sidebar currentPath={path} onNavigate={handleNavigate} />
 
 	<!-- Main content area -->
 	<div class="flex min-w-0 flex-1 flex-col">
@@ -804,9 +814,8 @@
 			onViewModeChange={handleViewModeChange}
 		/>
 	</div>
-</div>
 
-<!-- File Preview Modal -->
+	<!-- File Preview Modal -->
 <FilePreview
 	file={previewFile}
 	allFiles={previewableFiles}

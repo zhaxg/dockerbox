@@ -139,3 +139,28 @@ body {
 		background-color: rgb(30 30 30 / 0.9);
 	}
 }
+
+/* Global scrollbar — dark, thin, subtle */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #444;
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #555;
+}
+
+/* Firefox */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: #444 transparent;
+}
