@@ -49,3 +49,5 @@ vendor/
 
 # Docker
 .docker/
+boxbox-linux
+backend/internal/static/dist/
