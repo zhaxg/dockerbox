@@ -92,7 +92,9 @@ export function getFileContextMenuItems(options: FileContextMenuOptions): Contex
 	}
 
 	return [
-		...createItems,
+		...(singleFile && canOpenAsText(items[0])
+			? [{ id: 'open-with-notepad', label: 'Open with Notepad', icon: FileText }]
+			: []),
 		{ id: 'copy', label: 'Copy', icon: Copy, shortcut: 'Ctrl+C' },
 		{ id: 'cut', label: 'Cut', icon: Scissors, shortcut: 'Ctrl+X' },
 		{ id: 'paste', label: 'Paste', icon: ClipboardPaste, shortcut: 'Ctrl+V', disabled: !canPaste },
@@ -110,9 +112,6 @@ export function getFileContextMenuItems(options: FileContextMenuOptions): Contex
 		{ id: 'delete', label: 'Delete', icon: Trash2, shortcut: 'Del' },
 		{ id: 'separator-2', label: '', separator: true },
 		{ id: 'download', label: 'Download', icon: Download, disabled: hasFolder },
-		...(singleFile && canOpenAsText(items[0])
-			? [{ id: 'open-with-notepad', label: 'Open with Notepad', icon: FileText }]
-			: []),
 		{ id: 'properties', label: 'Properties', icon: Info, disabled: hasMultiple },
 		{ id: 'separator-refresh', label: '', separator: true },
 		{ id: 'refresh', label: 'Refresh', icon: RefreshCw, shortcut: 'F5' }
