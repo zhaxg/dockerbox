@@ -93,7 +93,7 @@ export function getFileContextMenuItems(options: FileContextMenuOptions): Contex
 
 	return [
 		...(singleFile && canOpenAsText(items[0])
-			? [{ id: 'open-with-notepad', label: 'Open with Notepad', icon: FileText }]
+			? [{ id: 'open-with-notepad', label: 'Open', icon: FileText }]
 			: []),
 		{ id: 'copy', label: 'Copy', icon: Copy, shortcut: 'Ctrl+C' },
 		{ id: 'cut', label: 'Cut', icon: Scissors, shortcut: 'Ctrl+X' },

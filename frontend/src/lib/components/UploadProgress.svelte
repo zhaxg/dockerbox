@@ -68,7 +68,7 @@
 </script>
 
 {#if filteredUploads.length > 0}
-	<div class="w-[340px] overflow-hidden rounded-lg border border-border-secondary bg-surface-primary/95 shadow-xl backdrop-blur">
+	<div class="w-[340px] overflow-hidden rounded-lg border border-border-secondary bg-surface-primary shadow-lg">
 		<!-- Header -->
 		<div class="flex items-center justify-between border-b border-border-secondary px-3 py-2">
 			<div class="flex items-center gap-2">
@@ -87,7 +87,7 @@
 		<!-- Upload list -->
 		<ul class="m-0 max-h-[240px] list-none overflow-y-auto p-0" role="list">
 			{#each filteredUploads as upload (upload.uploadId)}
-				<li class="border-b border-border-secondary/50 px-3 py-2 last:border-b-0 hover:bg-surface-secondary/50 transition-colors">
+				<li class="border-b border-border-secondary/30 px-3 py-2 last:border-b-0">
 					<!-- File name row -->
 					<div class="flex items-center gap-2 mb-1.5">
 						{#if upload.status === 'complete'}
