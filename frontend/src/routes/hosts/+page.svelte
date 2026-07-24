@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import { hostsApi, type DockerHost, type DockerHostsConfig } from '$lib/api/hosts';
-	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Terminal, MessageSquare, Search } from 'lucide-svelte';
+	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Terminal, MessageSquare, Search, FileUp } from 'lucide-svelte';
 
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let loading = $state(true);
@@ -109,6 +109,21 @@
 			if (result.private_key) { modal.host.sshKey = result.private_key; modal.host.sshPubKey = result.public_key; }
 		} catch (e) { console.error(e); }
 		finally { genKeyLoading = false; }
+	}
+
+	let keyFileInput: HTMLInputElement;
+	function handleKeyFileUpload(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = () => {
+			const text = reader.result as string;
+			modal.host.sshKey = text;
+			// Try extract public key comment to guess endpoint user
+		};
+		reader.readAsText(file);
+		// Reset so same file can be re-selected
+		(e.target as HTMLInputElement).value = '';
 	}
 
 	function copyText(text: string, key: string) {
@@ -312,9 +327,15 @@
 					<div class="rounded border border-border-secondary bg-surface-secondary p-3 space-y-3">
 						<div class="flex items-center justify-between">
 							<span class="text-[11px] font-medium text-text-muted flex items-center gap-1"><Key size={12} /> ED25519 密钥对</span>
-							<Button variant="secondary" size="sm" onclick={genKeyPair} disabled={genKeyLoading}>
-								{#if genKeyLoading}<Spinner size={12} />{:else}一键生成密钥对{/if}
-							</Button>
+							<div class="flex items-center gap-1.5">
+								<input type="file" bind:this={keyFileInput} accept=".pem,.key,id_ed25519,id_rsa,*.pem,*.key" class="hidden" onchange={handleKeyFileUpload} />
+								<Button variant="secondary" size="sm" onclick={() => keyFileInput?.click()}>
+									<FileUp size={12} class="mr-1" />上传私钥
+								</Button>
+								<Button variant="secondary" size="sm" onclick={genKeyPair} disabled={genKeyLoading}>
+									{#if genKeyLoading}<Spinner size={12} />{:else}一键生成密钥对{/if}
+								</Button>
+							</div>
 						</div>
 						<div>
 							<label class="mb-1 block text-[10px] text-text-muted">私钥</label>
