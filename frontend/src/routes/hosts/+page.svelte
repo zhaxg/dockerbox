@@ -98,7 +98,18 @@
 	}
 
 	function copyText(text: string, key: string) {
-		navigator.clipboard.writeText(text);
+		if (navigator.clipboard && window.isSecureContext) {
+			navigator.clipboard.writeText(text);
+		} else {
+			const ta = document.createElement('textarea');
+			ta.value = text;
+			ta.style.position = 'fixed';
+			ta.style.left = '-9999px';
+			document.body.appendChild(ta);
+			ta.select();
+			document.execCommand('copy');
+			document.body.removeChild(ta);
+		}
 		copied[key] = true;
 		setTimeout(() => copied[key] = false, 2000);
 	}
