@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -97,6 +98,7 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Failed to save: "+err.Error(), model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
+	ensureSSHKey(host.ID, host.SSHKey, host.Endpoint)
 
 	writeJSON(w, host, http.StatusCreated)
 }
@@ -104,7 +106,10 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 // UpdateHost updates an existing Docker host.
 func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	var updates model.DockerHost
+	var updates struct {
+		model.DockerHost
+		IsDefault bool `json:"isDefault"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
@@ -134,6 +139,13 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 	existing.SSHKey = updates.SSHKey
 	existing.SSHPubKey = updates.SSHPubKey
 	existing.Tags = updates.Tags
+
+	// Update default host
+	if updates.IsDefault {
+		cfg.DockerHosts.Default = id
+	} else if cfg.DockerHosts.Default == id {
+		cfg.DockerHosts.Default = ""
+	}
 	if updates.MountPoints != nil {
 		existing.MountPoints = updates.MountPoints
 	}
@@ -142,6 +154,7 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Failed to save", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
+	ensureSSHKey(existing.ID, existing.SSHKey, existing.Endpoint)
 
 	writeJSON(w, existing, http.StatusOK)
 }
@@ -385,4 +398,60 @@ func saveHostsToFile(hosts *model.DockerHostsConfig) error {
 	}
 	cfg.Config.DockerHosts = hosts
 	return config.Save(cfg.Config)
+}
+
+// ensureSSHKey writes the private key and updates ~/.ssh/config for Docker SDK connhelper.
+func ensureSSHKey(hostID, sshKey, endpoint string) {
+	if sshKey == "" {
+		return
+	}
+	homeDir, _ := os.UserHomeDir()
+	sshDir := filepath.Join(homeDir, ".ssh")
+	os.MkdirAll(sshDir, 0700)
+
+	// Write private key
+	keyPath := filepath.Join(sshDir, "boxbox_"+hostID)
+	os.WriteFile(keyPath, []byte(sshKey+"\n"), 0600)
+
+	// Parse endpoint to get user@host:port
+	user, hostPort := "root", endpoint
+	if idx := strings.Index(endpoint, "@"); idx >= 0 {
+		user = endpoint[:idx]
+		hostPort = endpoint[idx+1:]
+	}
+	host, port := hostPort, "22"
+	if idx := strings.LastIndex(hostPort, ":"); idx >= 0 {
+		host = hostPort[:idx]
+		port = hostPort[idx+1:]
+	}
+
+	// Update ~/.ssh/config
+	configPath := filepath.Join(sshDir, "config")
+	configData, _ := os.ReadFile(configPath)
+	configStr := string(configData)
+
+	// Remove old entry for this host
+	marker := "# boxbox:" + hostID
+	lines := strings.Split(configStr, "\n")
+	var newLines []string
+	skip := false
+	for _, line := range lines {
+		if strings.Contains(line, marker) {
+			skip = true
+			continue
+		}
+		if skip && (strings.HasPrefix(strings.TrimSpace(line), "Host ") || line == "") {
+			skip = false
+		}
+		if !skip {
+			newLines = append(newLines, line)
+		}
+	}
+
+	// Add new entry
+	entry := fmt.Sprintf("\nHost %s %s\n  HostName %s\n  Port %s\n  User %s\n  IdentityFile %s\n  StrictHostKeyChecking no\n  # boxbox:%s",
+		host, hostID, host, port, user, keyPath, hostID)
+	newLines = append(newLines, entry)
+
+	os.WriteFile(configPath, []byte(strings.Join(newLines, "\n")), 0600)
 }
