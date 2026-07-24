@@ -1,7 +1,7 @@
-// Package handler provides HTTP handlers for the BoxBox API.
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,11 +15,12 @@ import (
 // SSEHandler handles Server-Sent Events connections.
 type SSEHandler struct {
 	dockerService *service.DockerService
+	collector     *service.CollectorBackground
 }
 
 // NewSSEHandler creates a new SSE handler.
-func NewSSEHandler(dockerService *service.DockerService) *SSEHandler {
-	return &SSEHandler{dockerService: dockerService}
+func NewSSEHandler(dockerService *service.DockerService, collector *service.CollectorBackground) *SSEHandler {
+	return &SSEHandler{dockerService: dockerService, collector: collector}
 }
 
 // RegisterRoutes registers SSE routes on the given router.
@@ -27,6 +28,22 @@ func (h *SSEHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/stats", h.StreamStats)
 	r.Get("/logs/{id}", h.StreamLogs)
 	r.Get("/host", h.StreamHostStats)
+	r.Get("/overview", h.GetOverview)
+}
+
+// GetOverview returns the latest snapshot + history for the overview page.
+func (h *SSEHandler) GetOverview(w http.ResponseWriter, r *http.Request) {
+	if h.collector == nil {
+		writeJSON(w, map[string]interface{}{"host": service.HostStats{}, "docker": service.DockerStatsSnapshot{}, "history": []service.HostStats{}}, http.StatusOK)
+		return
+	}
+	latest := h.collector.Latest()
+	history := h.collector.History()
+	writeJSON(w, map[string]interface{}{
+		"host":    latest.Host,
+		"docker":  latest.Docker,
+		"history": history,
+	}, http.StatusOK)
 }
 
 // writeSSEHeaders sets the standard SSE headers on the response.
@@ -119,17 +136,7 @@ func (h *SSEHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// StreamHostStats streams host system stats via SSE.
-// detectProcBase finds the host proc filesystem path.
-func detectProcBase() string {
-	for _, p := range []string{"/host_root/proc", "/host/proc", "/proc"} {
-		if _, err := os.Stat(p + "/stat"); err == nil {
-			return p
-		}
-	}
-	return "/proc"
-}
-
+// StreamHostStats streams host stats from the collector via SSE.
 func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 	writeSSEHeaders(w)
 
@@ -142,8 +149,6 @@ func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	procBase := detectProcBase()
-
 	fmt.Fprintf(w, "event: connected\ndata: {}\n\n")
 	flusher.Flush()
 
@@ -152,15 +157,12 @@ func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			cpu := readFile(procBase + "/stat")
-			mem := readFile(procBase + "/meminfo")
-			net := readFile(procBase + "/net/dev")
-			load := readFile(procBase + "/loadavg")
-
-			data := fmt.Sprintf(`{"cpu":%s,"memory":%s,"network":%s,"load":%s}`,
-				wrapRaw(cpu), wrapRaw(mem), wrapRaw(net), wrapRaw(load))
-
-			fmt.Fprintf(w, "event: host\ndata: %s\n\n", data)
+			if h.collector == nil {
+				continue
+			}
+			snap := h.collector.Latest()
+			data, _ := json.Marshal(snap.Host)
+			fmt.Fprintf(w, "event: host\ndata: %s\n\n", string(data))
 			flusher.Flush()
 		}
 	}
@@ -172,10 +174,6 @@ func readFile(path string) string {
 		return fmt.Sprintf(`{"error":"%s"}`, escapeJSON(err.Error()))
 	}
 	return fmt.Sprintf(`{"raw":"%s"}`, escapeJSON(string(data)))
-}
-
-func wrapRaw(content string) string {
-	return content
 }
 
 func escapeJSON(s string) string {

@@ -27,7 +27,7 @@
 	let memChart: echarts.ECharts | null = null;
 	let netChart: echarts.ECharts | null = null;
 
-	const MAX_POINTS = 60;
+	const MAX_POINTS = 1800;
 	const cpuHistory: { time: string; value: number }[] = [];
 	const memHistory: { time: string; value: number }[] = [];
 	const netRxHistory: { time: string; value: number }[] = [];
@@ -36,8 +36,8 @@
 	let prevTx = 0;
 
 	onMount(async () => {
-		await loadStats();
-		// Init charts after DOM is ready (loading=false renders the chart divs)
+		await loadOverview();
+		// Init charts after DOM renders (loading=false)
 		requestAnimationFrame(() => { initCharts(); });
 		connectSSE();
 	});
@@ -49,8 +49,8 @@
 		netChart?.dispose();
 	});
 
-	function formatTime(): string {
-		const d = new Date();
+	function formatTime(ts?: number): string {
+		const d = ts ? new Date(ts) : new Date();
 		return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') + ':' + d.getSeconds().toString().padStart(2, '0');
 	}
 
@@ -105,21 +105,62 @@
 		if (cpuChartEl) { cpuChart = echarts.init(cpuChartEl); cpuChart.setOption(getChartOption('CPU', '#3b82f6', 100, '{value}%')); }
 		if (memChartEl) { memChart = echarts.init(memChartEl); memChart.setOption(getChartOption('内存', '#22c55e', 100, '{value}%')); }
 		if (netChartEl) { netChart = echarts.init(netChartEl); netChart.setOption(getMultiLineChartOption()); }
+		// Fill charts with history
+		updateCharts();
 	}
 
-	async function loadStats() {
+	// Load overview data (latest + 1h history) from backend collector
+	async function loadOverview() {
 		try {
-			const [statsData, composeData] = await Promise.all([
-				api.get<any>('/docker/containers/stats').catch(() => ({ containers: { total: 0, running: 0, stopped: 0, paused: 0 }, images: { total: 0, size: 0 } })),
-				api.get<{ projects: any[] }>('/docker/compose').catch(() => ({ projects: [] }))
-			]);
-			const projects = composeData.projects || [];
-			stats = {
-				containers: statsData.containers || { total: 0, running: 0, stopped: 0, paused: 0 },
-				compose: { total: projects.length, running: projects.filter((p: any) => p.status === 'running').length },
-				images: statsData.images || { total: 0, size: 0 }
-			};
-		} catch (e) { console.error(e); } finally { loading = false; }
+			const data = await api.get<{ host: any; docker: any; history: any[] }>('/sse/overview');
+
+			// Apply latest host stats
+			if (data.host) {
+				const h = data.host;
+				hostStats.cpu.usage = Math.round(h.cpu || 0);
+				hostStats.cpu.cores = h.cpuCores || 0;
+				hostStats.memory.total = h.memTotal || 0;
+				hostStats.memory.used = h.memUsed || 0;
+				hostStats.memory.percent = Math.round(h.memPct || 0);
+				hostStats.network.rx = h.netRx || 0;
+				hostStats.network.tx = h.netTx || 0;
+				hostStats.load.avg1 = h.load1 || 0;
+				hostStats.load.avg5 = h.load5 || 0;
+				hostStats.load.avg15 = h.load15 || 0;
+			}
+
+			// Apply latest docker stats
+			if (data.docker) {
+				const d = data.docker;
+				stats.containers = { total: d.containersTotal || 0, running: d.containersRunning || 0, stopped: d.containersStopped || 0, paused: 0 };
+				stats.compose = { total: d.composeTotal || 0, running: d.composeRunning || 0 };
+				stats.images = { total: d.imagesTotal || 0, size: d.imagesSize || 0 };
+			}
+
+			// Fill history arrays from backend collector
+			if (data.history && data.history.length > 0) {
+				let lastRx = 0, lastTx = 0;
+				for (const pt of data.history) {
+					const t = formatTime(pt.ts);
+					cpuHistory.push({ time: t, value: Math.round(pt.cpu || 0) });
+					memHistory.push({ time: t, value: Math.round(pt.memPct || 0) });
+					const rxSpeed = lastRx > 0 ? (pt.netRx || 0) - lastRx : 0;
+					const txSpeed = lastTx > 0 ? (pt.netTx || 0) - lastTx : 0;
+					netRxHistory.push({ time: t, value: rxSpeed });
+					netTxHistory.push({ time: t, value: txSpeed });
+					lastRx = pt.netRx || 0;
+					lastTx = pt.netTx || 0;
+				}
+				prevRx = lastRx;
+				prevTx = lastTx;
+				// Trim to MAX_POINTS
+				while (cpuHistory.length > MAX_POINTS) cpuHistory.shift();
+				while (memHistory.length > MAX_POINTS) memHistory.shift();
+				while (netRxHistory.length > MAX_POINTS) netRxHistory.shift();
+				while (netTxHistory.length > MAX_POINTS) netTxHistory.shift();
+			}
+		} catch (e) { console.error('loadOverview failed:', e); }
+		finally { loading = false; }
 	}
 
 	function connectSSE() {
@@ -128,76 +169,41 @@
 		eventSource = new EventSource(`/api/v1/sse/host?token=${token}`);
 		eventSource.addEventListener('host', (event) => {
 			try {
-				const data = JSON.parse(event.data);
-				if (data.cpu?.error) { console.warn('SSE cpu read error:', data.cpu.error); }
-				parseHostStats(data);
-			} catch (e) { console.error('SSE parse error:', e); }
+				const h = JSON.parse(event.data);
+				// Update KPI cards
+				hostStats.cpu.usage = Math.round(h.cpu || 0);
+				hostStats.cpu.cores = h.cpuCores || 0;
+				hostStats.memory.total = h.memTotal || 0;
+				hostStats.memory.used = h.memUsed || 0;
+				hostStats.memory.percent = Math.round(h.memPct || 0);
+				hostStats.network.rx = h.netRx || 0;
+				hostStats.network.tx = h.netTx || 0;
+				hostStats.load.avg1 = h.load1 || 0;
+				hostStats.load.avg5 = h.load5 || 0;
+				hostStats.load.avg15 = h.load15 || 0;
+				// Append to history
+				const t = formatTime(h.ts);
+				cpuHistory.push({ time: t, value: hostStats.cpu.usage });
+				memHistory.push({ time: t, value: hostStats.memory.percent });
+				const rxSpeed = prevRx > 0 ? (h.netRx || 0) - prevRx : 0;
+				const txSpeed = prevTx > 0 ? (h.netTx || 0) - prevTx : 0;
+				prevRx = h.netRx || 0;
+				prevTx = h.netTx || 0;
+				netRxHistory.push({ time: t, value: rxSpeed });
+				netTxHistory.push({ time: t, value: txSpeed });
+				if (cpuHistory.length > MAX_POINTS) cpuHistory.shift();
+				if (memHistory.length > MAX_POINTS) memHistory.shift();
+				if (netRxHistory.length > MAX_POINTS) netRxHistory.shift();
+				if (netTxHistory.length > MAX_POINTS) netTxHistory.shift();
+				updateCharts();
+			} catch {}
 		});
 		eventSource.addEventListener('error', () => {
-			// Reconnect after 5s on error
 			setTimeout(() => { if (!eventSource || eventSource.readyState === EventSource.CLOSED) connectSSE(); }, 5000);
 		});
 	}
 
-	function parseHostStats(data: any) {
-		const t = formatTime();
-
-		if (data.cpu?.raw) {
-			const cpuLine = data.cpu.raw.split('\n').find((l: string) => l.startsWith('cpu '));
-			if (cpuLine) {
-				const parts = cpuLine.split(/\s+/).slice(1).map(Number);
-				const idle = parts[3] || 0;
-				const total = parts.reduce((a: number, b: number) => a + b, 0);
-				hostStats.cpu.usage = total > 0 ? Math.round(((total - idle) / total) * 100) : 0;
-			}
-			hostStats.cpu.cores = data.cpu.raw.split('\n').filter((l: string) => l.startsWith('cpu')).length;
-			cpuHistory.push({ time: t, value: hostStats.cpu.usage });
-			if (cpuHistory.length > MAX_POINTS) cpuHistory.shift();
-		}
-
-		if (data.memory?.raw) {
-			const lines = data.memory.raw.split('\n');
-			const memLine = lines.find((l: string) => l.startsWith('MemTotal:'));
-			const usedLine = lines.find((l: string) => l.startsWith('MemAvailable:'));
-			if (memLine) hostStats.memory.total = parseInt(memLine.split(/\s+/)[1]) * 1024;
-			if (usedLine) hostStats.memory.used = hostStats.memory.total - parseInt(usedLine.split(/\s+/)[1]) * 1024;
-			hostStats.memory.percent = hostStats.memory.total > 0 ? Math.round((hostStats.memory.used / hostStats.memory.total) * 100) : 0;
-			memHistory.push({ time: t, value: hostStats.memory.percent });
-			if (memHistory.length > MAX_POINTS) memHistory.shift();
-		}
-
-		if (data.network?.raw) {
-			const lines = data.network.raw.split('\n');
-			let totalRx = 0, totalTx = 0;
-			for (const line of lines) {
-				if (line.includes(':') && !line.startsWith('Inter') && !line.startsWith('face')) {
-					const parts = line.trim().split(/\s+/);
-					if (parts.length >= 10) {
-						totalRx += parseInt(parts[1]) || 0;
-						totalTx += parseInt(parts[9]) || 0;
-					}
-				}
-			}
-			const rxSpeed = prevRx > 0 ? totalRx - prevRx : 0;
-			const txSpeed = prevTx > 0 ? totalTx - prevTx : 0;
-			prevRx = totalRx;
-			prevTx = totalTx;
-			hostStats.network.rx = totalRx;
-			hostStats.network.tx = totalTx;
-			netRxHistory.push({ time: t, value: rxSpeed });
-			netTxHistory.push({ time: t, value: txSpeed });
-			if (netRxHistory.length > MAX_POINTS) netRxHistory.shift();
-			if (netTxHistory.length > MAX_POINTS) netTxHistory.shift();
-		}
-
-		if (data.load?.raw) {
-			const parts = data.load.raw.trim().split(/\s+/);
-			hostStats.load.avg1 = parseFloat(parts[0]) || 0;
-			hostStats.load.avg5 = parseFloat(parts[1]) || 0;
-			hostStats.load.avg15 = parseFloat(parts[2]) || 0;
-		}
-
-		// Update charts (initCharts runs once via onMount $effect)
+	function updateCharts() {
 		if (cpuChart) {
 			cpuChart.setOption({ xAxis: { data: cpuHistory.map(d => d.time) }, series: [{ data: cpuHistory.map(d => d.value) }] });
 		}

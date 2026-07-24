@@ -60,7 +60,7 @@ func main() {
 	defer cancel()
 
 	// Initialize components
-	server, hub, jobService, authService, streamHandler, err := initializeServer(cfg)
+	server, hub, jobService, authService, streamHandler, err := initializeServer(ctx, cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize server")
 	}
@@ -102,7 +102,7 @@ func main() {
 }
 
 // initializeServer creates and configures all server components
-func initializeServer(cfg *model.ServerConfig) (*http.Server, *websocket.Hub, service.JobService, service.AuthService, *handler.StreamHandler, error) {
+func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Server, *websocket.Hub, service.JobService, service.AuthService, *handler.StreamHandler, error) {
 	// Create filesystem abstraction (using real OS filesystem)
 	fs := filesystem.NewOsFS()
 
@@ -192,7 +192,9 @@ func initializeServer(cfg *model.ServerConfig) (*http.Server, *websocket.Hub, se
 			composePaths = []string{"/vol1/1000/docker"}
 		}
 		dockerHandler = handler.NewDockerHandler(dockerService, composePaths)
-		sseHandler = handler.NewSSEHandler(dockerService)
+		collector := service.NewCollector(ctx, dockerService, composePaths)
+		sseHandler = handler.NewSSEHandler(dockerService, collector)
+		_ = collector // stopped via context cancel
 	}
 
 	// Create router
