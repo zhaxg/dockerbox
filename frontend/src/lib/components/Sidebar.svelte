@@ -18,9 +18,12 @@
 	import { resolve } from '$app/paths';
 	import { settingsStore } from '$lib/stores/settings';
 	import { listRoots, type MountPoint } from '$lib/api/files';
+	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { onMount } from 'svelte';
 
 	let mountPoints = $state<MountPoint[]>([]);
+	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
+	let hostDropdownOpen = $state(false);
 
 	// Navigation items
 	const navItems = [
@@ -44,12 +47,27 @@
 
 	onMount(async () => {
 		try {
-			const data = await listRoots();
-			mountPoints = data.roots || [];
+			const [mpData, hostData] = await Promise.all([
+				listRoots().catch(() => ({ roots: [] })),
+				hostsApi.list().catch(() => ({ default: '', hosts: {} }))
+			]);
+			mountPoints = mpData.roots || [];
+			hostsConfig = hostData;
+			if (!hostsConfig.hosts) hostsConfig.hosts = {};
 		} catch (e) {
-			console.error('Failed to load mount points:', e);
+			console.error('Failed to load data:', e);
 		}
 	});
+
+	async function switchHost(id: string) {
+		hostsConfig.default = id;
+		hostDropdownOpen = false;
+		// Save to backend
+		try {
+			const host = hostsConfig.hosts[id];
+			if (host) await hostsApi.update(id, { ...host, isDefault: true });
+		} catch (e) { console.error(e); }
+	}
 
 	function isActive(path: string): boolean {
 		return page.url.pathname.startsWith(path);
@@ -67,6 +85,29 @@
 	<div class="border-b border-border-secondary px-4 py-3">
 		<h1 class="text-lg font-semibold text-text-primary">BoxBox</h1>
 	</div>
+
+	<!-- Host Switcher -->
+	{#if Object.keys(hostsConfig.hosts || {}).length > 0}
+	<div class="border-b border-border-secondary px-3 py-2">
+		<button type="button" class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-secondary hover:bg-surface-secondary transition-colors"
+			onclick={() => hostDropdownOpen = !hostDropdownOpen}>
+			<Server size={14} class="shrink-0 text-green-500" />
+			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[hostsConfig.default]?.name || '选择主机'}</span>
+			<ChevronDown size={12} class="shrink-0 transition-transform {hostDropdownOpen ? '' : '-rotate-90'}" />
+		</button>
+		{#if hostDropdownOpen}
+			<div class="mt-1 space-y-0.5">
+				{#each Object.entries(hostsConfig.hosts || {}) as [id, host]}
+					<button type="button" class="flex w-full items-center gap-2 rounded px-2 py-1 text-[12px] hover:bg-surface-secondary transition-colors {hostsConfig.default === id ? 'text-green-400' : 'text-text-secondary'}"
+						onclick={() => switchHost(id)}>
+						<span class="h-1.5 w-1.5 rounded-full {hostsConfig.default === id ? 'bg-green-500' : 'bg-gray-500'}"></span>
+						<span class="flex-1 text-left truncate">{host.name}</span>
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</div>
+	{/if}
 
 	<!-- Main Navigation -->
 	<nav class="flex-1 overflow-y-auto py-2">
