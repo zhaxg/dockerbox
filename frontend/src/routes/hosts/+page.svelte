@@ -125,9 +125,10 @@
 	async function doSave() {
 		const mp = modal.host.mountPoints || {};
 		for (const k of Object.keys(mp)) mp[k] = { ...mp[k], isDocker: k === modal.dockerDirKey };
+		const saveData = { ...modal.host, isDefault: modal.isDefault };
 		try {
-			if (modal.mode === 'add') await hostsApi.create(modal.host);
-			else await hostsApi.update(modal.host.id, modal.host);
+			if (modal.mode === 'add') await hostsApi.create(saveData);
+			else await hostsApi.update(modal.host.id, saveData);
 			hostsConfig.default = modal.isDefault ? modal.host.id : (hostsConfig.default === modal.host.id ? '' : hostsConfig.default);
 			await loadHosts();
 		} catch (e) { console.error(e); }
