@@ -942,7 +942,7 @@
 			</div>
 			<div class="flex justify-between">
 				<span class="text-text-secondary">Path:</span>
-				<span class="break-all text-text-primary">{file.path}</span>
+				<span class="break-all text-text-primary">/{file.path}</span>
 			</div>
 			{#if !file.isDir}
 				<div class="flex justify-between">
