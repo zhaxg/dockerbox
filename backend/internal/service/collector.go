@@ -44,7 +44,6 @@ type StatsSnapshot struct {
 // CollectorBackground continuously collects host + Docker stats.
 type CollectorBackground struct {
 	docker       *DockerService
-	composePaths []string
 
 	mu       sync.RWMutex
 	latest   StatsSnapshot
@@ -60,10 +59,9 @@ const (
 )
 
 // NewCollector creates and starts a background stats collector.
-func NewCollector(ctx context.Context, docker *DockerService, composePaths []string) *CollectorBackground {
+func NewCollector(ctx context.Context, docker *DockerService) *CollectorBackground {
 	c := &CollectorBackground{
 		docker:       docker,
-		composePaths: composePaths,
 		history:      make([]HostStats, 0, maxHistoryPoints),
 		maxPoints:    maxHistoryPoints,
 		stopCh:       make(chan struct{}),
@@ -260,7 +258,7 @@ func (c *CollectorBackground) readDockerStats() DockerStatsSnapshot {
 	}
 
 	// Count compose projects separately
-	projects, err := c.docker.ListComposeProjects(ctx, c.composePaths)
+	projects, err := c.docker.ListComposeProjects(ctx)
 	if err == nil {
 		snap.ComposeTotal = len(projects)
 		for _, p := range projects {

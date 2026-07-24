@@ -298,11 +298,11 @@ func (s *DockerService) GetDockerStats(ctx context.Context) (*model.DockerStats,
 	return stats, nil
 }
 
-// ListComposeProjects finds and returns Docker Compose projects.
+// ListComposeProjects finds and returns Docker Compose projects from container labels.
 // Discovery source depends on Docker connection:
 //   - Remote (TCP): reads container labels from Docker API
 //   - Local (socket): reads container labels first, then falls back to filesystem scan
-func (s *DockerService) ListComposeProjects(ctx context.Context, paths []string) ([]model.ComposeProject, error) {
+func (s *DockerService) ListComposeProjects(ctx context.Context) ([]model.ComposeProject, error) {
 	projects := make([]model.ComposeProject, 0)
 	seen := make(map[string]bool)
 
@@ -341,44 +341,6 @@ func (s *DockerService) ListComposeProjects(ctx context.Context, paths []string)
 				project.Status = "stopped"
 			}
 
-			projects = append(projects, project)
-		}
-	}
-
-	// 2. Fallback: local filesystem scan
-	for _, searchPath := range paths {
-		cmd := exec.Command("find", searchPath, "-maxdepth", "2", "-name", "docker-compose.yml", "-o", "-name", "docker-compose.yaml", "-o", "-name", "compose.yml", "-o", "-name", "compose.yaml")
-		output, err := cmd.Output()
-		if err != nil {
-			continue
-		}
-		files := strings.Split(strings.TrimSpace(string(output)), "\n")
-		for _, file := range files {
-			if file == "" {
-				continue
-			}
-			parts := strings.Split(file, "/")
-			if len(parts) < 2 {
-				continue
-			}
-			projectName := parts[len(parts)-2]
-			if seen[projectName] {
-				continue
-			}
-			seen[projectName] = true
-			projectPath := strings.TrimSuffix(file, "/"+parts[len(parts)-1])
-			project := model.ComposeProject{
-				ID:   projectName,
-				Name: projectName,
-				Path: projectPath,
-			}
-			if content, err := readFileContent(file); err == nil {
-				project.File = content
-			}
-			envPath := strings.TrimSuffix(file, filepath.Ext(file)) + ".env"
-			if content, err := readFileContent(envPath); err == nil {
-				project.EnvFile = content
-			}
 			projects = append(projects, project)
 		}
 	}

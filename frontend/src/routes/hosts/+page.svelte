@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Spinner, Button } from '$lib/components/ui';
+	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import { hostsApi, type DockerHost, type DockerHostsConfig } from '$lib/api/hosts';
-	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Terminal, MessageSquare } from 'lucide-svelte';
+	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Terminal, MessageSquare, Search } from 'lucide-svelte';
 
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let loading = $state(true);
+	let searchQuery = $state('');
 	let confirmDialog = $state<{ open: boolean; title: string; message: string; onConfirm: () => void }>({
 		open: false, title: '', message: '', onConfirm: () => {}
 	});
@@ -27,6 +28,11 @@
 	});
 
 	const hostList = $derived(Object.values(hostsConfig.hosts || {}));
+	const filteredHostList = $derived(
+		searchQuery.trim()
+			? hostList.filter((h) => h.name.toLowerCase().includes(searchQuery.toLowerCase()) || h.endpoint.toLowerCase().includes(searchQuery.toLowerCase()))
+			: hostList
+	);
 	onMount(loadHosts);
 
 	async function loadHosts() {
@@ -170,8 +176,13 @@
 
 <div class="flex h-full flex-col bg-surface-primary">
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
-		<h1 class="text-base font-semibold text-text-primary">主机 <span class="ml-1 text-sm font-normal text-text-muted">({hostList.length})</span></h1>
+		<h1 class="text-base font-semibold text-text-primary">主机 <Badge>{hostList.length}</Badge></h1>
 		<div class="flex items-center gap-2">
+			<div class="relative">
+				<Search size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+				<input type="text" bind:value={searchQuery} placeholder="搜索主机..."
+					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+			</div>
 			<Button variant="secondary" size="sm" onclick={openAdd} title="添加主机"><Plus size={14} /></Button>
 			<Button variant="secondary" size="sm" onclick={loadHosts} title="刷新"><RefreshCw size={14} /></Button>
 		</div>
@@ -181,7 +192,7 @@
 			<div class="flex items-center justify-center py-12"><Spinner size="lg" /></div>
 		{:else if hostList.length === 0}
 			<div class="flex flex-col items-center gap-2 py-12 text-text-muted">
-				<span class="text-sm">暂无主机配置</span>
+				<span class="text-sm">{searchQuery ? "没有匹配的主机" : "暂无主机配置"}</span>
 				<Button variant="primary" size="sm" onclick={openAdd}><Plus size={14} class="mr-1" /> 添加主机</Button>
 			</div>
 		{:else}
@@ -195,7 +206,7 @@
 					<th class="{thClass} text-right">Actions</th>
 				</tr></thead>
 				<tbody>
-					{#each hostList as host (host.id)}
+					{#each filteredHostList as host (host.id)}
 						<tr class="transition-colors hover:bg-surface-secondary">
 							<td class="{tdClass}">
 								<div class="flex items-center gap-2">

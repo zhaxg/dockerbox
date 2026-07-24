@@ -219,10 +219,41 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 					continue
 				}
 				dockerHandler.SetService(id, svc)
+				
+				// Extract compose paths from host mount points where is_docker is true
+				var hostComposePaths []string
+				for _, mp := range host.MountPoints {
+					if mp.IsDocker {
+						hostComposePaths = append(hostComposePaths, mp.Path)
+					}
+				}
+				dockerHandler.SetComposePaths(id, hostComposePaths)
 			}
 		}
-		collector := service.NewCollector(ctx, dockerService, composePaths)
+		collector := service.NewCollector(ctx, dockerService)
 		sseHandler = handler.NewSSEHandler(dockerService, collector)
+		if cfg.DockerHosts != nil {
+			sseHandler.SetDefaultHost(cfg.DockerHosts.Default)
+			for id, host := range cfg.DockerHosts.Hosts {
+				hostCfg := service.DockerServiceConfig{}
+				switch host.Driver {
+				case "tcp":
+					hostCfg.Host = "tcp://" + host.Endpoint
+				case "socket":
+					hostCfg.SocketPath = host.Endpoint
+				case "ssh":
+					hostCfg.Host = "ssh://" + host.Endpoint
+					hostCfg.SSHKey = host.SSHKey
+				}
+				svc, err := service.NewDockerService(hostCfg)
+				if err != nil {
+					continue
+				}
+				sseHandler.SetService(id, svc)
+				hostCollector := service.NewCollector(ctx, svc)
+				sseHandler.SetCollector(id, hostCollector)
+			}
+		}
 		_ = collector // stopped via context cancel
 	}
 
@@ -357,12 +388,16 @@ func createRouter(
 
 	// Static file handler for SPA frontend (catch-all)
 	// This must be after all API routes
-	staticHandler, err := static.NewHandler()
-	if err != nil {
-		log.Warn().Err(err).Msg("Static handler not available, frontend will not be served")
+	if cfg.DevMode {
+		log.Info().Msg("Dev mode: static file handler skipped, use npm run dev for frontend")
 	} else {
-		r.NotFound(staticHandler.ServeHTTP)
-		log.Info().Msg("Static file handler initialized for SPA frontend")
+		staticHandler, err := static.NewHandler()
+		if err != nil {
+			log.Warn().Err(err).Msg("Static handler not available, frontend will not be served")
+		} else {
+			r.NotFound(staticHandler.ServeHTTP)
+			log.Info().Msg("Static file handler initialized for SPA frontend")
+		}
 	}
 
 	return r

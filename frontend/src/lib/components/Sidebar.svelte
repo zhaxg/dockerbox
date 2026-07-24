@@ -63,6 +63,7 @@
 		hostsConfig.default = id;
 		hostDropdownOpen = false;
 		localStorage.setItem('currentHostId', id);
+		window.dispatchEvent(new Event('host-changed'));
 		try {
 			const host = hostsConfig.hosts[id];
 			if (host) await hostsApi.update(id, { ...host, isDefault: true });

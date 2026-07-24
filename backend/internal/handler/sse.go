@@ -14,13 +14,68 @@ import (
 
 // SSEHandler handles Server-Sent Events connections.
 type SSEHandler struct {
-	dockerService *service.DockerService
-	collector     *service.CollectorBackground
+	dockerService    *service.DockerService
+	collector        *service.CollectorBackground // default collector
+	services         map[string]*service.DockerService
+	hostCollectors   map[string]*service.CollectorBackground
+	defaultHostID    string
 }
 
 // NewSSEHandler creates a new SSE handler.
 func NewSSEHandler(dockerService *service.DockerService, collector *service.CollectorBackground) *SSEHandler {
-	return &SSEHandler{dockerService: dockerService, collector: collector}
+	return &SSEHandler{
+		dockerService:  dockerService,
+		collector:      collector,
+		services:       make(map[string]*service.DockerService),
+		hostCollectors: make(map[string]*service.CollectorBackground),
+	}
+}
+
+// SetService registers a DockerService for a host ID.
+func (h *SSEHandler) SetService(hostID string, svc *service.DockerService) {
+	h.services[hostID] = svc
+}
+
+// SetCollector registers a CollectorBackground for a host ID.
+func (h *SSEHandler) SetCollector(hostID string, c *service.CollectorBackground) {
+	h.hostCollectors[hostID] = c
+}
+
+// SetDefaultHost sets the default host ID.
+func (h *SSEHandler) SetDefaultHost(hostID string) {
+	h.defaultHostID = hostID
+}
+
+// getCollector returns the collector for the current request's host.
+func (h *SSEHandler) getCollector(r *http.Request) *service.CollectorBackground {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID != "" {
+		if c, ok := h.hostCollectors[hostID]; ok {
+			return c
+		}
+	}
+	if h.defaultHostID != "" {
+		if c, ok := h.hostCollectors[h.defaultHostID]; ok {
+			return c
+		}
+	}
+	return h.collector
+}
+
+// getDockerService returns the DockerService for the current request's host.
+func (h *SSEHandler) getDockerService(r *http.Request) *service.DockerService {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID != "" {
+		if svc, ok := h.services[hostID]; ok {
+			return svc
+		}
+	}
+	if h.defaultHostID != "" {
+		if svc, ok := h.services[h.defaultHostID]; ok {
+			return svc
+		}
+	}
+	return h.dockerService
 }
 
 // RegisterRoutes registers SSE routes on the given router.
@@ -33,12 +88,13 @@ func (h *SSEHandler) RegisterRoutes(r chi.Router) {
 
 // GetOverview returns the latest snapshot + history for the overview page.
 func (h *SSEHandler) GetOverview(w http.ResponseWriter, r *http.Request) {
-	if h.collector == nil {
+	c := h.getCollector(r)
+	if c == nil {
 		writeJSON(w, map[string]interface{}{"host": service.HostStats{}, "docker": service.DockerStatsSnapshot{}, "history": []service.HostStats{}}, http.StatusOK)
 		return
 	}
-	latest := h.collector.Latest()
-	history := h.collector.History()
+	latest := c.Latest()
+	history := c.History()
 	writeJSON(w, map[string]interface{}{
 		"host":    latest.Host,
 		"docker":  latest.Docker,
@@ -64,6 +120,8 @@ func (h *SSEHandler) StreamStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	docker := h.getDockerService(r)
+
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
@@ -75,7 +133,7 @@ func (h *SSEHandler) StreamStats(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			stats, err := h.dockerService.GetDockerStats(r.Context())
+			stats, err := docker.GetDockerStats(r.Context())
 			if err != nil {
 				fmt.Fprintf(w, "event: error\ndata: {\"error\":\"%s\"}\n\n", escapeJSON(err.Error()))
 				flusher.Flush()
@@ -104,6 +162,8 @@ func (h *SSEHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	docker := h.getDockerService(r)
+
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -117,7 +177,7 @@ func (h *SSEHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			logs, err := h.dockerService.GetContainerLogs(r.Context(), id, 50)
+			logs, err := docker.GetContainerLogs(r.Context(), id, 50)
 			if err != nil {
 				fmt.Fprintf(w, "event: error\ndata: {\"error\":\"%s\"}\n\n", escapeJSON(err.Error()))
 				flusher.Flush()
@@ -146,6 +206,8 @@ func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	c := h.getCollector(r)
+
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
@@ -157,10 +219,10 @@ func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			if h.collector == nil {
+			if c == nil {
 				continue
 			}
-			snap := h.collector.Latest()
+			snap := c.Latest()
 			data, _ := json.Marshal(snap.Host)
 			fmt.Fprintf(w, "event: host\ndata: %s\n\n", string(data))
 			flusher.Flush()

@@ -47,6 +47,7 @@ type ServerConfig struct {
 	MaxUploadMB int          `mapstructure:"max_upload_mb"`
 	ChunkSizeMB int          `mapstructure:"chunk_size_mb"`
 	DataDir     string       `mapstructure:"data_dir"`
+	DevMode     bool         `mapstructure:"dev_mode"`
 
 	// Docker settings
 	DockerHost    string   `mapstructure:"docker_host"`     // e.g. tcp://192.168.1.100:2375

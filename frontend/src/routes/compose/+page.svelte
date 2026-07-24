@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { Spinner, Button } from '$lib/components/ui';
+	import { onMount, onDestroy } from 'svelte';
+	import { Spinner, Button, Badge } from '$lib/components/ui';
+	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { api } from '$lib/api/client';
 	import { Play, RefreshCw, Eye, RotateCcw, Hammer, Package, Plus, Search, Trash2, X, Save } from 'lucide-svelte';
 	import type * as Monaco from 'monaco-editor';
@@ -17,6 +18,7 @@
 	let projects = $state<ComposeProject[]>([]);
 	let loading = $state(true);
 	let searchQuery = $state('');
+	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 
 	// Confirm dialog
 	let confirmDialog = $state<{ open: boolean; title: string; message: string; onConfirm: () => void }>({
@@ -55,7 +57,30 @@
 			: projects
 	);
 
-	onMount(async () => { await loadProjects(); });
+	onMount(async () => {
+		window.addEventListener('host-changed', onHostChanged);
+		await Promise.all([loadProjects(), loadHosts()]);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('host-changed', onHostChanged);
+	});
+
+	function onHostChanged() {
+		loadProjects();
+		loadHosts();
+	}
+
+	async function loadHosts() {
+		try {
+			hostsConfig = await hostsApi.list();
+			if (!hostsConfig.hosts) hostsConfig.hosts = {};
+		} catch (e) { console.error(e); }
+	}
+
+	const currentHost = $derived(
+		hostsConfig.hosts?.[localStorage.getItem('currentHostId') || hostsConfig.default]
+	);
 
 	async function loadProjects() {
 		loading = true;
@@ -201,7 +226,11 @@
 
 <div class="flex h-full flex-col bg-surface-primary">
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
-		<h1 class="text-base font-semibold text-text-primary">Compose <span class="ml-1 text-sm font-normal text-text-muted">({filteredProjects.length})</span></h1>
+		<h1 class="text-base font-semibold text-text-primary">
+			Compose
+			{#if currentHost}<Badge variant="info">{currentHost.name}</Badge>{/if}
+			<Badge>{filteredProjects.length}</Badge>
+		</h1>
 		<div class="flex items-center gap-2">
 			<div class="relative">
 				<Search size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />

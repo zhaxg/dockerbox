@@ -3,6 +3,16 @@ chunk_size_mb: 5
 dockerhosts:
     default: host-nas
     hosts:
+        host-mrymssal:
+            driver: socket
+            endpoint: /var/run/docker.sock
+            id: host-mrymssal
+            mount_points:
+                docker:
+                    is_docker: true
+                    path: /opt/docker
+                    read_only: false
+            name: "210"
         host-nas:
             driver: ssh
             endpoint: zhaxg@192.168.132.86:2322
@@ -12,10 +22,18 @@ dockerhosts:
                     is_docker: true
                     path: /vol1/1000/docker
                     read_only: false
-            name: 主NAS
-            ssh_pub_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILAKnLi+rGtqHC+Im1lhCfJMTxte4B1TD2DZ+rwVUajH boxbox
+            name: fnos
+            ssh_key: |-
+                -----BEGIN OPENSSH PRIVATE KEY-----
+                b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+                QyNTUxOQAAACC6VO6rFccUT6ld3/33DX1SbBuOnP1m53QpCFtDdsdZJgAAAJCEn4/fhJ+P
+                3wAAAAtzc2gtZWQyNTUxOQAAACC6VO6rFccUT6ld3/33DX1SbBuOnP1m53QpCFtDdsdZJg
+                AAAEATfUWYDQZCo04oWsPbsYYec+6WaGNEL0jlPfKov1p/fbpU7qsVxxRPqV3f/fcNfVJs
+                G46c/WbndCkIW0N2x1kmAAAABmJveGJveAECAwQFBgc=
+                -----END OPENSSH PRIVATE KEY-----
+            ssh_pub_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILpU7qsVxxRPqV3f/fcNfVJsG46c/WbndCkIW0N2x1km boxbox
 host: 0.0.0.0
-jwt_secret: change-me-in-production-use-a-long-random-string
+jwt_secret: boxbox-dev-secret-k3y-2026
 max_upload_mb: 10240
 mount_points:
     - auto_discover: true
@@ -46,5 +64,8 @@ mount_points:
     - name: videos
       path: /home/user/Videos
       read_only: false
-port: 8080
+port: 8081
 rate_limit_rps: 10
+users:
+    admin: admin123
+dev_mode: false

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { Spinner, Button } from '$lib/components/ui';
+	import { Spinner, Button, Badge } from '$lib/components/ui';
+	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { api } from '$lib/api/client';
 	import {
 		Play,
@@ -41,6 +42,7 @@
 	let containers = $state<ContainerInfo[]>([]);
 	let loading = $state(true);
 	let searchQuery = $state('');
+	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let eventSource: EventSource | null = null;
 
 	// Modal states
@@ -71,15 +73,24 @@
 	);
 
 	onMount(async () => {
-		await loadContainers();
+		window.addEventListener('host-changed', onHostChanged);
+		await Promise.all([loadContainers(), loadHosts()]);
 		connectSSE();
 	});
 
 	onDestroy(() => {
+		window.removeEventListener('host-changed', onHostChanged);
 		if (eventSource) eventSource.close();
 		closeLogsStream();
 		closeExec();
 	});
+
+	function onHostChanged() {
+		if (eventSource) eventSource.close();
+		loadContainers();
+		loadHosts();
+		connectSSE();
+	}
 
 	function cleanupUnused() {
 		showConfirm('清理未使用资源', '确定要清理所有未使用的镜像和网络吗？', async () => {
@@ -93,6 +104,17 @@
 			}
 		});
 	}
+
+	async function loadHosts() {
+		try {
+			hostsConfig = await hostsApi.list();
+			if (!hostsConfig.hosts) hostsConfig.hosts = {};
+		} catch (e) { console.error(e); }
+	}
+
+	const currentHost = $derived(
+		hostsConfig.hosts?.[localStorage.getItem('currentHostId') || hostsConfig.default]
+	);
 
 	async function loadContainers() {
 		loading = true;
@@ -347,7 +369,9 @@
 <div class="flex h-full flex-col bg-surface-primary">
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 		<h1 class="text-base font-semibold text-text-primary">
-			容器 <span class="ml-1 text-sm font-normal text-text-muted">({filteredContainers.length})</span>
+			容器
+			{#if currentHost}<Badge variant="info">{currentHost.name}</Badge>{/if}
+			<Badge>{filteredContainers.length}</Badge>
 		</h1>
 		<div class="flex items-center gap-2">
 			<div class="relative">

@@ -162,6 +162,7 @@ func loadWithReport(configPath string, searchPaths []configSearchPath) (*LoadRes
 		"data_dir",
 		"docker_host",
 		"docker_socket",
+		"dev_mode",
 	} {
 		if err := v.BindEnv(key); err != nil {
 			return nil, fmt.Errorf("bind environment variable %q: %w", key, err)

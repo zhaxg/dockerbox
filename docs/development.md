@@ -1,19 +1,64 @@
 # Development
 
-This guide covers the local BoxBox development workflow.
+本地开发前后端分离，各自热重载。
 
 ## Prerequisites
 
-- Go 1.24+
-- Bun 1.1+
-- Node.js 22+ for Svelte tooling compatibility
-- `air` for backend hot reload:
+- Go 1.25+
+- Node.js 20+
+- [Air](https://github.com/air-verse/air)：
 
 ```bash
 go install github.com/air-verse/air@latest
 ```
 
-Make sure `$GOPATH/bin` is on your `PATH`.
+## 启动开发
+
+两个终端分别驻留后台：
+
+**终端 1 — 后端（air 热重载）**
+
+```bash
+cd backend
+~/go/bin/air
+```
+
+Air 监听 `cmd/` 和 `internal/` 下 `.go` 文件，改动后自动编译重启。默认 `BOXBOX_DEV_MODE=true`，不嵌入前端，只跑 API（`localhost:8080`）。
+
+**终端 2 — 前端（Vite 热重载）**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite dev server 跑在 `http://localhost:5173`，自动代理 `/api` 和 `/ws` 到后端。
+
+## 发布构建
+
+```bash
+cd frontend && npm run build
+cd ../backend && go build -o boxbox ./cmd/server
+```
+
+去掉 `dev_mode`（默认 false），前端通过 `go:embed` 嵌入 Go 二进制。
+
+## 配置
+
+| 文件 | 说明 |
+|------|------|
+| `backend/config.yaml` | 后端配置 |
+| `backend/.air.toml` | Air 热重载配置 |
+
+`config.yaml` 关键字段：
+
+```yaml
+dev_mode: true     # 开发模式，跳过前端嵌入
+port: 8080
+users:
+  admin: admin123
+```
 
 ## Repository Layout
 
@@ -25,104 +70,19 @@ scripts/      Local development helpers
 Dockerfile    Single-container production build
 ```
 
-## Install Dependencies
-
-```bash
-bun install --cwd frontend
-cd backend && go mod download
-```
-
-## Run the Product App
-
-From the repository root:
-
-```bash
-bun run dev
-```
-
-This starts:
-
-- SvelteKit frontend through Vite.
-- Go backend through `air -c backend/.air.toml`.
-
-The backend uses `backend/config.yaml`. For a safer local setup, edit that file to point at temporary directories instead of broad host paths:
-
-```bash
-mkdir -p /tmp/boxbox/media /tmp/boxbox/documents
-```
-
-```yaml
-mount_points:
-  - name: "media"
-    path: "/tmp/boxbox/media"
-    read_only: false
-  - name: "documents"
-    path: "/tmp/boxbox/documents"
-    read_only: false
-```
-
-## Run Pieces Separately
-
-Backend:
-
-```bash
-cd backend
-go run ./cmd/server -config config.yaml
-```
-
-Frontend:
-
-```bash
-bun run --cwd frontend dev
-```
-
-## Build
-
-Frontend app:
-
-```bash
-bun run --cwd frontend build
-```
-
-Production container:
-
-```bash
-docker build -t boxbox:local .
-```
-
-The Dockerfile builds the frontend first, copies `frontend/build` into `backend/internal/static/dist`, and compiles the Go server with embedded assets.
-
-## Test and Validate
-
-Backend:
-
-```bash
-cd backend
-go test ./...
-```
-
-Frontend checks:
-
-```bash
-bun run --cwd frontend check
-bun run --cwd frontend build
-```
-
 ## Backend Patterns
 
-Use the existing Handler -> Service -> Model/Filesystem shape:
+Handler -> Service -> Model/Filesystem：
 
-- Handlers parse requests and write responses.
-- Services own business logic and filesystem work.
-- Models define request, response, and domain types.
-- Shared constants belong in `backend/internal/config/constants.go`.
-- File operations should go through `internal/pkg/filesystem` and existing validators.
+- Handlers 解析请求、写响应
+- Services 管业务逻辑和文件操作
+- Models 定义请求/响应/领域类型
+- 常量放 `backend/internal/config/constants.go`
+- 文件操作走 `internal/pkg/filesystem`
 
 ## Frontend Patterns
 
-- Use Svelte 5 patterns already present in the repo.
-- API calls belong in `frontend/src/lib/api`.
-- Shared UI primitives belong in `frontend/src/lib/components/ui`.
-- Formatting belongs in `frontend/src/lib/utils/format.ts`.
-- File type logic belongs in `frontend/src/lib/utils/fileTypes.ts`.
-- Central config belongs in `frontend/src/lib/config.ts`.
+- Svelte 5 runes（`$state`、`$derived`）
+- API 调用放 `frontend/src/lib/api`
+- UI 组件放 `frontend/src/lib/components/ui`
+- 格式化放 `frontend/src/lib/utils/format.ts`

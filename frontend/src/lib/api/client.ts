@@ -216,7 +216,7 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
 	}
 
 	// Add current host ID for Docker operations
-	if (!skipAuth && endpoint.startsWith('/docker')) {
+	if (!skipAuth && endpoint.startsWith('/docker') || endpoint.startsWith('/sse')) {
 		const hostId = localStorage.getItem('currentHostId');
 		if (hostId) {
 			requestHeaders['X-Host-ID'] = hostId;

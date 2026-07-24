@@ -36,6 +36,7 @@
 	let prevTx = 0;
 
 	onMount(async () => {
+		window.addEventListener('host-changed', onHostChanged);
 		await loadOverview();
 		// Init charts after DOM renders (loading=false)
 		requestAnimationFrame(() => { initCharts(); });
@@ -43,11 +44,18 @@
 	});
 
 	onDestroy(() => {
+		window.removeEventListener('host-changed', onHostChanged);
 		if (eventSource) eventSource.close();
 		cpuChart?.dispose();
 		memChart?.dispose();
 		netChart?.dispose();
 	});
+
+	function onHostChanged() {
+		if (eventSource) eventSource.close();
+		loadOverview();
+		connectSSE();
+	}
 
 	function formatTime(ts?: number): string {
 		const d = ts ? new Date(ts) : new Date();
