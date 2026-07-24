@@ -757,9 +757,9 @@ func (h *DockerHandler) ExecWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shell := h.dockerService.DetectShell(r.Context(), id)
-	execID, err := h.dockerService.CreateExec(r.Context(), id, []string{shell})
+	execID, err := h.dockerService.CreateExec(r.Context(), id, []string{shell, "-i"})
 	if err != nil {
-		conn.WriteMessage(websocket.TextMessage, []byte("Error: "+err.Error()))
+		conn.WriteMessage(websocket.TextMessage, []byte("Error: 无法创建exec: "+err.Error()+"\n容器可能没有可用的shell工具"))
 		return
 	}
 

@@ -58,7 +58,7 @@
 	});
 	let logsEventSource: EventSource | null = null;
 	let execWs: WebSocket | null = null;
-	let execInput = $state('');
+	let execTerminalEl: HTMLDivElement | null = null;
 
 	const filteredContainers = $derived(
 		searchQuery.trim()
@@ -224,29 +224,62 @@
 			execWs?.send(JSON.stringify({ type: 'auth', token }));
 		};
 		execWs.onmessage = (event) => {
+			let text: string;
 			if (typeof event.data === 'string') {
-				try {
-					const msg = JSON.parse(event.data);
-					if (msg.type === 'output') execModal.output += atob(msg.data);
-				} catch {
-					execModal.output += event.data;
-				}
+				text = event.data;
+			} else if (event.data instanceof ArrayBuffer) {
+				text = new TextDecoder().decode(event.data);
 			} else if (event.data instanceof Blob) {
 				event.data.arrayBuffer().then((buf) => {
 					execModal.output += new TextDecoder().decode(buf);
 					scrollExec();
 				});
+				return;
+			} else {
+				text = String(event.data);
 			}
+			execModal.output += text;
+			scrollExec();
 		};
 		execWs.onclose = () => { execModal.connected = false; };
 		execWs.onerror = () => { execModal.connected = false; };
 	}
 
 	function sendExecInput(e: KeyboardEvent) {
-		if (e.key === 'Enter' && execWs?.readyState === WebSocket.OPEN) {
-			execWs.send(JSON.stringify({ type: 'input', data: execInput + '\r' }));
-			execModal.output += execInput + '\r\n';
-			execInput = '';
+		if (e.metaKey || e.ctrlKey) {
+			if (e.key === 'c') execSendRaw('\x03');
+			else if (e.key === 'd') execSendRaw('\x04');
+			e.preventDefault();
+			return;
+		}
+		if (e.key === 'Enter') {
+			execSendRaw('\r');
+		} else if (e.key === 'Backspace') {
+			execSendRaw('\x7f');
+		} else if (e.key === 'Tab') {
+			execSendRaw('\t');
+			e.preventDefault();
+		} else if (e.key === 'ArrowUp') {
+			execSendRaw('\x1b[A');
+			e.preventDefault();
+		} else if (e.key === 'ArrowDown') {
+			execSendRaw('\x1b[B');
+			e.preventDefault();
+		} else if (e.key === 'ArrowRight') {
+			execSendRaw('\x1b[C');
+			e.preventDefault();
+		} else if (e.key === 'ArrowLeft') {
+			execSendRaw('\x1b[D');
+			e.preventDefault();
+		} else if (e.key.length === 1 && !e.isComposing) {
+			execSendRaw(e.key);
+		}
+		e.preventDefault();
+	}
+
+	function execSendRaw(data: string) {
+		if (execWs?.readyState === WebSocket.OPEN) {
+			execWs.send(new TextEncoder().encode(data));
 		}
 	}
 
@@ -258,6 +291,7 @@
 	function closeExec() {
 		if (execWs) { execWs.close(); execWs = null; }
 		execModal.open = false;
+		execTerminalEl = null;
 	}
 
 	// --- Helpers ---
@@ -505,24 +539,30 @@
 
 <!-- Exec Modal -->
 {#if execModal.open}
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<div class="flex h-[80vh] w-[900px] flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary">
 			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 				<div class="flex items-center gap-2">
 					<h3 class="text-sm font-semibold text-text-primary">终端 - {execModal.name}</h3>
 					<span class="h-2 w-2 rounded-full {execModal.connected ? 'bg-green-500' : 'bg-red-500'}"></span>
+					{#if !execModal.connected}<span class="text-[11px] text-text-muted">无可用shell</span>{/if}
 				</div>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={closeExec}>
 					<X size={16} />
 				</button>
 			</div>
-			<div class="flex-1 overflow-auto bg-black p-4">
-				<pre id="exec-pre" class="font-mono text-xs text-green-400 whitespace-pre-wrap">{execModal.output}</pre>
-			</div>
-			<div class="border-t border-border-secondary px-4 py-2">
-				<input type="text" bind:value={execInput} onkeydown={sendExecInput}
-					placeholder="输入命令..." disabled={!execModal.connected}
-					class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				bind:this={execTerminalEl}
+				class="flex-1 overflow-auto bg-black p-4 font-mono text-xs text-green-400 focus:outline-none cursor-text"
+				tabindex="0"
+				onfocus={() => execTerminalEl?.focus()}
+				onkeydown={sendExecInput}
+			>
+				<pre class="whitespace-pre-wrap">{execModal.output}</pre>
 			</div>
 		</div>
 	</div>
