@@ -122,29 +122,27 @@
 		return `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${modal.host.sshPubKey || ''}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
 	}
 
-	async function saveHost() {
+	async function doSave() {
 		const mp = modal.host.mountPoints || {};
 		for (const k of Object.keys(mp)) mp[k] = { ...mp[k], isDocker: k === modal.dockerDirKey };
 		try {
 			if (modal.mode === 'add') await hostsApi.create(modal.host);
 			else await hostsApi.update(modal.host.id, modal.host);
-			if (modal.isDefault) {
-				hostsConfig.default = modal.host.id;
-				hostsConfig.hosts[modal.host.id] = { ...modal.host };
-			}
+			hostsConfig.default = modal.isDefault ? modal.host.id : (hostsConfig.default === modal.host.id ? '' : hostsConfig.default);
 			await loadHosts();
 		} catch (e) { console.error(e); }
 	}
 
+	function saveAndClose() { doSave().then(() => closeModal()); }
+
 	async function saveAndTest() {
-		await saveHost();
+		await doSave();
 		testLoading = true;
 		try {
 			const result = await hostsApi.test(modal.host.id);
 			showToast(result.status === 'ok' ? '连接成功: ' + result.message : '连接失败: ' + result.message, result.status === 'ok' ? 'ok' : 'err');
-		} catch (e) {
-			showToast('连接失败: ' + String(e), 'err');
-		} finally { testLoading = false; }
+		} catch (e) { showToast('连接失败: ' + String(e), 'err'); }
+		finally { testLoading = false; }
 	}
 
 	function deleteHost(id: string, name: string) {
@@ -188,7 +186,6 @@
 		{:else}
 			<table class="w-full min-w-[900px] border-collapse text-[13px] leading-5">
 				<thead><tr>
-					<th class="{thClass} w-[50px]">默认</th>
 					<th class="{thClass}">Name</th>
 					<th class="{thClass}">Endpoint</th>
 					<th class="{thClass}">Status</th>
@@ -199,18 +196,11 @@
 				<tbody>
 					{#each hostList as host (host.id)}
 						<tr class="transition-colors hover:bg-surface-secondary">
-							<td class="{tdClass} text-center">
-								{#if hostsConfig.default === host.id}
-									<span class="inline-block h-3 w-3 rounded-full bg-green-500"></span>
-								{/if}
-							</td>
 							<td class="{tdClass}">
 								<div class="flex items-center gap-2">
 									{#if hostStats[host.id]}
 										<span class="h-2 w-2 rounded-full shrink-0 {hostStats[host.id].status === 'online' ? 'bg-green-500' : 'bg-red-500'}"></span>
-									{:else}
-										<span class="h-2 w-2 rounded-full bg-gray-500 shrink-0"></span>
-									{/if}
+									{:else}<span class="h-2 w-2 rounded-full bg-gray-500 shrink-0"></span>{/if}
 									<span class="font-medium">{host.name}</span>
 									<span class="text-[11px] {getDriverColor(host.driver)}">{getDriverLabel(host.driver)}</span>
 								</div>
@@ -231,12 +221,13 @@
 								</div>
 							</td>
 							<td class="{tdClass} text-text-secondary text-[12px]">
-								{#if hostStats[host.id]}
-									{hostStats[host.id].running}/{hostStats[host.id].total}
-								{:else}-{/if}
+								{#if hostStats[host.id]}{hostStats[host.id].running}/{hostStats[host.id].total}{:else}-{/if}
 							</td>
 							<td class="{tdClass}">
-								<div class="flex justify-end gap-1">
+								<div class="flex justify-end items-center gap-1">
+									{#if hostsConfig.default === host.id}
+										<Check size={14} class="text-green-400 shrink-0" />
+									{/if}
 									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => testHost(host.id)} title="测试连接" disabled={testLoading}><Plug size={13} /></button>
 									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openEdit(host)} title="编辑"><Pencil size={13} /></button>
 									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteHost(host.id, host.name)} title="删除"><Trash2 size={13} /></button>
@@ -253,10 +244,7 @@
 <!-- Toast -->
 {#if toastMsg}
 	<div class="fixed bottom-4 right-4 z-[70] max-w-md rounded-lg border px-4 py-3 shadow-xl {toastType === 'ok' ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-red-500/30 bg-red-500/10 text-red-400'}">
-		<div class="flex items-center gap-2 text-[12px]">
-			<MessageSquare size={14} />
-			<span>{toastMsg}</span>
-		</div>
+		<div class="flex items-center gap-2 text-[12px]"><MessageSquare size={14} /><span>{toastMsg}</span></div>
 	</div>
 {/if}
 
@@ -318,29 +306,28 @@
 						</div>
 						<div>
 							<label class="mb-1 block text-[10px] text-text-muted">私钥</label>
-							<input type="text" bind:value={modal.host.sshKey} readonly placeholder="点击生成或粘贴"
-								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:outline-none cursor-default" />
+							<textarea bind:value={modal.host.sshKey} rows={3} placeholder="点击生成或粘贴"
+								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none resize-none"></textarea>
 						</div>
 						<div>
 							<label class="mb-1 block text-[10px] text-text-muted">公钥</label>
-							<input type="text" bind:value={modal.host.sshPubKey} readonly placeholder="点击生成或粘贴"
-								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:outline-none cursor-default" />
+							<input type="text" bind:value={modal.host.sshPubKey} placeholder="点击生成或粘贴"
+								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 						</div>
 						<div class="flex items-center gap-1 pt-2 border-t border-border-secondary">
-							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制私钥" onclick={() => copyText(modal.host.sshKey || '', 'priv')} disabled={!modal.host.sshKey}>
+							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" onclick={() => copyText(modal.host.sshKey || '', 'priv')} disabled={!modal.host.sshKey}>
 								{#if copied['priv']}<Check size={10} class="text-green-400" />已复制{:else}<Copy size={10} />私钥{/if}
 							</button>
-							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制公钥" onclick={() => copyText(modal.host.sshPubKey || '', 'pub')} disabled={!modal.host.sshPubKey}>
+							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" onclick={() => copyText(modal.host.sshPubKey || '', 'pub')} disabled={!modal.host.sshPubKey}>
 								{#if copied['pub']}<Check size={10} class="text-green-400" />已复制{:else}<Copy size={10} />公钥{/if}
 							</button>
-							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制公钥设置命令" onclick={() => copyText(getCopyCmd(), 'cmd')} disabled={!modal.host.sshPubKey || !modal.host.endpoint}>
+							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" onclick={() => copyText(getCopyCmd(), 'cmd')} disabled={!modal.host.sshPubKey || !modal.host.endpoint}>
 								{#if copied['cmd']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal size={10} />公钥设置命令{/if}
 							</button>
+							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" onclick={() => copyText('systemctl enable --now podman.socket', 'podman')}>
+								{#if copied['podman']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal size={10} />Podman命令{/if}
+							</button>
 						</div>
-						<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-blue-400 hover:bg-blue-500/10 transition-colors mt-2"
-							onclick={() => copyText('systemctl enable --now podman.socket', 'podman')}>
-							{#if copied['podman']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal size={10} />Podman 兼容命令{/if}
-						</button>
 					</div>
 				{/if}
 				<div>
@@ -352,7 +339,7 @@
 					<div class="space-y-1.5 mb-2">
 						{#each Object.entries(modal.host.mountPoints || {}) as [key, mp]}
 							<div class="flex items-center gap-2 rounded border border-border-secondary bg-surface-secondary px-3 py-1.5">
-								<input type="radio" name="dockerDir" value={key} checked={modal.dockerDirKey === key} onchange={() => modal.dockerDirKey = key} class="accent-green-500" title="设为Docker主目录" />
+								<input type="radio" name="dockerDir" value={key} checked={modal.dockerDirKey === key} onchange={() => modal.dockerDirKey = key} class="accent-green-500" />
 								<span class="text-[12px] font-medium text-text-primary min-w-[80px]">{key}</span>
 								<span class="flex-1 text-[11px] text-text-secondary font-mono truncate">{mp.path}</span>
 								{#if mp.readOnly}<span class="text-[10px] text-text-muted">只读</span>{/if}
@@ -362,7 +349,7 @@
 						{/each}
 					</div>
 					<div class="flex items-center gap-2">
-						<input type="text" bind:value={modal.mountKey} placeholder="名称 (如: docker)" class="w-28 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+						<input type="text" bind:value={modal.mountKey} placeholder="名称" class="w-28 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 						<input type="text" bind:value={modal.mountPath} placeholder="/opt/docker" class="flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 						<label class="flex items-center gap-1 text-[11px] text-text-muted cursor-pointer"><input type="checkbox" bind:checked={modal.mountReadOnly} class="rounded" /> 只读</label>
 						<button type="button" class="rounded bg-surface-tertiary px-2 py-1 text-[11px] text-text-primary hover:bg-surface-secondary" onclick={addMountPoint}>添加</button>
@@ -375,7 +362,7 @@
 				</Button>
 				<div class="flex items-center gap-2">
 					<Button variant="secondary" size="sm" onclick={closeModal}>取消</Button>
-					<Button variant="primary" size="sm" onclick={saveHost} disabled={!modal.host.name || !modal.host.endpoint}>
+					<Button variant="primary" size="sm" onclick={saveAndClose} disabled={!modal.host.name || !modal.host.endpoint}>
 						{modal.mode === 'add' ? '添加' : '保存'}
 					</Button>
 				</div>
