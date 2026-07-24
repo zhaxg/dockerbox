@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"net/url"
 	"github.com/go-chi/chi/v5"
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
 	"github.com/jR4dh3y/BoxBox/backend/internal/service"
@@ -48,7 +49,8 @@ func (h *JobHandler) getHostAccess(r *http.Request) service.HostFileAccess {
 
 func (h *JobHandler) resolvePath(r *http.Request, boxPath string) string {
 	hostID := r.Header.Get("X-Host-ID")
-	parts := strings.SplitN(boxPath, "/", 2)
+	decoded, _ := url.PathUnescape(boxPath)
+	parts := strings.SplitN(decoded, "/", 2)
 	mountName := parts[0]
 	subPath := ""
 	if len(parts) > 1 {
@@ -62,7 +64,7 @@ func (h *JobHandler) resolvePath(r *http.Request, boxPath string) string {
 			return hostPath
 		}
 	}
-	return "/" + boxPath
+	return "/" + decoded
 }
 
 func (h *JobHandler) getHostID(r *http.Request) string {

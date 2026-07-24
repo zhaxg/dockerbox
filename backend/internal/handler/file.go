@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"strings"
+	"net/url"
 	"github.com/go-chi/chi/v5"
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
 	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/validator"
@@ -79,7 +80,8 @@ func (h *FileHandler) getHostAccess(r *http.Request) service.HostFileAccess {
 
 // resolvePath resolves a BoxBox browse path to the actual host filesystem path.
 func (h *FileHandler) ResolvePath(r *http.Request, boxPath string) string {
-	parts := strings.SplitN(boxPath, "/", 2)
+	decoded, _ := url.PathUnescape(boxPath)
+	parts := strings.SplitN(decoded, "/", 2)
 	mountName := parts[0]
 	subPath := ""
 	if len(parts) > 1 {
@@ -94,7 +96,7 @@ func (h *FileHandler) ResolvePath(r *http.Request, boxPath string) string {
 			return mp.Path
 		}
 	}
-	return "/" + boxPath
+	return "/" + decoded
 }
 
 // RegisterRoutes registers file routes on the given router

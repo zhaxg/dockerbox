@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"net/url"
 	"github.com/go-chi/chi/v5"
 	"github.com/jR4dh3y/BoxBox/backend/internal/config"
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
@@ -88,7 +89,8 @@ func (h *StreamHandler) resolvePath(r *http.Request, boxPath string) string {
 	if hostID == "" {
 		hostID = r.URL.Query().Get("host")
 	}
-	parts := strings.SplitN(boxPath, "/", 2)
+	decoded, _ := url.PathUnescape(boxPath)
+	parts := strings.SplitN(decoded, "/", 2)
 	mountName := parts[0]
 	subPath := ""
 	if len(parts) > 1 {
@@ -102,7 +104,7 @@ func (h *StreamHandler) resolvePath(r *http.Request, boxPath string) string {
 			return hostPath
 		}
 	}
-	return "/" + boxPath
+	return "/" + decoded
 }
 
 func (h *StreamHandler) getHostAccess(r *http.Request) service.HostFileAccess {
