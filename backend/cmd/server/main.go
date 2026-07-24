@@ -49,10 +49,14 @@ func main() {
 			Msg(warning.Message)
 	}
 
+	hostCount := 0
+	if cfg.DockerHosts != nil {
+		hostCount = len(cfg.DockerHosts.Hosts)
+	}
 	log.Info().
 		Int("port", cfg.Port).
 		Str("host", cfg.Host).
-		Int("mount_points", len(cfg.MountPoints)).
+		Int("hosts", hostCount).
 		Msg("Configuration loaded")
 
 	// Create context that listens for shutdown signals
@@ -106,28 +110,21 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 	// Create filesystem abstraction (using real OS filesystem)
 	fs := filesystem.NewOsFS()
 
-	// Ensure mount point directories exist
-	for _, mp := range cfg.MountPoints {
-		exists, err := fs.Exists(mp.Path)
-		if err != nil {
-			log.Warn().Err(err).Str("path", mp.Path).Str("name", mp.Name).Msg("Error checking mount point")
-			continue
-		}
-		if !exists {
-			log.Warn().Str("path", mp.Path).Str("name", mp.Name).Msg("Mount point directory does not exist")
-		} else {
-			log.Info().Str("path", mp.Path).Str("name", mp.Name).Bool("read_only", mp.ReadOnly).Msg("Mount point configured")
+	// Collect mount points from host configurations
+	mountPoints := make([]model.MountPoint, 0)
+	if cfg.DockerHosts != nil {
+		for _, host := range cfg.DockerHosts.Hosts {
+			for name, mp := range host.MountPoints {
+				mountPoints = append(mountPoints, model.MountPoint{
+					Name:     name,
+					Path:     mp.Path,
+					ReadOnly: mp.ReadOnly,
+				})
+			}
 		}
 	}
-
-	// Convert config mount points to model mount points
-	mountPoints := make([]model.MountPoint, len(cfg.MountPoints))
-	for i, mp := range cfg.MountPoints {
-		mountPoints[i] = model.MountPoint{
-			Name:     mp.Name,
-			Path:     mp.Path,
-			ReadOnly: mp.ReadOnly,
-		}
+	for _, mp := range mountPoints {
+		log.Info().Str("path", mp.Path).Str("name", mp.Name).Bool("read_only", mp.ReadOnly).Msg("Mount point")
 	}
 
 	// Create WebSocket hub
@@ -249,19 +246,6 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 					})
 				}
 				fileHandler.SetMountPoints(id, mps)
-				// Add host mount points to global list for MountPointGuard
-				for _, mp := range mps {
-					found := false
-					for _, gmp := range mountPoints {
-						if gmp.Name == mp.Name {
-							found = true
-							break
-					}
-				}
-					if !found {
-						mountPoints = append(mountPoints, mp)
-					}
-				}
 				// Create HostFileAccess for this host
 				var access service.HostFileAccess
 				switch host.Driver {

@@ -10,11 +10,6 @@ allowed_origins: []
 users:
     admin: admin123
 
-mount_points:
-    - name: docker
-      path: /opt/docker
-      read_only: false
-
 dockerhosts:
     default: host-mrymssal
     hosts:

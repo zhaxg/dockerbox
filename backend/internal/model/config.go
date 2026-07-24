@@ -42,7 +42,6 @@ type HostMountPoint struct {
 type ServerConfig struct {
 	Port        int          `mapstructure:"port"`
 	Host        string       `mapstructure:"host"`
-	MountPoints []MountPoint `mapstructure:"mount_points"`
 	JWTSecret   string       `mapstructure:"jwt_secret"`
 	MaxUploadMB int          `mapstructure:"max_upload_mb"`
 	ChunkSizeMB int          `mapstructure:"chunk_size_mb"`
@@ -79,19 +78,6 @@ func (c *ServerConfig) Validate() error {
 		}
 		if strings.Contains(strings.ToLower(password), "change-me") {
 			return fmt.Errorf("password for user %q must be changed from the placeholder value", username)
-		}
-	}
-
-	if len(c.MountPoints) == 0 {
-		return fmt.Errorf("at least one mount_point is required")
-	}
-
-	for i, mp := range c.MountPoints {
-		if mp.Name == "" {
-			return fmt.Errorf("mount_point[%d].name is required", i)
-		}
-		if mp.Path == "" {
-			return fmt.Errorf("mount_point[%d].path is required", i)
 		}
 	}
 
