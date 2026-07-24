@@ -120,6 +120,16 @@ func (h *SSEHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 // StreamHostStats streams host system stats via SSE.
+// detectProcBase finds the host proc filesystem path.
+func detectProcBase() string {
+	for _, p := range []string{"/host_root/proc", "/host/proc", "/proc"} {
+		if _, err := os.Stat(p + "/stat"); err == nil {
+			return p
+		}
+	}
+	return "/proc"
+}
+
 func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 	writeSSEHeaders(w)
 
@@ -132,6 +142,8 @@ func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	procBase := detectProcBase()
+
 	fmt.Fprintf(w, "event: connected\ndata: {}\n\n")
 	flusher.Flush()
 
@@ -140,10 +152,10 @@ func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			cpu := readFile("/host_root/proc/stat")
-			mem := readFile("/host_root/proc/meminfo")
-			net := readFile("/host_root/proc/net/dev")
-			load := readFile("/host_root/proc/loadavg")
+			cpu := readFile(procBase + "/stat")
+			mem := readFile(procBase + "/meminfo")
+			net := readFile(procBase + "/net/dev")
+			load := readFile(procBase + "/loadavg")
 
 			data := fmt.Sprintf(`{"cpu":%s,"memory":%s,"network":%s,"load":%s}`,
 				wrapRaw(cpu), wrapRaw(mem), wrapRaw(net), wrapRaw(load))
