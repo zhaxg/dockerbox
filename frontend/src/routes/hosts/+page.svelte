@@ -205,7 +205,7 @@
 				<span class="text-sm">暂无主机配置</span>
 				<Button variant="primary" size="sm" onclick={openAdd}><Plus size={14} class="mr-1" /> 添加主机</Button>
 			</div>
-		{:else}
+		{:else} 
 			<table class="w-full min-w-[900px] border-collapse text-[13px] leading-5">
 				<thead><tr>
 					<th class="{thClass}">Name</th>
@@ -222,7 +222,7 @@
 								<div class="flex items-center gap-2">
 									{#if hostsConfig.default === host.id}
 										<span class="h-2 w-2 rounded-full bg-green-500 shrink-0"></span>
-									{:else}
+									{:else} 
 										<span class="h-2 w-2 rounded-full bg-gray-500 shrink-0"></span>
 									{/if}
 									<span class="font-medium">{host.name}</span>
@@ -231,9 +231,9 @@
 							</td>
 							<td class="{tdClass} font-mono text-[12px] text-text-secondary">{host.endpoint}</td>
 							<td class="{tdClass}">
-								{#if testResult && testResult.hostId === host.id}
-									<span class="text-[11px] {testResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}">{testResult.message}</span>
-								{:else}
+								{#if hostStats[host.id]}
+									<span class="text-[11px] {hostStats[host.id].status === 'online' ? 'text-green-400' : 'text-red-400'}">{hostStats[host.id].status === 'online' ? '在线' : '离线'}</span>
+								{:else} 
 									<span class="text-[11px] text-text-muted">未检测</span>
 								{/if}
 							</td>
@@ -245,7 +245,12 @@
 								</div>
 							</td>
 							<td class="{tdClass} text-text-secondary text-[12px]">
-								{#if host.mountPoints}{Object.keys(host.mountPoints).length} 目录{:else}0 目录{/if}
+								{#if hostStats[host.id]}
+								<span class="text-green-400">{hostStats[host.id].running}</span>/<span>{hostStats[host.id].total}</span>
+								{#if hostStats[host.id].stopped > 0}<span class="text-red-400 ml-1">({hostStats[host.id].stopped} 停止)</span>{/if}
+							{:else}
+								-
+							{/if}
 							</td>
 							<td class="{tdClass}">
 								<div class="flex justify-end gap-1">
@@ -316,7 +321,7 @@
 						<div class="flex items-center justify-between">
 							<span class="text-[11px] font-medium text-text-muted flex items-center gap-1"><Key size={12} /> ED25519 密钥对</span>
 							<Button variant="secondary" size="sm" onclick={genKeyPair} disabled={genKeyLoading}>
-								{#if genKeyLoading}<Spinner size={12} />{:else}一键生成密钥对{/if}
+								{#if genKeyLoading}<Spinner size={12} />{:else} 一键生成密钥对{/if}
 							</Button>
 						</div>
 						<div>
@@ -342,7 +347,7 @@
 										<input type="password" bind:value={modal.sshPassword} placeholder="远程服务器密码"
 											class="flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary focus:border-border-focus focus:outline-none" />
 										<Button variant="primary" size="sm" onclick={pushKey} disabled={pushLoading || !modal.sshPassword || !modal.host.sshPubKey}>
-											{#if pushLoading}<Spinner size={12} class="mr-1" />{:else}<Server size={12} class="mr-1" />{/if}推送
+											{#if pushLoading}<Spinner size={12} class="mr-1" />{:else} <Server size={12} class="mr-1" />{/if}推送
 										</Button>
 									</div>
 									{#if pushResult}
