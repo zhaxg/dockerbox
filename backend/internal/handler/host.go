@@ -136,8 +136,12 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 	if updates.Endpoint != "" {
 		existing.Endpoint = updates.Endpoint
 	}
-	existing.SSHKey = updates.SSHKey
-	existing.SSHPubKey = updates.SSHPubKey
+	if updates.SSHKey != "" {
+		existing.SSHKey = updates.SSHKey
+	}
+	if updates.SSHPubKey != "" {
+		existing.SSHPubKey = updates.SSHPubKey
+	}
 	existing.Tags = updates.Tags
 
 	// Update default host
