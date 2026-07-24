@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Spinner, Button } from '$lib/components/ui';
 	import { hostsApi, type DockerHost, type DockerHostsConfig } from '$lib/api/hosts';
-	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Terminal } from 'lucide-svelte';
+	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Terminal, MessageSquare } from 'lucide-svelte';
 
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let loading = $state(true);
@@ -14,6 +14,8 @@
 	let copied = $state<Record<string, boolean>>({});
 	let genKeyLoading = $state(false);
 	let hostStats = $state<Record<string, { status: string; total: number; running: number; stopped: number; message?: string }>>({});
+	let toastMsg = $state('');
+	let toastType = $state<'ok' | 'err'>('ok');
 
 	let modal = $state<{
 		open: boolean; mode: 'add' | 'edit'; host: any;
@@ -45,6 +47,11 @@
 		} catch (e) { hostStats[id] = { status: 'offline', total: 0, running: 0, stopped: 0 }; }
 	}
 
+	function showToast(msg: string, type: 'ok' | 'err' = 'ok') {
+		toastMsg = msg; toastType = type;
+		setTimeout(() => toastMsg = '', 4000);
+	}
+
 	function showConfirm(title: string, message: string, onConfirm: () => void) {
 		confirmDialog = { open: true, title, message, onConfirm };
 	}
@@ -53,7 +60,7 @@
 	function openAdd() {
 		modal = {
 			open: true, mode: 'add',
-			host: { id: 'host-' + Date.now().toString(36), name: '', driver: 'ssh', endpoint: '', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
+			host: { id: 'host-' + Date.now().toString(36), name: '', driver: 'socket', endpoint: '/var/run/docker.sock', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
 			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: ''
 		};
 	}
@@ -102,12 +109,8 @@
 			navigator.clipboard.writeText(text);
 		} else {
 			const ta = document.createElement('textarea');
-			ta.value = text;
-			ta.style.position = 'fixed';
-			ta.style.left = '-9999px';
-			document.body.appendChild(ta);
-			ta.select();
-			document.execCommand('copy');
+			ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+			document.body.appendChild(ta); ta.select(); document.execCommand('copy');
 			document.body.removeChild(ta);
 		}
 		copied[key] = true;
@@ -115,6 +118,9 @@
 	}
 
 	function getCopyCmd() {
+		const ep = modal.host.endpoint || '';
+		const [u, hp] = ep.split('@');
+		const [h, p] = (hp || '').split(':');
 		return `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${modal.host.sshPubKey || ''}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
 	}
 
@@ -136,9 +142,19 @@
 
 	async function testHost(id: string) {
 		testLoading = true; testResult = null;
-		try { const result = await hostsApi.test(id); testResult = { hostId: id, status: result.status, message: result.message }; }
-		catch (e) { testResult = { hostId: id, status: 'error', message: String(e) }; }
-		finally { testLoading = false; }
+		try {
+			const result = await hostsApi.test(id);
+			testResult = { hostId: id, status: result.status, message: result.message };
+			showToast(result.status === 'ok' ? '✓ 连接成功: ' + result.message : '✗ 连接失败: ' + result.message, result.status === 'ok' ? 'ok' : 'err');
+		} catch (e) {
+			testResult = { hostId: id, status: 'error', message: String(e) };
+			showToast('✗ 连接失败: ' + String(e), 'err');
+		} finally { testLoading = false; }
+	}
+
+	async function saveAndTest() {
+		await saveHost();
+		await testHost(modal.host.id);
 	}
 
 	function getDriverLabel(d: string) { return d === 'ssh' ? 'SSH' : 'Socket'; }
@@ -191,9 +207,7 @@
 									<span class="text-[11px] {hostStats[host.id].status === 'online' ? 'text-green-400' : 'text-red-400'}">
 										{hostStats[host.id].status === 'online' ? '在线' : '离线'}
 									</span>
-								{:else}
-									<span class="text-[11px] text-text-muted">检测中...</span>
-								{/if}
+								{:else}<span class="text-[11px] text-text-muted">检测中...</span>{/if}
 							</td>
 							<td class="{tdClass}">
 								<div class="flex flex-wrap gap-1">
@@ -222,6 +236,16 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Toast -->
+{#if toastMsg}
+	<div class="fixed bottom-4 right-4 z-[70] max-w-md rounded-lg border px-4 py-3 shadow-xl {toastType === 'ok' ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-red-500/30 bg-red-500/10 text-red-400'}">
+		<div class="flex items-center gap-2 text-[12px]">
+			<MessageSquare size={14} />
+			<span>{toastMsg}</span>
+		</div>
+	</div>
+{/if}
 
 <!-- Confirm Dialog -->
 {#if confirmDialog.open}
@@ -253,14 +277,17 @@
 				<div class="grid grid-cols-3 gap-3">
 					<div>
 						<label class="mb-1 block text-[11px] text-text-muted">连接方式</label>
-						<select bind:value={modal.host.driver} class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none">
-							<option value="ssh">SSH</option>
+						<select bind:value={modal.host.driver} onchange={(e) => { if ((e.target as HTMLSelectElement).value === 'socket' && !modal.host.endpoint) modal.host.endpoint = '/var/run/docker.sock'; }}
+							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none">
 							<option value="socket">Socket</option>
+							<option value="ssh">SSH</option>
 						</select>
 					</div>
 					<div class="col-span-2">
 						<label class="mb-1 block text-[11px] text-text-muted">{modal.host.driver === 'ssh' ? 'user@host:port' : '/var/run/docker.sock'}</label>
-						<input type="text" bind:value={modal.host.endpoint} placeholder={modal.host.driver === 'ssh' ? 'root@192.168.1.100:22' : '/var/run/docker.sock'} class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+						<input type="text" bind:value={modal.host.endpoint}
+							placeholder={modal.host.driver === 'ssh' ? 'root@192.168.1.100:22' : '/var/run/docker.sock'}
+							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 					</div>
 				</div>
 				{#if modal.host.driver === 'ssh'}
@@ -286,9 +313,18 @@
 							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制公钥" onclick={() => copyText(modal.host.sshPubKey || '', 'pub')} disabled={!modal.host.sshPubKey}>
 								{#if copied['pub']}<Check size={10} class="text-green-400" />已复制{:else}<Copy size={10} />公钥{/if}
 							</button>
-							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制推送命令" onclick={() => copyText(getCopyCmd(), 'cmd')} disabled={!modal.host.sshPubKey || !modal.host.endpoint}>
-								{#if copied['cmd']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal size={10} />推送命令{/if}
+							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制公钥设置命令" onclick={() => copyText(getCopyCmd(), 'cmd')} disabled={!modal.host.sshPubKey || !modal.host.endpoint}>
+								{#if copied['cmd']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal size={10} />公钥设置命令{/if}
 							</button>
+						</div>
+						<div class="mt-2 rounded border border-blue-500/20 bg-blue-500/5 p-2">
+							<p class="text-[10px] text-blue-400 font-medium mb-1">Podman 兼容</p>
+							<div class="flex items-center gap-1 rounded bg-black/30 px-2 py-1 font-mono text-[10px] text-text-secondary">
+								<span class="flex-1 truncate">systemctl enable --now podman.socket</span>
+								<button type="button" class="shrink-0 text-text-muted hover:text-text-primary" onclick={() => copyText('systemctl enable --now podman.socket', 'podman')}>
+									{#if copied['podman']}<Check size={10} class="text-green-400" />{:else}<Copy size={10} />{/if}
+								</button>
+							</div>
 						</div>
 					</div>
 				{/if}
@@ -320,11 +356,11 @@
 			</div>
 			<div class="flex items-center justify-between border-t border-border-secondary px-4 py-3">
 				<div>
-					<Button variant="ghost" size="sm" onclick={() => testHost(modal.host.id)} disabled={testLoading || !modal.host.endpoint}>
-						{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug size={12} class="mr-1" />{/if}测试连接
+					<Button variant="ghost" size="sm" onclick={saveAndTest} disabled={testLoading || !modal.host.name || !modal.host.endpoint}>
+						{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug size={12} class="mr-1" />{/if}保存并测试
 					</Button>
 					{#if testResult && testResult.hostId === modal.host.id}
-						<span class="ml-2 text-[11px] {testResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}">{testResult.message}</span>
+						<span class="ml-2 text-[11px] {testResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}">{testResult.status === 'ok' ? '连接成功' : '连接失败'}</span>
 					{/if}
 				</div>
 				<div class="flex items-center gap-2">
