@@ -16,7 +16,9 @@ import {
 	Download,
 	Info,
 	Pin,
-	PinOff
+	PinOff,
+	RefreshCw,
+	FileText
 } from 'lucide-svelte';
 
 export type FileContextAction =
@@ -30,7 +32,9 @@ export type FileContextAction =
 	| 'rename'
 	| 'delete'
 	| 'download'
-	| 'properties';
+	| 'properties'
+	| 'refresh'
+	| 'open-with-notepad';
 
 export interface FileContextMenuOptions {
 	/** Selected items for the context menu */
@@ -49,6 +53,13 @@ export interface FileContextMenuOptions {
  * Get context menu items for file operations
  * Configures disabled states based on selection
  */
+/** Max file size for text viewer: 2MB */
+const MAX_NOTEPAD_SIZE = 2 * 1024 * 1024;
+
+function canOpenAsText(file: FileInfo): boolean {
+	return !file.isDir && file.size <= MAX_NOTEPAD_SIZE;
+}
+
 export function getFileContextMenuItems(options: FileContextMenuOptions): ContextMenuItem[] {
 	const {
 		items,
@@ -61,6 +72,7 @@ export function getFileContextMenuItems(options: FileContextMenuOptions): Contex
 	const hasMultiple = items.length > 1;
 	const hasFolder = items.some((i) => i.isDir);
 	const singleFolder = !hasMultiple && items[0]?.isDir ? items[0] : null;
+	const singleFile = !hasMultiple && items.length === 1 && !items[0].isDir ? items[0] : null;
 	const isFavorite = singleFolder ? favoritePaths.has(singleFolder.path) : false;
 	const createItems: ContextMenuItem[] = includeCreateActions
 		? [
@@ -73,7 +85,9 @@ export function getFileContextMenuItems(options: FileContextMenuOptions): Contex
 	if (!hasSelection) {
 		return [
 			...createItems,
-			{ id: 'paste', label: 'Paste', icon: ClipboardPaste, shortcut: 'Ctrl+V', disabled: !canPaste }
+			{ id: 'paste', label: 'Paste', icon: ClipboardPaste, shortcut: 'Ctrl+V', disabled: !canPaste },
+			{ id: 'separator-refresh', label: '', separator: true },
+			{ id: 'refresh', label: 'Refresh', icon: RefreshCw, shortcut: 'F5' }
 		];
 	}
 
@@ -96,6 +110,11 @@ export function getFileContextMenuItems(options: FileContextMenuOptions): Contex
 		{ id: 'delete', label: 'Delete', icon: Trash2, shortcut: 'Del' },
 		{ id: 'separator-2', label: '', separator: true },
 		{ id: 'download', label: 'Download', icon: Download, disabled: hasFolder },
-		{ id: 'properties', label: 'Properties', icon: Info, disabled: hasMultiple }
+		...(singleFile && canOpenAsText(items[0])
+			? [{ id: 'open-with-notepad', label: 'Open with Notepad', icon: FileText }]
+			: []),
+		{ id: 'properties', label: 'Properties', icon: Info, disabled: hasMultiple },
+		{ id: 'separator-refresh', label: '', separator: true },
+		{ id: 'refresh', label: 'Refresh', icon: RefreshCw, shortcut: 'F5' }
 	];
 }

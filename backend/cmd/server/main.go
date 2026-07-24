@@ -259,21 +259,28 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 						mountPoints = append(mountPoints, mp)
 					}
 				}
-				// Remote hosts need Docker exec for file access
-				if host.Driver == "ssh" || host.Driver == "tcp" {
-					fileHandler.SetRemoteHost(id)
-					streamHandler.SetRemoteHost(id)
+				// Create HostFileAccess for this host
+				var access service.HostFileAccess
+				switch host.Driver {
+				case "ssh":
 					if svc, ok := dockerHandler.Services()[id]; ok {
-						fileHandler.SetDockerService(id, svc)
-						streamHandler.SetDockerService(id, svc)
+						access = service.NewSSHFileAccess(svc)
 					}
-					// Set host mount points for path resolution
-					mounts := make(map[string]string)
-					for name, mp := range host.MountPoints {
-						mounts[name] = mp.Path
-					}
-					streamHandler.SetHostMountPoints(id, mounts)
+				case "tcp", "socket":
+					access = service.NewSocketFileAccess()
 				}
+				if access != nil {
+					fileHandler.SetHostAccess(id, access)
+					streamHandler.SetHostAccess(id, access)
+					jobHandler.SetHostAccess(id, access)
+				}
+				// Set host mount points for path resolution
+				mounts := make(map[string]string)
+				for name, mp := range host.MountPoints {
+					mounts[name] = mp.Path
+				}
+				streamHandler.SetHostMountPoints(id, mounts)
+				jobHandler.SetHostMountPoints(id, mounts)
 			}
 		}
 

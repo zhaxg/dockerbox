@@ -284,6 +284,10 @@ export async function getFileContent(path: string, hostId?: string): Promise<str
 		if (!response.ok) {
 			throw new Error(`Failed to fetch file: ${response.statusText}`);
 		}
+		// Stream endpoints return raw file content, not JSON
+		if (path.includes('/stream/')) {
+			return response.text();
+		}
 		const data = await response.json();
 		return data.content || '';
 	}

@@ -23,7 +23,7 @@ cd backend
 ~/go/bin/air
 ```
 
-Air 监听 `cmd/` 和 `internal/` 下 `.go` 文件，改动后自动编译重启。默认 `BOXBOX_DEV_MODE=true`，不嵌入前端，只跑 API（`localhost:8080`）。
+Air 监听 `cmd/` 和 `internal/` 下 `.go` 文件，改动后自动编译重启。默认 `BOXBOX_DEV_MODE=true`，不嵌入前端，只跑 API（`localhost:8081`）。
 
 **终端 2 — 前端（Vite 热重载）**
 
@@ -33,7 +33,7 @@ npm install
 npm run dev
 ```
 
-Vite dev server 跑在 `http://localhost:5173`，自动代理 `/api` 和 `/ws` 到后端。
+Vite dev server 跑在 `http://localhost:8080`，自动代理 `/api` 和 `/ws` 到后端 `localhost:8081`。
 
 ## 发布构建
 
@@ -55,7 +55,7 @@ cd ../backend && go build -o boxbox ./cmd/server
 
 ```yaml
 dev_mode: true     # 开发模式，跳过前端嵌入
-port: 8080
+port: 8081
 users:
   admin: admin123
 ```

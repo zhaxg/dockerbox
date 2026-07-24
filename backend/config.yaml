@@ -1,7 +1,8 @@
 allowed_origins: []
 chunk_size_mb: 5
+dev_mode: false
 dockerhosts:
-    default: host-nas
+    default: host-mrymssal
     hosts:
         host-mrymssal:
             driver: socket
@@ -68,4 +69,3 @@ port: 8081
 rate_limit_rps: 10
 users:
     admin: admin123
-dev_mode: false

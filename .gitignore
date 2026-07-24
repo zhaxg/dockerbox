@@ -53,3 +53,7 @@ boxbox-linux
 backend/internal/static/dist/
 .playwright-mcp/
 backend/boxbox
+
+# Build output
+backend/server
+*.tmp

@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
@@ -11,14 +12,61 @@ import (
 
 // JobHandler handles job-related HTTP requests
 type JobHandler struct {
-	jobService service.JobService
+	jobService      service.JobService
+	hostAccess      map[string]service.HostFileAccess
+	hostMountPoints map[string]map[string]string // hostID -> mountName -> hostPath
 }
 
 // NewJobHandler creates a new job handler
 func NewJobHandler(jobService service.JobService) *JobHandler {
 	return &JobHandler{
-		jobService: jobService,
+		jobService:      jobService,
+		hostAccess:      make(map[string]service.HostFileAccess),
+		hostMountPoints: make(map[string]map[string]string),
 	}
+}
+
+// SetHostAccess registers a HostFileAccess implementation for a host ID.
+func (h *JobHandler) SetHostAccess(hostID string, access service.HostFileAccess) {
+	h.hostAccess[hostID] = access
+}
+
+// SetHostMountPoints sets mount point paths for a host.
+func (h *JobHandler) SetHostMountPoints(hostID string, mounts map[string]string) {
+	h.hostMountPoints[hostID] = mounts
+}
+
+func (h *JobHandler) getHostAccess(r *http.Request) service.HostFileAccess {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID != "" {
+		if access, ok := h.hostAccess[hostID]; ok {
+			return access
+		}
+	}
+	return nil
+}
+
+func (h *JobHandler) resolvePath(r *http.Request, boxPath string) string {
+	hostID := r.Header.Get("X-Host-ID")
+	parts := strings.SplitN(boxPath, "/", 2)
+	mountName := parts[0]
+	subPath := ""
+	if len(parts) > 1 {
+		subPath = parts[1]
+	}
+	if mounts, ok := h.hostMountPoints[hostID]; ok {
+		if hostPath, ok := mounts[mountName]; ok {
+			if subPath != "" {
+				return hostPath + "/" + subPath
+			}
+			return hostPath
+		}
+	}
+	return "/" + boxPath
+}
+
+func (h *JobHandler) getHostID(r *http.Request) string {
+	return r.Header.Get("X-Host-ID")
 }
 
 // RegisterRoutes registers job routes on the given router
@@ -55,9 +103,7 @@ type JobListResponse struct {
 	Jobs []JobResponse `json:"jobs"`
 }
 
-
 // List returns all jobs
-// GET /api/v1/jobs
 func (h *JobHandler) List(w http.ResponseWriter, r *http.Request) {
 	jobs, err := h.jobService.List(r.Context())
 	if err != nil {
@@ -77,7 +123,6 @@ func (h *JobHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get returns a job by ID
-// GET /api/v1/jobs/:id
 func (h *JobHandler) Get(w http.ResponseWriter, r *http.Request) {
 	jobID := chi.URLParam(r, "id")
 	if jobID == "" {
@@ -95,7 +140,6 @@ func (h *JobHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // Create creates a new job
-// POST /api/v1/jobs
 func (h *JobHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateJobRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -103,33 +147,66 @@ func (h *JobHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate job type
 	jobType := model.JobType(req.Type)
 	if !jobType.IsValid() {
 		writeError(w, "Invalid job type. Must be 'copy', 'move', or 'delete'", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
 
-	// Validate source path
 	if req.SourcePath == "" {
 		writeError(w, "Source path is required", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
 
-	// Validate destination path for copy and move
 	if (jobType == model.JobTypeCopy || jobType == model.JobTypeMove) && req.DestPath == "" {
 		writeError(w, "Destination path is required for copy and move operations", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
 
-	// Create job params
+	// Remote/socket host: execute synchronously via HostFileAccess
+	if access := h.getHostAccess(r); access != nil {
+		job := &model.Job{
+			Type:       jobType,
+			State:      model.JobStateRunning,
+			SourcePath: req.SourcePath,
+			DestPath:   req.DestPath,
+		}
+
+		srcPath := h.resolvePath(r, req.SourcePath)
+		var dstPath string
+		if req.DestPath != "" {
+			dstPath = h.resolvePath(r, req.DestPath)
+		}
+
+		var execErr error
+		switch jobType {
+		case model.JobTypeCopy:
+			execErr = h.remoteCopy(access, r, srcPath, dstPath)
+		case model.JobTypeMove:
+			execErr = h.remoteMove(access, r, srcPath, dstPath)
+		case model.JobTypeDelete:
+			execErr = access.Remove(r.Context(), srcPath)
+		}
+
+		if execErr != nil {
+			job.State = model.JobStateFailed
+			job.Error = execErr.Error()
+		} else {
+			job.State = model.JobStateCompleted
+			job.Progress = 100
+		}
+
+		writeJSON(w, h.toJobResponse(job), http.StatusAccepted)
+		return
+	}
+
+	// Local: queue as background job
 	params := model.JobParams{
 		Type:       jobType,
 		SourcePath: req.SourcePath,
 		DestPath:   req.DestPath,
 	}
 
-	// Create job
 	job, err := h.jobService.Create(r.Context(), params)
 	if err != nil {
 		HandleServiceError(w, err)
@@ -140,7 +217,6 @@ func (h *JobHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Cancel cancels a running job
-// DELETE /api/v1/jobs/:id
 func (h *JobHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	jobID := chi.URLParam(r, "id")
 	if jobID == "" {
@@ -154,6 +230,31 @@ func (h *JobHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]string{"message": "Job cancelled successfully"}, http.StatusOK)
+}
+
+// remoteCopy copies a file via HostFileAccess
+func (h *JobHandler) remoteCopy(access service.HostFileAccess, r *http.Request, src, dst string) error {
+	data, err := access.Read(r.Context(), src)
+	if err != nil {
+		return err
+	}
+	return access.Write(r.Context(), dst, data)
+}
+
+// remoteMove moves a file via HostFileAccess (rename or copy+delete)
+func (h *JobHandler) remoteMove(access service.HostFileAccess, r *http.Request, src, dst string) error {
+	if err := access.Rename(r.Context(), src, dst); err != nil {
+		// Fallback: copy + delete
+		data, readErr := access.Read(r.Context(), src)
+		if readErr != nil {
+			return readErr
+		}
+		if writeErr := access.Write(r.Context(), dst, data); writeErr != nil {
+			return writeErr
+		}
+		return access.Remove(r.Context(), src)
+	}
+	return nil
 }
 
 // toJobResponse converts a model.Job to JobResponse
@@ -179,5 +280,3 @@ func (h *JobHandler) toJobResponse(job *model.Job) JobResponse {
 
 	return resp
 }
-
-

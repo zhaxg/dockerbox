@@ -29,13 +29,12 @@ var errUploadTooLarge = errors.New("upload too large")
 
 // StreamHandler handles streaming upload and download operations
 type StreamHandler struct {
-	fileService      service.FileService
-	uploadManager    *UploadManager
-	chunkSizeMB      int
-	maxUploadBytes   int64
-	services         map[string]*service.DockerService
-	remoteHosts      map[string]bool
-	hostMountPoints  map[string]map[string]string // hostID -> mountName -> hostPath
+	fileService     service.FileService
+	uploadManager   *UploadManager
+	chunkSizeMB     int
+	maxUploadBytes  int64
+	hostAccess      map[string]service.HostFileAccess
+	hostMountPoints map[string]map[string]string // hostID -> mountName -> hostPath
 }
 
 // NewStreamHandler creates a new stream handler
@@ -51,9 +50,8 @@ func NewStreamHandler(fileService service.FileService, chunkSizeMB int, maxUploa
 		uploadManager:   NewUploadManager(config.DefaultUploadTempDir),
 		chunkSizeMB:     chunkSizeMB,
 		maxUploadBytes: int64(maxUploadMB) * 1024 * 1024,
-		services:         make(map[string]*service.DockerService),
-		remoteHosts:      make(map[string]bool),
-		hostMountPoints:  make(map[string]map[string]string),
+		hostAccess:      make(map[string]service.HostFileAccess),
+		hostMountPoints: make(map[string]map[string]string),
 	}
 }
 
@@ -75,14 +73,9 @@ func (h *StreamHandler) StopCleanup() {
 	h.uploadManager.StopCleanup()
 }
 
-// SetDockerService registers a DockerService for a host ID.
-func (h *StreamHandler) SetDockerService(hostID string, svc *service.DockerService) {
-	h.services[hostID] = svc
-}
-
-// SetRemoteHost marks a host as remote.
-func (h *StreamHandler) SetRemoteHost(hostID string) {
-	h.remoteHosts[hostID] = true
+// SetHostAccess registers a HostFileAccess implementation for a host ID.
+func (h *StreamHandler) SetHostAccess(hostID string, access service.HostFileAccess) {
+	h.hostAccess[hostID] = access
 }
 
 // SetHostMountPoints sets mount point paths for a host.
@@ -112,30 +105,19 @@ func (h *StreamHandler) resolvePath(r *http.Request, boxPath string) string {
 	return "/" + boxPath
 }
 
-func (h *StreamHandler) isRemoteHost(r *http.Request) bool {
-	hostID := r.Header.Get("X-Host-ID")
-	if hostID == "" {
-		hostID = r.URL.Query().Get("host")
-	}
-	if hostID == "" {
-		return false
-	}
-	result := h.remoteHosts[hostID]
-	return result
-}
-
-func (h *StreamHandler) getDockerService(r *http.Request) *service.DockerService {
+func (h *StreamHandler) getHostAccess(r *http.Request) service.HostFileAccess {
 	hostID := r.Header.Get("X-Host-ID")
 	if hostID == "" {
 		hostID = r.URL.Query().Get("host")
 	}
 	if hostID != "" {
-		if svc, ok := h.services[hostID]; ok {
-			return svc
+		if access, ok := h.hostAccess[hostID]; ok {
+			return access
 		}
 	}
 	return nil
 }
+
 
 // Download handles file download requests with Range header support
 // GET /api/v1/stream/download/*path
@@ -145,10 +127,10 @@ func (h *StreamHandler) Download(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Path is required", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
-	log.Printf("Download: path=%s remote=%v hostID=%s", path, h.isRemoteHost(r), r.Header.Get("X-Host-ID"))
+	log.Printf("Download: path=%s remote=%v hostID=%s", path, h.getHostAccess(r) != nil, r.Header.Get("X-Host-ID"))
 
-	if h.isRemoteHost(r) {
-		h.serveRemoteFile(w, r, path, "attachment")
+	if access := h.getHostAccess(r); access != nil {
+		h.serveRemoteFile(w, r, path, "attachment", access)
 		return
 	}
 
@@ -175,8 +157,8 @@ func (h *StreamHandler) Preview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.isRemoteHost(r) {
-		h.serveRemoteFile(w, r, path, "inline")
+	if access := h.getHostAccess(r); access != nil {
+		h.serveRemoteFile(w, r, path, "inline", access)
 		return
 	}
 
@@ -199,18 +181,8 @@ func (h *StreamHandler) Preview(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, info.Name, info.ModTime, file)
 }
 
-// serveRemoteFile reads a file from a remote host via SFTP and serves it.
-func (h *StreamHandler) serveRemoteFile(w http.ResponseWriter, r *http.Request, boxPath string, disposition string) {
-	hostID := r.Header.Get("X-Host-ID")
-	if hostID == "" {
-		hostID = r.URL.Query().Get("host")
-	}
-	docker := h.getDockerService(r)
-	if docker == nil {
-		writeError(w, "No Docker service for host: "+hostID, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
+// serveRemoteFile reads a file from a remote host and serves it.
+func (h *StreamHandler) serveRemoteFile(w http.ResponseWriter, r *http.Request, boxPath string, disposition string, access service.HostFileAccess) {
 	hostPath := h.resolvePath(r, boxPath)
 
 	name := boxPath
@@ -219,14 +191,14 @@ func (h *StreamHandler) serveRemoteFile(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Get file size for Content-Length and Range support
-	fileSize, err := docker.GetFileSizeViaSFTP(r.Context(), hostPath)
+	fileSize, err := access.GetSize(r.Context(), hostPath)
 	if err != nil {
 		HandleServiceError(w, err)
 		return
 	}
 
 	// Detect MIME type by reading a small sample
-	sample, _ := docker.ReadFileRangeViaSFTP(r.Context(), hostPath, 0, 512)
+	sample, _ := access.ReadRange(r.Context(), hostPath, 0, 512)
 	mimeType := detectStreamMimeType(bytes.NewReader(sample), name)
 
 	w.Header().Set("Content-Type", mimeType)
@@ -260,7 +232,7 @@ func (h *StreamHandler) serveRemoteFile(w http.ResponseWriter, r *http.Request, 
 				end = fileSize - 1
 			}
 			length := end - start + 1
-			data, err := docker.ReadFileRangeViaSFTP(r.Context(), hostPath, start, length)
+			data, err := access.ReadRange(r.Context(), hostPath, start, length)
 			if err != nil {
 				HandleServiceError(w, err)
 				return
@@ -275,7 +247,7 @@ func (h *StreamHandler) serveRemoteFile(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Full file (no Range)
-	data, err := docker.ReadFileViaDocker(r.Context(), hostPath)
+	data, err := access.Read(r.Context(), hostPath)
 	if err != nil {
 		HandleServiceError(w, err)
 		return
@@ -512,15 +484,22 @@ func (h *StreamHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate path and check write permissions
-	mount, fsPath, err := h.fileService.ResolvePath(path)
-	if err != nil {
-		HandleServiceError(w, err)
-		return
-	}
-
-	if mount.ReadOnly {
-		writeError(w, "Mount point is read-only", model.ErrCodeReadOnly, http.StatusForbidden)
-		return
+	var fsPath string
+	remote := h.getHostAccess(r) != nil
+	if remote {
+		// Remote host: resolve via hostMountPoints
+		fsPath = h.resolvePath(r, path)
+	} else {
+		mount, resolvedPath, err := h.fileService.ResolvePath(path)
+		if err != nil {
+			HandleServiceError(w, err)
+			return
+		}
+		if mount.ReadOnly {
+			writeError(w, "Mount point is read-only", model.ErrCodeReadOnly, http.StatusForbidden)
+			return
+		}
+		fsPath = resolvedPath
 	}
 
 	// Get or create upload session
@@ -592,16 +571,49 @@ func (h *StreamHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	// Check if upload is complete
 	if session.IsComplete() {
-		// Assemble chunks into final file
-		err = h.assembleChunks(session, fsPath, uploadReq.Checksum)
-		if err != nil {
-			h.uploadManager.DeleteSession(session.ID)
-			if strings.Contains(err.Error(), "checksum") {
-				writeError(w, err.Error(), model.ErrCodeChecksumMismatch, http.StatusUnprocessableEntity)
-			} else {
-				writeError(w, "Failed to assemble file: "+err.Error(), model.ErrCodeInternalError, http.StatusInternalServerError)
+		if remote {
+			// Remote host: assemble to local temp, then upload via SFTP
+			localTemp := filepath.Join(session.TempDir, "assembled."+path[strings.LastIndex(path, "/")+1:])
+			err = h.assembleChunks(session, localTemp, uploadReq.Checksum)
+			if err != nil {
+				h.uploadManager.DeleteSession(session.ID)
+				if strings.Contains(err.Error(), "checksum") {
+					writeError(w, err.Error(), model.ErrCodeChecksumMismatch, http.StatusUnprocessableEntity)
+				} else {
+					writeError(w, "Failed to assemble file: "+err.Error(), model.ErrCodeInternalError, http.StatusInternalServerError)
+				}
+				return
 			}
-			return
+			data, readErr := os.ReadFile(localTemp)
+			_ = os.Remove(localTemp)
+			if readErr != nil {
+				h.uploadManager.DeleteSession(session.ID)
+				writeError(w, "Failed to read assembled file: "+readErr.Error(), model.ErrCodeInternalError, http.StatusInternalServerError)
+				return
+			}
+			access := h.getHostAccess(r)
+			if access == nil {
+				h.uploadManager.DeleteSession(session.ID)
+				writeError(w, "No file access for remote host", model.ErrCodeInternalError, http.StatusInternalServerError)
+				return
+			}
+			if err := access.Write(r.Context(), fsPath, data); err != nil {
+				h.uploadManager.DeleteSession(session.ID)
+				writeError(w, "Failed to upload to remote: "+err.Error(), model.ErrCodeInternalError, http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// Local: assemble chunks into final file
+			err = h.assembleChunks(session, fsPath, uploadReq.Checksum)
+			if err != nil {
+				h.uploadManager.DeleteSession(session.ID)
+				if strings.Contains(err.Error(), "checksum") {
+					writeError(w, err.Error(), model.ErrCodeChecksumMismatch, http.StatusUnprocessableEntity)
+				} else {
+					writeError(w, "Failed to assemble file: "+err.Error(), model.ErrCodeInternalError, http.StatusInternalServerError)
+				}
+				return
+			}
 		}
 
 		// Clean up session

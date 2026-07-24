@@ -49,6 +49,10 @@
 		try {
 			hostsConfig = await hostsApi.list().catch(() => ({ default: '', hosts: {} }));
 			if (!hostsConfig.hosts) hostsConfig.hosts = {};
+			// Ensure currentHostId is set in localStorage
+			if (!localStorage.getItem('currentHostId') && hostsConfig.default) {
+				localStorage.setItem('currentHostId', hostsConfig.default);
+			}
 			updateMountPoints();
 		} catch (e) {
 			console.error('Failed to load data:', e);

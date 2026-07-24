@@ -425,6 +425,17 @@
 					};
 				}
 				break;
+
+			case 'refresh':
+				directoryQuery.refetch();
+				toastStore.success('Refreshed');
+				break;
+
+			case 'open-with-notepad':
+				if (items.length === 1 && !items[0].isDir) {
+					previewFile = items[0];
+				}
+				break;
 		}
 	}
 

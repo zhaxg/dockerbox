@@ -188,6 +188,14 @@ async function uploadChunk(
 		headers['Authorization'] = `Bearer ${token}`;
 	}
 
+	// Add host ID for remote host routing
+	if (typeof window !== 'undefined') {
+		const hostId = localStorage.getItem('currentHostId');
+		if (hostId) {
+			headers['X-Host-ID'] = hostId;
+		}
+	}
+
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
 		const abortHandler = () => {

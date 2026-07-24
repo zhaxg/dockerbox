@@ -15,21 +15,18 @@ import (
 
 // FileHandler handles file-related HTTP requests
 type FileHandler struct {
-	fileService      service.FileService
-	dockerService    *service.DockerService // for remote host file access
-	hostMountPoints  map[string][]model.MountPoint
-	defaultHostID    string
-	services         map[string]*service.DockerService // host ID → docker service
-	remoteHosts      map[string]bool // host ID → is remote
+	fileService     service.FileService
+	hostAccess      map[string]service.HostFileAccess // host ID → file access impl
+	hostMountPoints map[string][]model.MountPoint
+	defaultHostID   string
 }
 
 // NewFileHandler creates a new file handler
 func NewFileHandler(fileService service.FileService) *FileHandler {
 	return &FileHandler{
 		fileService:     fileService,
+		hostAccess:      make(map[string]service.HostFileAccess),
 		hostMountPoints: make(map[string][]model.MountPoint),
-		services:        make(map[string]*service.DockerService),
-		remoteHosts:     make(map[string]bool),
 	}
 }
 
@@ -38,14 +35,9 @@ func (h *FileHandler) SetMountPoints(hostID string, mps []model.MountPoint) {
 	h.hostMountPoints[hostID] = mps
 }
 
-// SetRemoteHost marks a host as remote (needs Docker exec for file access).
-func (h *FileHandler) SetRemoteHost(hostID string) {
-	h.remoteHosts[hostID] = true
-}
-
-// SetDockerService registers a DockerService for a host ID.
-func (h *FileHandler) SetDockerService(hostID string, svc *service.DockerService) {
-	h.services[hostID] = svc
+// SetHostAccess registers a HostFileAccess implementation for a host ID.
+func (h *FileHandler) SetHostAccess(hostID string, access service.HostFileAccess) {
+	h.hostAccess[hostID] = access
 }
 
 // SetDefaultHost sets the default host ID.
@@ -69,29 +61,20 @@ func (h *FileHandler) getMountPoints(r *http.Request) []model.MountPoint {
 	return h.fileService.ListMountPoints()
 }
 
-// getDockerService returns the DockerService for the current request's host.
-func (h *FileHandler) getDockerService(r *http.Request) *service.DockerService {
+// getHostAccess returns the HostFileAccess for the current request's host, or nil for local.
+func (h *FileHandler) getHostAccess(r *http.Request) service.HostFileAccess {
 	hostID := r.Header.Get("X-Host-ID")
 	if hostID != "" {
-		if svc, ok := h.services[hostID]; ok {
-			return svc
+		if access, ok := h.hostAccess[hostID]; ok {
+			return access
 		}
 	}
 	if h.defaultHostID != "" {
-		if svc, ok := h.services[h.defaultHostID]; ok {
-			return svc
+		if access, ok := h.hostAccess[h.defaultHostID]; ok {
+			return access
 		}
 	}
-	return h.dockerService
-}
-
-// isRemoteHost checks if the current request targets a remote host.
-func (h *FileHandler) isRemoteHost(r *http.Request) bool {
-	hostID := r.Header.Get("X-Host-ID")
-	if hostID == "" {
-		hostID = h.defaultHostID
-	}
-	return h.remoteHosts[hostID]
+	return nil
 }
 
 // resolvePath resolves a BoxBox browse path to the actual host filesystem path.
@@ -192,9 +175,9 @@ func (h *FileHandler) GetPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Remote host: use Docker exec
-	if h.isRemoteHost(r) {
-		h.getPathRemote(w, r, path)
+	// Remote/socket host: use HostFileAccess
+	if access := h.getHostAccess(r); access != nil {
+		h.getPathRemote(w, r, path, access)
 		return
 	}
 
@@ -217,31 +200,22 @@ func (h *FileHandler) GetPath(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// getPathRemote handles file listing for remote hosts via Docker exec.
-func (h *FileHandler) getPathRemote(w http.ResponseWriter, r *http.Request, boxPath string) {
-	docker := h.getDockerService(r)
-	if docker == nil {
-		writeError(w, "No Docker service for this host", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
+// getPathRemote handles file listing for remote hosts via HostFileAccess.
+func (h *FileHandler) getPathRemote(w http.ResponseWriter, r *http.Request, boxPath string, access service.HostFileAccess) {
 	hostPath := h.ResolvePath(r, boxPath)
 
-	// Check if it's a file or directory
-	fileInfo, err := docker.GetFileInfoViaDocker(r.Context(), hostPath)
+	fileInfo, err := access.GetInfo(r.Context(), hostPath)
 	if err != nil {
 		HandleServiceError(w, err)
 		return
 	}
 
 	if fileInfo.IsDir {
-		// List directory contents
-		files, err := docker.ListFilesViaDocker(r.Context(), hostPath)
+		files, err := access.List(r.Context(), hostPath)
 		if err != nil {
 			HandleServiceError(w, err)
 			return
 		}
-		// Set paths relative to browse path
 		for i := range files {
 			files[i].Path = boxPath + "/" + files[i].Name
 		}
@@ -288,6 +262,35 @@ func (h *FileHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		fullPath = fullPath + "/" + req.Name
 	} else {
 		fullPath = req.Name
+	}
+
+	// Remote/socket host: use HostFileAccess
+	if access := h.getHostAccess(r); access != nil {
+		hostPath := h.ResolvePath(r, fullPath)
+		switch itemType {
+		case "directory", "folder":
+			if err := access.Mkdir(r.Context(), hostPath); err != nil {
+				HandleServiceError(w, err)
+				return
+			}
+		case "file":
+			content := []byte(req.Content)
+			if err := access.Write(r.Context(), hostPath, content); err != nil {
+				HandleServiceError(w, err)
+				return
+			}
+		default:
+			writeError(w, "Type must be file or directory", model.ErrCodeValidationError, http.StatusBadRequest)
+			return
+		}
+		info, infoErr := access.GetInfo(r.Context(), hostPath)
+		if infoErr != nil {
+			writeJSON(w, map[string]string{"message": "Created successfully"}, http.StatusCreated)
+			return
+		}
+		info.Path = fullPath
+		writeJSON(w, info, http.StatusCreated)
+		return
 	}
 
 	switch itemType {
@@ -349,6 +352,23 @@ func (h *FileHandler) SaveFileContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Remote/socket host: use HostFileAccess
+	if access := h.getHostAccess(r); access != nil {
+		hostPath := h.ResolvePath(r, path)
+		if err := access.Write(r.Context(), hostPath, []byte(req.Content)); err != nil {
+			HandleServiceError(w, err)
+			return
+		}
+		info, err := access.GetInfo(r.Context(), hostPath)
+		if err != nil {
+			writeJSON(w, &model.FileInfo{Name: path[strings.LastIndex(path, "/")+1:], Path: path, Size: int64(len(req.Content))}, http.StatusOK)
+			return
+		}
+		info.Path = path
+		writeJSON(w, info, http.StatusOK)
+		return
+	}
+
 	if err := h.fileService.WriteFile(r.Context(), path, []byte(req.Content)); err != nil {
 		HandleServiceError(w, err)
 		return
@@ -384,6 +404,24 @@ func (h *FileHandler) Rename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Remote/socket host: use HostFileAccess
+	if access := h.getHostAccess(r); access != nil {
+		oldHostPath := h.ResolvePath(r, oldPath)
+		newHostPath := h.ResolvePath(r, req.NewPath)
+		if err := access.Rename(r.Context(), oldHostPath, newHostPath); err != nil {
+			HandleServiceError(w, err)
+			return
+		}
+		info, infoErr := access.GetInfo(r.Context(), newHostPath)
+		if infoErr != nil {
+			writeJSON(w, map[string]string{"message": "Renamed successfully"}, http.StatusOK)
+			return
+		}
+		info.Path = req.NewPath
+		writeJSON(w, info, http.StatusOK)
+		return
+	}
+
 	// Perform rename
 	if err := h.fileService.Rename(r.Context(), oldPath, req.NewPath); err != nil {
 		HandleServiceError(w, err)
@@ -406,6 +444,17 @@ func (h *FileHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	path := chi.URLParam(r, "*")
 	if path == "" {
 		writeError(w, "Path is required", model.ErrCodeValidationError, http.StatusBadRequest)
+		return
+	}
+
+	// Remote/socket host: use HostFileAccess
+	if access := h.getHostAccess(r); access != nil {
+		hostPath := h.ResolvePath(r, path)
+		if err := access.Remove(r.Context(), hostPath); err != nil {
+			HandleServiceError(w, err)
+			return
+		}
+		writeJSON(w, map[string]string{"message": "Deleted successfully"}, http.StatusOK)
 		return
 	}
 

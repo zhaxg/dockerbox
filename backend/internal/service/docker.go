@@ -134,6 +134,11 @@ type DockerService struct {
 	sshHost string // user@host:port
 }
 
+// Client returns the underlying Docker API client.
+func (s *DockerService) Client() *client.Client {
+	return s.client
+}
+
 // DockerServiceConfig holds configuration for DockerService.
 type DockerServiceConfig struct {
 	SocketPath string // e.g., /var/run/docker.sock
@@ -1150,6 +1155,91 @@ func (s *DockerService) GetFileSizeViaSFTP(ctx context.Context, hostPath string)
 	}
 	return info.Size(), nil
 }
+
+// WriteFileViaSFTP uploads local data to a remote file via SFTP.
+func (s *DockerService) WriteFileViaSFTP(ctx context.Context, hostPath string, data []byte) error {
+	c, err := s.newSFTPClient()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	// Ensure parent directory exists
+	parent := hostPath[:len(hostPath)-len(hostPath[strings.LastIndex(hostPath, "/"):])]
+	if parent != "" {
+		_ = c.MkdirAll(parent)
+	}
+
+	f, err := c.Create(hostPath)
+	if err != nil {
+		return fmt.Errorf("create %s: %w", hostPath, err)
+	}
+	defer f.Close()
+
+	if _, err := f.Write(data); err != nil {
+		return fmt.Errorf("write %s: %w", hostPath, err)
+	}
+	return nil
+}
+
+// RemoveViaSFTP deletes a file or directory via SFTP.
+func (s *DockerService) RemoveViaSFTP(ctx context.Context, hostPath string) error {
+	c, err := s.newSFTPClient()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	info, err := c.Stat(hostPath)
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", hostPath, err)
+	}
+	if info.IsDir() {
+		return removeDirSFTP(c, hostPath)
+	}
+	return c.Remove(hostPath)
+}
+
+func removeDirSFTP(c *sftp.Client, dir string) error {
+	entries, err := c.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		entryPath := dir + "/" + entry.Name()
+		if entry.IsDir() {
+			if err := removeDirSFTP(c, entryPath); err != nil {
+				return err
+			}
+		} else {
+			if err := c.Remove(entryPath); err != nil {
+				return err
+			}
+		}
+	}
+	return c.Remove(dir)
+}
+
+// RenameViaSFTP renames a file or directory via SFTP.
+func (s *DockerService) RenameViaSFTP(ctx context.Context, oldPath, newPath string) error {
+	c, err := s.newSFTPClient()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	return c.Rename(oldPath, newPath)
+}
+
+// MkdirViaSFTP creates a directory via SFTP.
+func (s *DockerService) MkdirViaSFTP(ctx context.Context, hostPath string) error {
+	c, err := s.newSFTPClient()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	return c.MkdirAll(hostPath)
+}
+
 // GetFileInfoViaDocker gets file info via SFTP.
 func (s *DockerService) GetFileInfoViaDocker(ctx context.Context, hostPath string) (*model.FileInfo, error) {
 	c, err := s.newSFTPClient()

@@ -203,7 +203,7 @@ export function getPreviewType(filename: string): PreviewType {
 		return 'code';
 	}
 
-	if (!ext) return 'unsupported';
+	if (!ext) return 'text';
 
 	if (FILE_EXTENSIONS.archive.includes(ext as (typeof FILE_EXTENSIONS.archive)[number]))
 		return 'unsupported';
