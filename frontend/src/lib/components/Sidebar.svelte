@@ -25,6 +25,7 @@
 	// Navigation items
 	const navItems = [
 		{ name: '概览', path: '/overview', icon: LayoutDashboard },
+		{ name: '主机', path: '/hosts', icon: Server },
 		{ name: '容器', path: '/containers', icon: Container },
 		{ name: 'Compose', path: '/compose', icon: Package },
 		{

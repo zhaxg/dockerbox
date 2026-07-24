@@ -61,6 +61,24 @@ func Load(configPath string) (*model.ServerConfig, error) {
 	return result.Config, nil
 }
 
+// Save persists the current config back to the config file.
+func Save(cfg *model.ServerConfig) error {
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "/app/config.yaml"
+	}
+	v := viper.New()
+	v.SetConfigFile(configPath)
+
+	// Read existing config first to preserve other settings
+	_ = v.ReadInConfig()
+
+	// Set dockerhosts
+	v.Set("dockerhosts", cfg.DockerHosts)
+
+	return v.WriteConfig()
+}
+
 // LoadWithReport reads configuration from file and environment variables,
 // returning deprecated migration inputs that should be surfaced to operators.
 func LoadWithReport(configPath string) (*LoadResult, error) {

@@ -13,6 +13,29 @@ type MountPoint struct {
 	AutoDiscover bool   `json:"autoDiscover" mapstructure:"auto_discover"`
 }
 
+// DockerHostsConfig holds all Docker host configurations.
+type DockerHostsConfig struct {
+	Default string                    `json:"default" mapstructure:"default"` // ID of the default host
+	Hosts   map[string]*DockerHost    `json:"hosts" mapstructure:"hosts"`
+}
+
+// DockerHost represents a remote or local Docker host connection.
+type DockerHost struct {
+	ID          string              `json:"id" mapstructure:"id"`
+	Name        string              `json:"name" mapstructure:"name"`
+	Driver      string              `json:"driver" mapstructure:"driver"`       // tcp | ssh | socket
+	Endpoint    string              `json:"endpoint" mapstructure:"endpoint"`   // e.g. 192.168.1.100:2375, user@192.168.1.100, /var/run/docker.sock
+	SSHKey      string              `json:"sshKey,omitempty" mapstructure:"ssh_key"`
+	Tags        []string            `json:"tags,omitempty" mapstructure:"tags"`
+	MountPoints map[string]*HostMountPoint `json:"mountPoints" mapstructure:"mount_points"`
+}
+
+// HostMountPoint represents a browsable directory on a Docker host.
+type HostMountPoint struct {
+	Path     string `json:"path" mapstructure:"path"`
+	ReadOnly bool   `json:"readOnly" mapstructure:"read_only"`
+}
+
 // ServerConfig contains all server configuration options
 type ServerConfig struct {
 	Port        int          `mapstructure:"port"`
@@ -26,7 +49,8 @@ type ServerConfig struct {
 	// Docker settings
 	DockerHost    string   `mapstructure:"docker_host"`     // e.g. tcp://192.168.1.100:2375
 	DockerSocket  string   `mapstructure:"docker_socket"`   // e.g. /var/run/docker.sock
-	ComposePaths  []string `mapstructure:"compose_paths"`   // directories to scan for compose projects
+	ComposePaths  []string     `mapstructure:"compose_paths"`   // directories to scan for compose projects
+	DockerHosts   *DockerHostsConfig `mapstructure:"dockerhosts"`
 
 	// Security settings
 	Users          map[string]string `mapstructure:"users"`           // username -> password

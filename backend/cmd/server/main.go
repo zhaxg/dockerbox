@@ -186,6 +186,13 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 	settingsHandler := handler.NewSettingsHandler(settingsService)
 	var dockerHandler *handler.DockerHandler
 	var sseHandler *handler.SSEHandler
+	hostHandler := handler.NewHostHandler(
+		func() *model.ServerConfig { return cfg },
+		func(hosts *model.DockerHostsConfig) error {
+			cfg.DockerHosts = hosts
+			return config.Save(cfg)
+		},
+	)
 	if dockerService != nil {
 		composePaths := cfg.ComposePaths
 		if len(composePaths) == 0 {
@@ -198,7 +205,7 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 	}
 
 	// Create router
-	router := createRouter(cfg, authService, authHandler, fileHandler, streamHandler, jobHandler, searchHandler, wsHandler, systemHandler, settingsHandler, dockerHandler, sseHandler, mountPoints)
+	router := createRouter(cfg, authService, authHandler, fileHandler, streamHandler, jobHandler, searchHandler, wsHandler, systemHandler, settingsHandler, dockerHandler, sseHandler, hostHandler, mountPoints)
 
 	// Create HTTP server
 	server := &http.Server{
@@ -226,6 +233,7 @@ func createRouter(
 	settingsHandler *handler.SettingsHandler,
 	dockerHandler *handler.DockerHandler,
 	sseHandler *handler.SSEHandler,
+	hostHandler *handler.HostHandler,
 	mountPoints []model.MountPoint,
 ) chi.Router {
 	r := chi.NewRouter()
@@ -293,6 +301,12 @@ func createRouter(
 			r.Route("/settings", func(r chi.Router) {
 				settingsHandler.RegisterRoutes(r)
 			})
+
+			// Host management
+			r.Route("/hosts", func(r chi.Router) {
+				hostHandler.RegisterRoutes(r)
+			})
+			r.Get("/ssh-instructions", hostHandler.SSHKeyPairInstructions)
 
 			// Docker operations (optional)
 			if dockerHandler != nil {

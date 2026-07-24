@@ -16,7 +16,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-		"github.com/docker/docker/client"
+		"github.com/docker/cli/cli/connhelper"
+	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
 )
@@ -41,6 +42,7 @@ type DockerService struct {
 type DockerServiceConfig struct {
 	SocketPath string // e.g., /var/run/docker.sock
 	Host       string // e.g., tcp://192.168.1.100:2375 (overrides SocketPath)
+	SSHKey     string // path to SSH private key for ssh:// connections
 }
 
 // NewDockerService creates a new Docker service.
@@ -49,9 +51,18 @@ func NewDockerService(cfg DockerServiceConfig) (*DockerService, error) {
 		client.WithAPIVersionNegotiation(),
 	}
 
-	// Use TCP host if provided, otherwise use socket
+	// Use TCP/SSH host if provided, otherwise use socket
 	if cfg.Host != "" {
-		opts = append(opts, client.WithHost(cfg.Host))
+		if strings.HasPrefix(cfg.Host, "ssh://") {
+			// SSH connection via connhelper
+			helper, err := connhelper.GetConnectionHelper(cfg.Host)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create SSH connection helper: %w", err)
+			}
+			opts = append(opts, client.WithHost(helper.Host), client.WithDialContext(helper.Dialer))
+		} else {
+			opts = append(opts, client.WithHost(cfg.Host))
+		}
 	} else if cfg.SocketPath != "" {
 		opts = append(opts, client.WithHost("unix://"+cfg.SocketPath))
 	}
@@ -62,6 +73,15 @@ func NewDockerService(cfg DockerServiceConfig) (*DockerService, error) {
 	}
 
 	return &DockerService{client: c}, nil
+}
+
+// GetDockerInfo returns the Docker server version string.
+func (s *DockerService) GetDockerInfo(ctx context.Context) (string, error) {
+	info, err := s.client.ServerVersion(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get Docker info: %w", err)
+	}
+	return info.Version, nil
 }
 
 // ListContainers returns all containers with their status.
