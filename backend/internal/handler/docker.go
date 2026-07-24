@@ -72,6 +72,7 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 		r.Put("/{id}/file", h.SaveComposeFile)
 		r.Get("/{id}/env", h.GetComposeEnv)
 		r.Put("/{id}/env", h.SaveComposeEnv)
+		r.Delete("/{id}", h.DeleteComposeProject)
 	})
 
 	// Network routes
@@ -658,6 +659,28 @@ func (h *DockerHandler) SaveComposeEnv(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]string{"message": "Env file saved"}, http.StatusOK)
+}
+
+// DeleteComposeProject removes a compose project and its files.
+func (h *DockerHandler) DeleteComposeProject(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
+		return
+	}
+
+	path, err := h.resolveProjectPath(r.Context(), id)
+	if err != nil {
+		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
+		return
+	}
+
+	if err := h.dockerService.DeleteComposeProject(path); err != nil {
+		writeError(w, "Failed to delete project", model.ErrCodeInternalError, http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"message": "Project deleted"}, http.StatusOK)
 }
 
 // ListNetworks returns all Docker networks.

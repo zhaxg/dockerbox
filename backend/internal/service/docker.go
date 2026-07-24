@@ -599,6 +599,11 @@ func (s *DockerService) SaveComposeEnv(projectPath string, content string) error
 	return writeFileContent(projectPath+"/.env", content)
 }
 
+// DeleteComposeProject removes a compose project directory.
+func (s *DockerService) DeleteComposeProject(projectPath string) error {
+	return os.RemoveAll(projectPath)
+}
+
 // CreateExec creates a new exec instance in a container.
 func (s *DockerService) CreateExec(ctx context.Context, containerID string, cmd []string) (string, error) {
 	execConfig := types.ExecConfig{
