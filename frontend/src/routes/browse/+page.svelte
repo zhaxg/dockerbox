@@ -830,6 +830,7 @@
 <Modal
 	open={createDialog.open}
 	title={createDialog.type === 'file' ? 'New File' : 'New Folder'}
+	persistent
 	onclose={closeCreateDialog}
 >
 	<div class="flex flex-col gap-4">
@@ -854,6 +855,7 @@
 <Modal
 	open={renameDialog.open}
 	title="Rename"
+	persistent
 	onclose={() => (renameDialog = { open: false, file: null, newName: '' })}
 >
 	<div class="flex flex-col gap-4">
@@ -879,6 +881,7 @@
 <Modal
 	open={deleteDialog.open}
 	title="Delete"
+	persistent
 	onclose={() => (deleteDialog = { open: false, items: [] })}
 >
 	<div class="flex flex-col gap-3 text-sm text-text-secondary">
@@ -923,6 +926,7 @@
 <Modal
 	open={propertiesDialog.open}
 	title="Properties"
+	persistent
 	onclose={() => (propertiesDialog = { open: false, file: null })}
 >
 	{#if propertiesDialog.file}

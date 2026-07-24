@@ -6,6 +6,7 @@
 		open?: boolean;
 		title?: string;
 		size?: 'md' | 'lg';
+		persistent?: boolean;
 		children: Snippet;
 		headerActions?: Snippet;
 		footer?: Snippet;
@@ -16,6 +17,7 @@
 		open = false,
 		title,
 		size = 'md',
+		persistent = false,
 		children,
 		headerActions,
 		footer,
@@ -25,13 +27,13 @@
 	const widthClass = $derived(size === 'lg' ? 'max-w-3xl' : 'max-w-md');
 
 	function handleBackdropClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) {
+		if (e.target === e.currentTarget && !persistent) {
 			onclose?.();
 		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
+		if (e.key === 'Escape' && !persistent) {
 			onclose?.();
 		}
 	}
