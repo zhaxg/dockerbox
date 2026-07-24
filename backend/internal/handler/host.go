@@ -346,42 +346,31 @@ func (h *HostHandler) SSHPushKey(w http.ResponseWriter, r *http.Request) {
 		req.Port = "22"
 	}
 
-	// Write pubkey to temp file
-	tmpFile, err := os.CreateTemp("", "boxbox-pubkey-*")
-	if err != nil {
-		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("failed to create temp file: %v", err)}, http.StatusOK)
-		return
-	}
-	tmpPath := tmpFile.Name()
-	tmpFile.WriteString(req.PubKey + "\n")
-	tmpFile.Close()
-	defer os.Remove(tmpPath)
-
-	// Use sshpass + ssh-copy-id to push the key
-	// First check if sshpass is available
-	sshpassErr := exec.Command("which", "sshpass").Run()
-	if sshpassErr != nil {
-		// No sshpass, try using ssh directly with expect-like approach
-		// Write password to temp file for sshpass alternative
+	// Check sshpass
+	if exec.Command("which", "sshpass").Run() != nil {
 		writeJSON(w, map[string]interface{}{
 			"status":  "error",
-			"message": "sshpass not installed. Install with: apt install sshpass or brew install hudochenkov/sshpass/sshpass",
+			"message": "sshpass not installed. Install: apt install sshpass",
 		}, http.StatusOK)
 		return
 	}
 
-	addr := req.Host + ":" + req.Port
-	cmd := exec.Command("sshpass", "-p", req.Password, "ssh-copy-id", "-i", tmpPath, "-o", "StrictHostKeyChecking=no", "-p", req.Port, req.User+"@"+req.Host)
+	// Push pubkey via ssh - pipe via stdin to avoid shell escaping
+	cmd := exec.Command("sshpass", "-p", req.Password, "ssh",
+		"-o", "StrictHostKeyChecking=no",
+		"-p", req.Port,
+		req.User+"@"+req.Host,
+		"sh", "-c", "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
+	cmd.Stdin = strings.NewReader(req.PubKey + "\n")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		writeJSON(w, map[string]interface{}{
 			"status":  "error",
-			"message": fmt.Sprintf("ssh-copy-id failed: %s", string(output)),
+			"message": fmt.Sprintf("push failed: %s", string(output)),
 		}, http.StatusOK)
 		return
 	}
 
-	_ = addr
 	writeJSON(w, map[string]interface{}{
 		"status":  "ok",
 		"message": "公钥推送成功",

@@ -13,7 +13,7 @@ dockerhosts:
                     path: /vol1/1000/docker
                     read_only: false
             name: 主NAS
-            ssh_pub_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITEST test@boxbox
+            ssh_pub_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILAKnLi+rGtqHC+Im1lhCfJMTxte4B1TD2DZ+rwVUajH boxbox
 host: 0.0.0.0
 jwt_secret: change-me-in-production-use-a-long-random-string
 max_upload_mb: 10240

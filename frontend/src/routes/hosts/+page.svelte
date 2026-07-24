@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Spinner, Button } from '$lib/components/ui';
 	import { hostsApi, type DockerHost, type DockerHostsConfig, type HostMountPoint } from '$lib/api/hosts';
-	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Server } from 'lucide-svelte';
+	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Server, Terminal } from 'lucide-svelte';
 
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let loading = $state(true);
@@ -12,8 +12,6 @@
 	let testResult = $state<{ hostId: string; status: string; message: string } | null>(null);
 	let testLoading = $state(false);
 	let copied = $state<Record<string, boolean>>({});
-	let pushLoading = $state(false);
-	let pushResult = $state('');
 	let genKeyLoading = $state(false);
 	let hostStats = $state<Record<string, { status: string; total: number; running: number; stopped: number; message?: string }>>({});
 
@@ -281,6 +279,8 @@
 	</div>
 {/if}
 
+
+
 <!-- Add/Edit Modal -->
 {#if modal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -403,11 +403,21 @@
 					</div>
 				</div>
 			</div>
-			<div class="flex items-center justify-end gap-2 border-t border-border-secondary px-4 py-3">
-				<Button variant="secondary" size="sm" onclick={closeModal}>取消</Button>
-				<Button variant="primary" size="sm" onclick={saveHost} disabled={!modal.host.name || !modal.host.endpoint}>
-					{modal.mode === 'add' ? '添加' : '保存'}
-				</Button>
+			<div class="flex items-center justify-between border-t border-border-secondary px-4 py-3">
+				<div>
+					<Button variant="ghost" size="sm" onclick={() => testHost(modal.host.id)} disabled={testLoading || !modal.host.endpoint}>
+						{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug size={12} class="mr-1" />{/if}测试连接
+					</Button>
+					{#if testResult && testResult.hostId === modal.host.id}
+						<span class="ml-2 text-[11px] {testResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}">{testResult.message}</span>
+					{/if}
+				</div>
+				<div class="flex items-center gap-2">
+					<Button variant="secondary" size="sm" onclick={closeModal}>取消</Button>
+					<Button variant="primary" size="sm" onclick={saveHost} disabled={!modal.host.name || !modal.host.endpoint}>
+						{modal.mode === 'add' ? '添加' : '保存'}
+					</Button>
+				</div>
 			</div>
 		</div>
 	</div>
