@@ -307,6 +307,7 @@ func createRouter(
 				hostHandler.RegisterRoutes(r)
 			})
 			r.Get("/ssh-instructions", hostHandler.SSHKeyPairInstructions)
+			r.Post("/ssh/genkey", hostHandler.SSHKeyGen)
 
 			// Docker operations (optional)
 			if dockerHandler != nil {
