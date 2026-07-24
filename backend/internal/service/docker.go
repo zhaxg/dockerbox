@@ -14,13 +14,107 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"strconv"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 		"github.com/docker/cli/cli/connhelper"
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
 )
+
+// newSFTPClient creates an SFTP client over SSH.
+func (s *DockerService) newSFTPClient() (*sftp.Client, error) {
+	if s.sshKey == "" || s.sshHost == "" {
+		return nil, fmt.Errorf("no SSH config for SFTP: key=%d host=%s", len(s.sshKey), s.sshHost)
+	}
+
+	// Parse host
+	host := strings.TrimPrefix(s.sshHost, "ssh://")
+	parts := strings.SplitN(host, ":", 2)
+	addr := parts[0]
+	port := "22"
+	if len(parts) > 1 {
+		port = parts[1]
+	}
+
+	// Parse private key
+	signer, err := ssh.ParsePrivateKey([]byte(s.sshKey))
+	if err != nil {
+		return nil, fmt.Errorf("parse SSH key: %w", err)
+	}
+
+	config := &ssh.ClientConfig{
+		User:            strings.Split(addr, "@")[0],
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	sshAddr := strings.SplitN(addr, "@", 2)
+	if len(sshAddr) > 1 {
+		addr = sshAddr[1]
+	}
+	conn, err := ssh.Dial("tcp", addr+":"+port, config)
+	if err != nil {
+		return nil, fmt.Errorf("ssh dial %s:%s user=%s: %w", addr, port, config.User, err)
+	}
+
+	return sftp.NewClient(conn)
+}
+
+// sshExec runs a command on the remote host via SSH.
+func (s *DockerService) sshExec(ctx context.Context, cmd string) (string, error) {
+	if s.sshKey == "" || s.sshHost == "" {
+		return "", fmt.Errorf("no SSH config")
+	}
+
+	// Write key to temp file
+	keyFile, err := os.CreateTemp("", "boxbox-ssh-*")
+	if err != nil {
+		return "", err
+	}
+	keyFile.WriteString(s.sshKey)
+	keyFile.Close()
+	os.Chmod(keyFile.Name(), 0600)
+	defer os.Remove(keyFile.Name())
+
+	// Parse host: ssh://user@host:port -> user@host -p port
+	host := strings.TrimPrefix(s.sshHost, "ssh://")
+	parts := strings.SplitN(host, ":", 2)
+	addr := parts[0]
+	port := "22"
+	if len(parts) > 1 {
+		port = parts[1]
+	}
+
+	sshCmd := exec.CommandContext(ctx, "ssh",
+		"-i", keyFile.Name(),
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-p", port,
+		addr,
+		cmd,
+	)
+	out, err := sshCmd.CombinedOutput()
+	if err != nil {
+		// Filter out SSH warnings from stderr, keep stdout
+		lines := strings.Split(string(out), "\n")
+		var filtered []string
+		for _, line := range lines {
+			if !strings.HasPrefix(line, "Warning:") && !strings.Contains(line, "known hosts") {
+				filtered = append(filtered, line)
+			}
+		}
+		result := strings.TrimSpace(strings.Join(filtered, "\n"))
+		if result != "" {
+			return result, nil
+		}
+		return "", fmt.Errorf("ssh exec failed: %w", err)
+	}
+	return string(out), nil
+}
 
 // composeCommand returns the available docker compose command (V2 plugin first, then V1 binary).
 func composeCommand(ctx context.Context, args ...string) *exec.Cmd {
@@ -35,7 +129,9 @@ func composeCommand(ctx context.Context, args ...string) *exec.Cmd {
 
 // DockerService handles Docker operations.
 type DockerService struct {
-	client *client.Client
+	client  *client.Client
+	sshKey  string // SSH private key content
+	sshHost string // user@host:port
 }
 
 // DockerServiceConfig holds configuration for DockerService.
@@ -72,7 +168,7 @@ func NewDockerService(cfg DockerServiceConfig) (*DockerService, error) {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)
 	}
 
-	return &DockerService{client: c}, nil
+	return &DockerService{client: c, sshKey: cfg.SSHKey, sshHost: cfg.Host}, nil
 }
 
 // GetDockerInfo returns the Docker server version string.
@@ -821,6 +917,32 @@ func (s *DockerService) ReadComposeFilesViaDocker(ctx context.Context, files map
 	return nil
 }
 
+// execInContainerRaw runs a command and returns raw stdout without trimming.
+func (s *DockerService) execInContainerRaw(ctx context.Context, containerID string, cmd []string) (string, error) {
+	execCfg := types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+	}
+	resp, err := s.client.ContainerExecCreate(ctx, containerID, execCfg)
+	if err != nil {
+		return "", err
+	}
+
+	reader, err := s.client.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
+	if err != nil {
+		return "", err
+	}
+	defer reader.Close()
+
+	var stdout bytes.Buffer
+	_, err = stdcopy.StdCopy(&stdout, io.Discard, reader.Reader)
+	if err != nil {
+		return "", err
+	}
+	return stdout.String(), nil
+}
+
 // execInContainer runs a command in a container and returns stdout
 func (s *DockerService) execInContainer(ctx context.Context, containerID string, cmd []string) (string, error) {
 	execCfg := types.ExecConfig{
@@ -943,4 +1065,144 @@ func getGateway(n types.NetworkResource) string {
 		}
 	}
 	return ""
+}
+
+// ListFilesViaDocker lists files via SFTP.
+func (s *DockerService) ListFilesViaDocker(ctx context.Context, hostPath string) ([]model.FileInfo, error) {
+	c, err := s.newSFTPClient()
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	entries, err := c.ReadDir(hostPath)
+	if err != nil {
+		return nil, fmt.Errorf("readdir %s: %w", hostPath, err)
+	}
+
+	var files []model.FileInfo
+	for _, entry := range entries {
+		info := entry
+		files = append(files, model.FileInfo{
+			Name:        info.Name(),
+			Size:        info.Size(),
+			IsDir:       info.IsDir(),
+			ModTime:     info.ModTime(),
+			Permissions: info.Mode().String(),
+		})
+	}
+	return files, nil
+}
+// ReadFileViaDocker reads a file via SFTP.
+func (s *DockerService) ReadFileViaDocker(ctx context.Context, hostPath string) ([]byte, error) {
+	c, err := s.newSFTPClient()
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	f, err := c.Open(hostPath)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", hostPath, err)
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", hostPath, err)
+	}
+	return data, nil
+}
+
+// ReadFileRangeViaSFTP reads a byte range from a remote file via SFTP (for Range requests).
+func (s *DockerService) ReadFileRangeViaSFTP(ctx context.Context, hostPath string, offset int64, length int64) ([]byte, error) {
+	c, err := s.newSFTPClient()
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	f, err := c.Open(hostPath)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", hostPath, err)
+	}
+	defer f.Close()
+
+	buf := make([]byte, length)
+	n, err := f.ReadAt(buf, offset)
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("readat %s: %w", hostPath, err)
+	}
+	return buf[:n], nil
+}
+
+// GetFileSizeViaSFTP returns file size via SFTP.
+func (s *DockerService) GetFileSizeViaSFTP(ctx context.Context, hostPath string) (int64, error) {
+	c, err := s.newSFTPClient()
+	if err != nil {
+			return 0, err
+	}
+	defer c.Close()
+
+	info, err := c.Stat(hostPath)
+	if err != nil {
+			return 0, err
+	}
+	return info.Size(), nil
+}
+// GetFileInfoViaDocker gets file info via SFTP.
+func (s *DockerService) GetFileInfoViaDocker(ctx context.Context, hostPath string) (*model.FileInfo, error) {
+	c, err := s.newSFTPClient()
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	info, err := c.Stat(hostPath)
+	if err != nil {
+		return nil, fmt.Errorf("stat %s: %w", hostPath, err)
+	}
+
+	return &model.FileInfo{
+		Name:        info.Name(),
+		Path:        hostPath,
+		Size:        info.Size(),
+		IsDir:       info.IsDir(),
+		ModTime:     info.ModTime(),
+		Permissions: info.Mode().String(),
+	}, nil
+}
+// parseLsOutput parses `ls -la` output into FileInfo slice.
+func parseLsOutput(output string) []model.FileInfo {
+	var files []model.FileInfo
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "total") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 9 {
+			continue
+		}
+		name := strings.Join(fields[8:], " ")
+		if name == "." || name == ".." {
+			continue
+		}
+		isDir := fields[0][0] == 'd'
+		size, _ := strconv.ParseInt(fields[4], 10, 64)
+		// fields[5] = month, fields[6] = day, fields[7] = time/year
+		modStr := fields[5] + " " + fields[6] + " " + fields[7]
+		modTime, _ := time.Parse("Jan 2 15:04", modStr)
+		if modTime.Year() == 0 {
+			modTime, _ = time.Parse("Jan 2 2006", modStr)
+		}
+
+		files = append(files, model.FileInfo{
+			Name:    name,
+			Size:    size,
+			IsDir:   isDir,
+			ModTime: modTime,
+		})
+	}
+	return files
 }

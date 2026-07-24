@@ -21,6 +21,25 @@ import {
 	saveLocalWallpaperDataUrl
 } from '$lib/utils/wallpaperStorage';
 
+function getCurrentHostId(): string {
+	if (typeof window === 'undefined') return '';
+	return localStorage.getItem('currentHostId') || '';
+}
+
+function getHostFavorites(): FavoriteFolder[] {
+	const hostId = getCurrentHostId();
+	if (!hostId) return [];
+	try {
+		return JSON.parse(localStorage.getItem('boxbox_fav_' + hostId) || '[]');
+	} catch { return []; }
+}
+
+function setHostFavorites(favorites: FavoriteFolder[]) {
+	const hostId = getCurrentHostId();
+	if (!hostId) return;
+	localStorage.setItem('boxbox_fav_' + hostId, JSON.stringify(favorites));
+}
+
 export interface UserSettings {
 	showHiddenFiles: boolean;
 	showFileExtensions: boolean;
@@ -242,7 +261,9 @@ async function migrateInlineBackgroundImage(settings: UserSettings): Promise<Use
 }
 
 function createSettingsStore() {
-	const { subscribe, set, update } = writable<UserSettings>(loadSettings());
+	const initial = loadSettings();
+	initial.favoriteFolders = getHostFavorites();
+	const { subscribe, set, update } = writable<UserSettings>(initial);
 
 	return {
 		subscribe,
@@ -333,33 +354,24 @@ function createSettingsStore() {
 		},
 
 		pinFavoriteFolder(folder: FavoriteFolder) {
-			update((current) => {
-				if (current.favoriteFolders.some((favorite) => favorite.path === folder.path)) {
-					return current;
-				}
-
-				const updated = {
-					...current,
-					favoriteFolders: [...current.favoriteFolders, folder]
-				};
-				saveSettings(updated);
-				return updated;
-			});
+			const current = getHostFavorites();
+			if (current.some((f) => f.path === folder.path)) return;
+			setHostFavorites([...current, folder]);
+			update((s) => ({ ...s, favoriteFolders: getHostFavorites() }));
 		},
 
 		unpinFavoriteFolder(path: string) {
-			update((current) => {
-				const updated = {
-					...current,
-					favoriteFolders: current.favoriteFolders.filter((folder) => folder.path !== path)
-				};
-				saveSettings(updated);
-				return updated;
-			});
+			const updated = getHostFavorites().filter((f) => f.path !== path);
+			setHostFavorites(updated);
+			update((s) => ({ ...s, favoriteFolders: updated }));
 		},
 
 		isFavoriteFolder(path: string): boolean {
-			return get({ subscribe }).favoriteFolders.some((folder) => folder.path === path);
+			return getHostFavorites().some((f) => f.path === path);
+		},
+
+		refreshFavorites() {
+			update((s) => ({ ...s, favoriteFolders: getHostFavorites() }));
 		}
 	};
 }

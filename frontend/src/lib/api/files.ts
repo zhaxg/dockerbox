@@ -241,9 +241,14 @@ export async function search(path: string, query: string): Promise<SearchRespons
  */
 export function getPreviewUrl(path: string): string {
 	const token = tokenStorage.getAccessToken();
+	const hostId = typeof window !== 'undefined' ? localStorage.getItem('currentHostId') : '';
 	const encodedPath = encodeRoutePath(path);
-	const baseUrl = `/api/v1/stream/preview/${encodedPath}`;
-	return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
+	let baseUrl = `/api/v1/stream/preview/${encodedPath}`;
+	const params = new URLSearchParams();
+	if (token) params.set('token', token);
+	if (hostId) params.set('host', hostId);
+	const qs = params.toString();
+	return qs ? `${baseUrl}?${qs}` : baseUrl;
 }
 
 /**
@@ -251,21 +256,29 @@ export function getPreviewUrl(path: string): string {
  */
 export function getDownloadUrl(path: string): string {
 	const token = tokenStorage.getAccessToken();
+	const hostId = typeof window !== 'undefined' ? localStorage.getItem('currentHostId') : '';
 	const encodedPath = encodeRoutePath(path);
-	const baseUrl = `/api/v1/stream/download/${encodedPath}`;
-	return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
+	let baseUrl = `/api/v1/stream/download/${encodedPath}`;
+	const params = new URLSearchParams();
+	if (token) params.set('token', token);
+	if (hostId) params.set('host', hostId);
+	const qs = params.toString();
+	return qs ? `${baseUrl}?${qs}` : baseUrl;
 }
 
 /**
  * Fetch file content as text (for code/text preview)
  */
-export async function getFileContent(path: string): Promise<string> {
+export async function getFileContent(path: string, hostId?: string): Promise<string> {
 	// If path is already a full API URL, use it with auth header
 	if (path.startsWith('/api/') || path.startsWith('http')) {
 		const token = tokenStorage.getAccessToken();
 		const headers: Record<string, string> = {};
 		if (token) {
 			headers['Authorization'] = `Bearer ${token}`;
+		}
+		if (hostId) {
+			headers['X-Host-ID'] = hostId;
 		}
 		const response = await fetch(path, { headers });
 		if (!response.ok) {

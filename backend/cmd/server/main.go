@@ -232,6 +232,51 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 		}
 		collector := service.NewCollector(ctx, dockerService)
 		sseHandler = handler.NewSSEHandler(dockerService, collector)
+
+		// Register per-host mount points and Docker services for file handler
+		if cfg.DockerHosts != nil {
+			fileHandler.SetDefaultHost(cfg.DockerHosts.Default)
+			for id, host := range cfg.DockerHosts.Hosts {
+				var mps []model.MountPoint
+				for name, mp := range host.MountPoints {
+					mps = append(mps, model.MountPoint{
+						Name:     name,
+						Path:     mp.Path,
+						ReadOnly: mp.ReadOnly,
+					})
+				}
+				fileHandler.SetMountPoints(id, mps)
+				// Add host mount points to global list for MountPointGuard
+				for _, mp := range mps {
+					found := false
+					for _, gmp := range mountPoints {
+						if gmp.Name == mp.Name {
+							found = true
+							break
+					}
+				}
+					if !found {
+						mountPoints = append(mountPoints, mp)
+					}
+				}
+				// Remote hosts need Docker exec for file access
+				if host.Driver == "ssh" || host.Driver == "tcp" {
+					fileHandler.SetRemoteHost(id)
+					streamHandler.SetRemoteHost(id)
+					if svc, ok := dockerHandler.Services()[id]; ok {
+						fileHandler.SetDockerService(id, svc)
+						streamHandler.SetDockerService(id, svc)
+					}
+					// Set host mount points for path resolution
+					mounts := make(map[string]string)
+					for name, mp := range host.MountPoints {
+						mounts[name] = mp.Path
+					}
+					streamHandler.SetHostMountPoints(id, mounts)
+				}
+			}
+		}
+
 		if cfg.DockerHosts != nil {
 			sseHandler.SetDefaultHost(cfg.DockerHosts.Default)
 			for id, host := range cfg.DockerHosts.Hosts {

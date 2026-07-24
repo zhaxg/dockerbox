@@ -5,7 +5,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"bytes"
 	"errors"
+	"log"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,10 +29,13 @@ var errUploadTooLarge = errors.New("upload too large")
 
 // StreamHandler handles streaming upload and download operations
 type StreamHandler struct {
-	fileService    service.FileService
-	uploadManager  *UploadManager
-	chunkSizeMB    int
-	maxUploadBytes int64
+	fileService      service.FileService
+	uploadManager    *UploadManager
+	chunkSizeMB      int
+	maxUploadBytes   int64
+	services         map[string]*service.DockerService
+	remoteHosts      map[string]bool
+	hostMountPoints  map[string]map[string]string // hostID -> mountName -> hostPath
 }
 
 // NewStreamHandler creates a new stream handler
@@ -42,10 +47,13 @@ func NewStreamHandler(fileService service.FileService, chunkSizeMB int, maxUploa
 		maxUploadMB = config.DefaultMaxUploadMB
 	}
 	return &StreamHandler{
-		fileService:    fileService,
-		uploadManager:  NewUploadManager(config.DefaultUploadTempDir),
-		chunkSizeMB:    chunkSizeMB,
+		fileService:     fileService,
+		uploadManager:   NewUploadManager(config.DefaultUploadTempDir),
+		chunkSizeMB:     chunkSizeMB,
 		maxUploadBytes: int64(maxUploadMB) * 1024 * 1024,
+		services:         make(map[string]*service.DockerService),
+		remoteHosts:      make(map[string]bool),
+		hostMountPoints:  make(map[string]map[string]string),
 	}
 }
 
@@ -67,6 +75,68 @@ func (h *StreamHandler) StopCleanup() {
 	h.uploadManager.StopCleanup()
 }
 
+// SetDockerService registers a DockerService for a host ID.
+func (h *StreamHandler) SetDockerService(hostID string, svc *service.DockerService) {
+	h.services[hostID] = svc
+}
+
+// SetRemoteHost marks a host as remote.
+func (h *StreamHandler) SetRemoteHost(hostID string) {
+	h.remoteHosts[hostID] = true
+}
+
+// SetHostMountPoints sets mount point paths for a host.
+func (h *StreamHandler) SetHostMountPoints(hostID string, mounts map[string]string) {
+	h.hostMountPoints[hostID] = mounts
+}
+
+func (h *StreamHandler) resolvePath(r *http.Request, boxPath string) string {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID == "" {
+		hostID = r.URL.Query().Get("host")
+	}
+	parts := strings.SplitN(boxPath, "/", 2)
+	mountName := parts[0]
+	subPath := ""
+	if len(parts) > 1 {
+		subPath = parts[1]
+	}
+	if mounts, ok := h.hostMountPoints[hostID]; ok {
+		if hostPath, ok := mounts[mountName]; ok {
+			if subPath != "" {
+				return hostPath + "/" + subPath
+			}
+			return hostPath
+		}
+	}
+	return "/" + boxPath
+}
+
+func (h *StreamHandler) isRemoteHost(r *http.Request) bool {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID == "" {
+		hostID = r.URL.Query().Get("host")
+	}
+	if hostID == "" {
+		return false
+	}
+	result := h.remoteHosts[hostID]
+	return result
+}
+
+func (h *StreamHandler) getDockerService(r *http.Request) *service.DockerService {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID == "" {
+		hostID = r.URL.Query().Get("host")
+	}
+	if hostID != "" {
+		if svc, ok := h.services[hostID]; ok {
+			return svc
+		}
+	}
+	return nil
+}
+
 // Download handles file download requests with Range header support
 // GET /api/v1/stream/download/*path
 func (h *StreamHandler) Download(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +145,13 @@ func (h *StreamHandler) Download(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Path is required", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
+	log.Printf("Download: path=%s remote=%v hostID=%s", path, h.isRemoteHost(r), r.Header.Get("X-Host-ID"))
 
-	// Open the file using the file service (uses filesystem abstraction)
+	if h.isRemoteHost(r) {
+		h.serveRemoteFile(w, r, path, "attachment")
+		return
+	}
+
 	file, info, err := h.fileService.OpenFile(r.Context(), path)
 	if err != nil {
 		HandleServiceError(w, err)
@@ -84,15 +159,10 @@ func (h *StreamHandler) Download(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Detect MIME type using centralized utility
 	mimeType := detectStreamMimeType(file, info.Name)
-
-	// Set response headers
 	w.Header().Set("Content-Type", mimeType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, info.Name))
 	w.Header().Set("Accept-Ranges", "bytes")
-
-	// Use http.ServeContent for efficient range-based streaming
 	http.ServeContent(w, r, info.Name, info.ModTime, file)
 }
 
@@ -105,7 +175,11 @@ func (h *StreamHandler) Preview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Open the file using the file service (uses filesystem abstraction)
+	if h.isRemoteHost(r) {
+		h.serveRemoteFile(w, r, path, "inline")
+		return
+	}
+
 	file, info, err := h.fileService.OpenFile(r.Context(), path)
 	if err != nil {
 		HandleServiceError(w, err)
@@ -113,24 +187,100 @@ func (h *StreamHandler) Preview(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Detect MIME type using extension + content sniffing fallback
 	mimeType := detectStreamMimeType(file, info.Name)
-
-	// Set response headers for inline viewing
 	w.Header().Set("Content-Type", mimeType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, info.Name))
 	w.Header().Set("Accept-Ranges", "bytes")
-	// Allow cross-origin requests for media playback
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Range")
+	w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges")
+	w.Header().Set("Cache-Control", "no-transform")
+	http.ServeContent(w, r, info.Name, info.ModTime, file)
+}
+
+// serveRemoteFile reads a file from a remote host via SFTP and serves it.
+func (h *StreamHandler) serveRemoteFile(w http.ResponseWriter, r *http.Request, boxPath string, disposition string) {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID == "" {
+		hostID = r.URL.Query().Get("host")
+	}
+	docker := h.getDockerService(r)
+	if docker == nil {
+		writeError(w, "No Docker service for host: "+hostID, model.ErrCodeInternalError, http.StatusInternalServerError)
+		return
+	}
+
+	hostPath := h.resolvePath(r, boxPath)
+
+	name := boxPath
+	if idx := strings.LastIndex(boxPath, "/"); idx >= 0 {
+		name = boxPath[idx+1:]
+	}
+
+	// Get file size for Content-Length and Range support
+	fileSize, err := docker.GetFileSizeViaSFTP(r.Context(), hostPath)
+	if err != nil {
+		HandleServiceError(w, err)
+		return
+	}
+
+	// Detect MIME type by reading a small sample
+	sample, _ := docker.ReadFileRangeViaSFTP(r.Context(), hostPath, 0, 512)
+	mimeType := detectStreamMimeType(bytes.NewReader(sample), name)
+
+	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`%s; filename="%s"`, disposition, name))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", fileSize))
+	w.Header().Set("Accept-Ranges", "bytes")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Range")
 	w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges")
 
-	// Avoid response transformation by intermediate proxies/CDNs.
-	w.Header().Set("Cache-Control", "no-transform")
+	// Handle Range request (video seeking)
+	rangeHeader := r.Header.Get("Range")
+	if rangeHeader != "" && strings.HasPrefix(rangeHeader, "bytes=") {
+		rangeSpec := strings.TrimPrefix(rangeHeader, "bytes=")
+		parts := strings.SplitN(rangeSpec, "-", 2)
+		if len(parts) == 2 {
+			var start, end int64
+			fmt.Sscanf(parts[0], "%d", &start)
+			if parts[1] != "" {
+				fmt.Sscanf(parts[1], "%d", &end)
+			} else {
+				end = fileSize - 1
+			}
+			if start >= fileSize {
+				w.Header().Set("Content-Range", fmt.Sprintf("bytes */%d", fileSize))
+				w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+				return
+			}
+			if end >= fileSize {
+				end = fileSize - 1
+			}
+			length := end - start + 1
+			data, err := docker.ReadFileRangeViaSFTP(r.Context(), hostPath, start, length)
+			if err != nil {
+				HandleServiceError(w, err)
+				return
+			}
+			w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, fileSize))
+			w.Header().Set("Content-Length", fmt.Sprintf("%d", length))
+			w.Header().Set("Accept-Ranges", "bytes")
+			w.WriteHeader(http.StatusPartialContent)
+			w.Write(data)
+			return
+		}
+	}
 
-	// Use http.ServeContent for efficient range-based streaming
-	http.ServeContent(w, r, info.Name, info.ModTime, file)
+	// Full file (no Range)
+	data, err := docker.ReadFileViaDocker(r.Context(), hostPath)
+	if err != nil {
+		HandleServiceError(w, err)
+		return
+	}
+	w.Write(data)
 }
 
 // UploadSession tracks the state of a chunked upload

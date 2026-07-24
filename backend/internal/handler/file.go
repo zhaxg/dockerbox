@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"strings"
 	"github.com/go-chi/chi/v5"
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
 	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/validator"
@@ -14,14 +15,103 @@ import (
 
 // FileHandler handles file-related HTTP requests
 type FileHandler struct {
-	fileService service.FileService
+	fileService      service.FileService
+	dockerService    *service.DockerService // for remote host file access
+	hostMountPoints  map[string][]model.MountPoint
+	defaultHostID    string
+	services         map[string]*service.DockerService // host ID → docker service
+	remoteHosts      map[string]bool // host ID → is remote
 }
 
 // NewFileHandler creates a new file handler
 func NewFileHandler(fileService service.FileService) *FileHandler {
 	return &FileHandler{
-		fileService: fileService,
+		fileService:     fileService,
+		hostMountPoints: make(map[string][]model.MountPoint),
+		services:        make(map[string]*service.DockerService),
+		remoteHosts:     make(map[string]bool),
 	}
+}
+
+// SetMountPoints registers mount points for a host ID.
+func (h *FileHandler) SetMountPoints(hostID string, mps []model.MountPoint) {
+	h.hostMountPoints[hostID] = mps
+}
+
+// SetRemoteHost marks a host as remote (needs Docker exec for file access).
+func (h *FileHandler) SetRemoteHost(hostID string) {
+	h.remoteHosts[hostID] = true
+}
+
+// SetDockerService registers a DockerService for a host ID.
+func (h *FileHandler) SetDockerService(hostID string, svc *service.DockerService) {
+	h.services[hostID] = svc
+}
+
+// SetDefaultHost sets the default host ID.
+func (h *FileHandler) SetDefaultHost(hostID string) {
+	h.defaultHostID = hostID
+}
+
+// getMountPoints returns mount points for the current request's host.
+func (h *FileHandler) getMountPoints(r *http.Request) []model.MountPoint {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID != "" {
+		if mps, ok := h.hostMountPoints[hostID]; ok {
+			return mps
+		}
+	}
+	if h.defaultHostID != "" {
+		if mps, ok := h.hostMountPoints[h.defaultHostID]; ok {
+			return mps
+		}
+	}
+	return h.fileService.ListMountPoints()
+}
+
+// getDockerService returns the DockerService for the current request's host.
+func (h *FileHandler) getDockerService(r *http.Request) *service.DockerService {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID != "" {
+		if svc, ok := h.services[hostID]; ok {
+			return svc
+		}
+	}
+	if h.defaultHostID != "" {
+		if svc, ok := h.services[h.defaultHostID]; ok {
+			return svc
+		}
+	}
+	return h.dockerService
+}
+
+// isRemoteHost checks if the current request targets a remote host.
+func (h *FileHandler) isRemoteHost(r *http.Request) bool {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID == "" {
+		hostID = h.defaultHostID
+	}
+	return h.remoteHosts[hostID]
+}
+
+// resolvePath resolves a BoxBox browse path to the actual host filesystem path.
+func (h *FileHandler) ResolvePath(r *http.Request, boxPath string) string {
+	parts := strings.SplitN(boxPath, "/", 2)
+	mountName := parts[0]
+	subPath := ""
+	if len(parts) > 1 {
+		subPath = parts[1]
+	}
+
+	for _, mp := range h.getMountPoints(r) {
+		if mp.Name == mountName {
+			if subPath != "" {
+				return mp.Path + "/" + subPath
+			}
+			return mp.Path
+		}
+	}
+	return "/" + boxPath
 }
 
 // RegisterRoutes registers file routes on the given router
@@ -67,7 +157,7 @@ type SaveFileRequest struct {
 // ListRoots returns all configured mount points
 // GET /api/v1/files
 func (h *FileHandler) ListRoots(w http.ResponseWriter, r *http.Request) {
-	mounts := h.fileService.ListMountPoints()
+	mounts := h.getMountPoints(r)
 
 	roots := make([]MountPointResponse, len(mounts))
 	for i, mount := range mounts {
@@ -102,10 +192,13 @@ func (h *FileHandler) GetPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse query parameters for listing options
-	opts := h.parseListOptions(r)
+	// Remote host: use Docker exec
+	if h.isRemoteHost(r) {
+		h.getPathRemote(w, r, path)
+		return
+	}
 
-	// Check if this is a directory or file
+	// Local: use file service
 	info, err := h.fileService.GetInfo(r.Context(), path)
 	if err != nil {
 		HandleServiceError(w, err)
@@ -113,16 +206,53 @@ func (h *FileHandler) GetPath(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if info.IsDir {
-		// Return directory listing
-		list, err := h.fileService.List(r.Context(), path, opts)
+		list, err := h.fileService.List(r.Context(), path, h.parseListOptions(r))
 		if err != nil {
 			HandleServiceError(w, err)
 			return
 		}
 		writeJSON(w, list, http.StatusOK)
 	} else {
-		// Return file info
 		writeJSON(w, info, http.StatusOK)
+	}
+}
+
+// getPathRemote handles file listing for remote hosts via Docker exec.
+func (h *FileHandler) getPathRemote(w http.ResponseWriter, r *http.Request, boxPath string) {
+	docker := h.getDockerService(r)
+	if docker == nil {
+		writeError(w, "No Docker service for this host", model.ErrCodeInternalError, http.StatusInternalServerError)
+		return
+	}
+
+	hostPath := h.ResolvePath(r, boxPath)
+
+	// Check if it's a file or directory
+	fileInfo, err := docker.GetFileInfoViaDocker(r.Context(), hostPath)
+	if err != nil {
+		HandleServiceError(w, err)
+		return
+	}
+
+	if fileInfo.IsDir {
+		// List directory contents
+		files, err := docker.ListFilesViaDocker(r.Context(), hostPath)
+		if err != nil {
+			HandleServiceError(w, err)
+			return
+		}
+		// Set paths relative to browse path
+		for i := range files {
+			files[i].Path = boxPath + "/" + files[i].Name
+		}
+		writeJSON(w, model.FileList{
+			Path:       boxPath,
+			Items:      files,
+			TotalCount: len(files),
+		}, http.StatusOK)
+	} else {
+		fileInfo.Path = boxPath
+		writeJSON(w, fileInfo, http.StatusOK)
 	}
 }
 

@@ -9,10 +9,11 @@
 	import FileList from '$lib/components/FileList.svelte';
 	import FileGrid from '$lib/components/FileGrid.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
-	import SystemDriveCard from '$lib/components/SystemDriveCard.svelte';
+
 	import FilePreview from '$lib/components/FilePreview.svelte';
 	import UploadPanel from '$lib/components/UploadPanel.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
+	import { FolderOpen } from 'lucide-svelte';
 	import { Spinner, Modal, Input, Button } from '$lib/components/ui';
 	import {
 		pathStore,
@@ -36,9 +37,9 @@
 		deleteFile,
 		getDownloadUrl
 	} from '$lib/api/files';
-	import { getSystemDrives, type SystemDrivesResponse } from '$lib/api/system';
+
 	import { createCopyJob, createMoveJob, createDeleteJob } from '$lib/api/jobs';
-	import { formatFileSize, formatFileDate, mapSystemMountToBrowsePath } from '$lib/utils/format';
+	import { formatFileSize, formatFileDate } from '$lib/utils/format';
 	import { canPreview, getFileTypeDescription } from '$lib/utils/fileTypes';
 	import type { SortField, SortDir, ViewMode } from '$lib/types/files';
 	import type {
@@ -140,11 +141,7 @@
 		queryFn: () => listRoots()
 	}));
 
-	const systemDrivesQuery = createQuery<SystemDrivesResponse>(() => ({
-		queryKey: ['system', 'drives'],
-		queryFn: () => getSystemDrives(),
-		enabled: path === ''
-	}));
+
 
 	const directoryQuery = createQuery<FileListType>(() => ({
 		queryKey: fileQueryKeys.list(path, directoryOptions),
@@ -166,7 +163,7 @@
 	const fileList = $derived(directoryQuery.data ?? null);
 	const searchResults = $derived(searchQueryResult.data?.results ?? []);
 	const roots = $derived(rootsQuery.data?.roots ?? []);
-	const systemDrives = $derived(systemDrivesQuery.data?.drives ?? []);
+
 	const isAtRoot = $derived(path === '');
 
 	// Clipboard state for context menu
@@ -213,7 +210,7 @@
 		return 'This folder is empty';
 	});
 
-	const itemCount = $derived(isAtRoot ? systemDrives.length : displayItems.length);
+	const itemCount = $derived(isAtRoot ? roots.length : displayItems.length);
 	const selectedCount = $derived(selectedPaths.size);
 	const canGoBack = $derived(historyIndex > 0);
 	const canGoForward = $derived(historyIndex < historyStack.length - 1);
@@ -299,7 +296,7 @@
 
 	function handleRefresh() {
 		if (isAtRoot) {
-			systemDrivesQuery.refetch();
+
 		} else {
 			directoryQuery.refetch();
 		}
@@ -739,25 +736,21 @@
 			{#if isAtRoot}
 				<!-- This Server view - show drive cards -->
 				<div class="p-6">
-					{#if rootsQuery.isLoading || systemDrivesQuery.isLoading}
+					{#if rootsQuery.isLoading}
 						<div class="flex items-center gap-2 py-5 text-sm text-text-secondary">
 							<Spinner size="sm" />
-							<span>Loading drives...</span>
+							<span>Loading...</span>
 						</div>
-					{:else if systemDrives.length === 0}
-						<div class="py-5 text-sm text-text-secondary">No storage devices found</div>
+					{:else if roots.length === 0}
+						<div class="py-5 text-sm text-text-secondary">No mount points configured</div>
 					{:else}
 						<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-							{#each systemDrives as drive (drive.mountPoint)}
-								<SystemDriveCard
-									{drive}
-									onClick={() => {
-										// Map system mount point to a configured BoxBox mount path.
-										const browsePath = mapSystemMountToBrowsePath(drive.mountPoint, roots);
-
-										handleNavigate(browsePath);
-									}}
-								/>
+							{#each roots as root (root.name)}
+								<button type="button" class="group flex flex-col items-center gap-2 rounded-lg border border-border-secondary bg-surface-secondary p-4 transition-colors hover:border-border-focus hover:bg-surface-tertiary" onclick={() => handleNavigate(root.name)}>
+									<FolderOpen size={32} class="text-blue-400" />
+									<span class="text-sm font-medium text-text-primary">{root.name}</span>
+									<span class="text-[11px] text-text-muted font-mono">{root.path}</span>
+								</button>
 							{/each}
 						</div>
 					{/if}

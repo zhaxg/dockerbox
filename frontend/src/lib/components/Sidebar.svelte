@@ -14,10 +14,10 @@
 		Network
 	} from 'lucide-svelte';
 	import { page } from '$app/state';
+	import { settingsStore } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { settingsStore } from '$lib/stores/settings';
-	import { listRoots, type MountPoint } from '$lib/api/files';
+	import { type MountPoint } from '$lib/api/files';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { onMount } from 'svelte';
 
@@ -47,23 +47,35 @@
 
 	onMount(async () => {
 		try {
-			const [mpData, hostData] = await Promise.all([
-				listRoots().catch(() => ({ roots: [] })),
-				hostsApi.list().catch(() => ({ default: '', hosts: {} }))
-			]);
-			mountPoints = mpData.roots || [];
-			hostsConfig = hostData;
+			hostsConfig = await hostsApi.list().catch(() => ({ default: '', hosts: {} }));
 			if (!hostsConfig.hosts) hostsConfig.hosts = {};
+			updateMountPoints();
 		} catch (e) {
 			console.error('Failed to load data:', e);
 		}
 	});
 
+	function updateMountPoints() {
+		const hostId = localStorage.getItem('currentHostId') || hostsConfig.default;
+		const host = hostsConfig.hosts?.[hostId];
+		if (host?.mountPoints) {
+			mountPoints = Object.entries(host.mountPoints).map(([name, mp]) => ({
+				name,
+				path: mp.path,
+				readOnly: mp.readOnly
+			}));
+		} else {
+			mountPoints = [];
+		}
+	}
+
 	async function switchHost(id: string) {
 		hostsConfig.default = id;
 		hostDropdownOpen = false;
 		localStorage.setItem('currentHostId', id);
+		updateMountPoints();
 		window.dispatchEvent(new Event('host-changed'));
+		settingsStore.refreshFavorites();
 		try {
 			const host = hostsConfig.hosts[id];
 			if (host) await hostsApi.update(id, { ...host, isDefault: true });

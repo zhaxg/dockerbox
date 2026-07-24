@@ -49,6 +49,11 @@ func (h *DockerHandler) SetComposePaths(hostID string, paths []string) {
 	}
 }
 
+// Services returns the host DockerService map (read-only).
+func (h *DockerHandler) Services() map[string]*service.DockerService {
+	return h.services
+}
+
 // SetDefaultHost sets the default host ID.
 func (h *DockerHandler) SetDefaultHost(hostID string) {
 	h.defaultHostID = hostID
