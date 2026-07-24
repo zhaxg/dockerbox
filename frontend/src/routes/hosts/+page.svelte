@@ -9,21 +9,21 @@
 	let confirmDialog = $state<{ open: boolean; title: string; message: string; onConfirm: () => void }>({
 		open: false, title: '', message: '', onConfirm: () => {}
 	});
-	let testResult = $state<{ hostId: string; status: string; message: string } | null>(null);
 	let testLoading = $state(false);
 	let copied = $state<Record<string, boolean>>({});
 	let genKeyLoading = $state(false);
-	let hostStats = $state<Record<string, { status: string; total: number; running: number; stopped: number; message?: string }>>({});
+	let hostStats = $state<Record<string, { status: string; total: number; running: number; stopped: number }>>({});
 	let toastMsg = $state('');
 	let toastType = $state<'ok' | 'err'>('ok');
 
 	let modal = $state<{
 		open: boolean; mode: 'add' | 'edit'; host: any;
 		mountKey: string; mountPath: string; mountReadOnly: boolean; dockerDirKey: string;
+		isDefault: boolean;
 	}>({
 		open: false, mode: 'add',
-		host: { id: '', name: '', driver: 'ssh', endpoint: '', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
-		mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: ''
+		host: { id: '', name: '', driver: 'socket', endpoint: '/var/run/docker.sock', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
+		mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: '', isDefault: false
 	});
 
 	const hostList = $derived(Object.values(hostsConfig.hosts || {}));
@@ -61,7 +61,7 @@
 		modal = {
 			open: true, mode: 'add',
 			host: { id: 'host-' + Date.now().toString(36), name: '', driver: 'socket', endpoint: '/var/run/docker.sock', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
-			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: ''
+			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: '', isDefault: false
 		};
 	}
 
@@ -71,7 +71,8 @@
 		modal = {
 			open: true, mode: 'edit',
 			host: { ...host, mountPoints: { ...mp }, tags: [...(host.tags || [])] },
-			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: dockerKey
+			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: dockerKey,
+			isDefault: hostsConfig.default === host.id
 		};
 	}
 
@@ -118,20 +119,32 @@
 	}
 
 	function getCopyCmd() {
-		const ep = modal.host.endpoint || '';
-		const [u, hp] = ep.split('@');
-		const [h, p] = (hp || '').split(':');
 		return `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${modal.host.sshPubKey || ''}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
 	}
 
 	async function saveHost() {
+		const mp = modal.host.mountPoints || {};
+		for (const k of Object.keys(mp)) mp[k] = { ...mp[k], isDocker: k === modal.dockerDirKey };
 		try {
-			const mp = modal.host.mountPoints || {};
-			for (const k of Object.keys(mp)) mp[k] = { ...mp[k], isDocker: k === modal.dockerDirKey };
 			if (modal.mode === 'add') await hostsApi.create(modal.host);
 			else await hostsApi.update(modal.host.id, modal.host);
-			closeModal(); await loadHosts();
+			if (modal.isDefault) {
+				hostsConfig.default = modal.host.id;
+				hostsConfig.hosts[modal.host.id] = { ...modal.host };
+			}
+			await loadHosts();
 		} catch (e) { console.error(e); }
+	}
+
+	async function saveAndTest() {
+		await saveHost();
+		testLoading = true;
+		try {
+			const result = await hostsApi.test(modal.host.id);
+			showToast(result.status === 'ok' ? '连接成功: ' + result.message : '连接失败: ' + result.message, result.status === 'ok' ? 'ok' : 'err');
+		} catch (e) {
+			showToast('连接失败: ' + String(e), 'err');
+		} finally { testLoading = false; }
 	}
 
 	function deleteHost(id: string, name: string) {
@@ -141,20 +154,12 @@
 	}
 
 	async function testHost(id: string) {
-		testLoading = true; testResult = null;
+		testLoading = true;
 		try {
 			const result = await hostsApi.test(id);
-			testResult = { hostId: id, status: result.status, message: result.message };
-			showToast(result.status === 'ok' ? '✓ 连接成功: ' + result.message : '✗ 连接失败: ' + result.message, result.status === 'ok' ? 'ok' : 'err');
-		} catch (e) {
-			testResult = { hostId: id, status: 'error', message: String(e) };
-			showToast('✗ 连接失败: ' + String(e), 'err');
-		} finally { testLoading = false; }
-	}
-
-	async function saveAndTest() {
-		await saveHost();
-		await testHost(modal.host.id);
+			showToast(result.status === 'ok' ? '连接成功: ' + result.message : '连接失败: ' + result.message, result.status === 'ok' ? 'ok' : 'err');
+		} catch (e) { showToast('连接失败: ' + String(e), 'err'); }
+		finally { testLoading = false; }
 	}
 
 	function getDriverLabel(d: string) { return d === 'ssh' ? 'SSH' : 'Socket'; }
@@ -183,6 +188,7 @@
 		{:else}
 			<table class="w-full min-w-[900px] border-collapse text-[13px] leading-5">
 				<thead><tr>
+					<th class="{thClass} w-[50px]">默认</th>
 					<th class="{thClass}">Name</th>
 					<th class="{thClass}">Endpoint</th>
 					<th class="{thClass}">Status</th>
@@ -193,10 +199,18 @@
 				<tbody>
 					{#each hostList as host (host.id)}
 						<tr class="transition-colors hover:bg-surface-secondary">
+							<td class="{tdClass} text-center">
+								{#if hostsConfig.default === host.id}
+									<span class="inline-block h-3 w-3 rounded-full bg-green-500"></span>
+								{/if}
+							</td>
 							<td class="{tdClass}">
 								<div class="flex items-center gap-2">
-									{#if hostsConfig.default === host.id}<span class="h-2 w-2 rounded-full bg-green-500 shrink-0"></span>
-									{:else}<span class="h-2 w-2 rounded-full bg-gray-500 shrink-0"></span>{/if}
+									{#if hostStats[host.id]}
+										<span class="h-2 w-2 rounded-full shrink-0 {hostStats[host.id].status === 'online' ? 'bg-green-500' : 'bg-red-500'}"></span>
+									{:else}
+										<span class="h-2 w-2 rounded-full bg-gray-500 shrink-0"></span>
+									{/if}
 									<span class="font-medium">{host.name}</span>
 									<span class="text-[11px] {getDriverColor(host.driver)}">{getDriverLabel(host.driver)}</span>
 								</div>
@@ -218,8 +232,7 @@
 							</td>
 							<td class="{tdClass} text-text-secondary text-[12px]">
 								{#if hostStats[host.id]}
-									<span class="text-green-400">{hostStats[host.id].running}</span>/<span>{hostStats[host.id].total}</span>
-									{#if hostStats[host.id].stopped > 0}<span class="text-red-400 ml-1">({hostStats[host.id].stopped} 停止)</span>{/if}
+									{hostStats[host.id].running}/{hostStats[host.id].total}
 								{:else}-{/if}
 							</td>
 							<td class="{tdClass}">
@@ -270,9 +283,14 @@
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={closeModal}><X size={16} /></button>
 			</div>
 			<div class="flex-1 overflow-auto p-4 space-y-4">
-				<div>
-					<label class="mb-1 block text-[11px] text-text-muted">显示名称 <span class="text-red-400">*</span></label>
-					<input type="text" bind:value={modal.host.name} placeholder="主NAS" class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+				<div class="flex items-end gap-3">
+					<div class="flex-1">
+						<label class="mb-1 block text-[11px] text-text-muted">显示名称 <span class="text-red-400">*</span></label>
+						<input type="text" bind:value={modal.host.name} placeholder="主NAS" class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+					</div>
+					<label class="flex items-center gap-1.5 text-[11px] text-text-muted cursor-pointer pb-1.5 whitespace-nowrap">
+						<input type="checkbox" bind:checked={modal.isDefault} class="rounded accent-green-500" /> 默认主机
+					</label>
 				</div>
 				<div class="grid grid-cols-3 gap-3">
 					<div>
@@ -300,11 +318,13 @@
 						</div>
 						<div>
 							<label class="mb-1 block text-[10px] text-text-muted">私钥</label>
-							<textarea bind:value={modal.host.sshKey} rows={3} readonly placeholder="点击生成或粘贴" class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:outline-none resize-none cursor-default"></textarea>
+							<input type="text" bind:value={modal.host.sshKey} readonly placeholder="点击生成或粘贴"
+								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:outline-none cursor-default" />
 						</div>
 						<div>
 							<label class="mb-1 block text-[10px] text-text-muted">公钥</label>
-							<textarea bind:value={modal.host.sshPubKey} rows={2} readonly placeholder="点击生成或粘贴" class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:outline-none resize-none cursor-default"></textarea>
+							<input type="text" bind:value={modal.host.sshPubKey} readonly placeholder="点击生成或粘贴"
+								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:outline-none cursor-default" />
 						</div>
 						<div class="flex items-center gap-1 pt-2 border-t border-border-secondary">
 							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制私钥" onclick={() => copyText(modal.host.sshKey || '', 'priv')} disabled={!modal.host.sshKey}>
@@ -317,15 +337,10 @@
 								{#if copied['cmd']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal size={10} />公钥设置命令{/if}
 							</button>
 						</div>
-						<div class="mt-2 rounded border border-blue-500/20 bg-blue-500/5 p-2">
-							<p class="text-[10px] text-blue-400 font-medium mb-1">Podman 兼容</p>
-							<div class="flex items-center gap-1 rounded bg-black/30 px-2 py-1 font-mono text-[10px] text-text-secondary">
-								<span class="flex-1 truncate">systemctl enable --now podman.socket</span>
-								<button type="button" class="shrink-0 text-text-muted hover:text-text-primary" onclick={() => copyText('systemctl enable --now podman.socket', 'podman')}>
-									{#if copied['podman']}<Check size={10} class="text-green-400" />{:else}<Copy size={10} />{/if}
-								</button>
-							</div>
-						</div>
+						<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-blue-400 hover:bg-blue-500/10 transition-colors mt-2"
+							onclick={() => copyText('systemctl enable --now podman.socket', 'podman')}>
+							{#if copied['podman']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal size={10} />Podman 兼容命令{/if}
+						</button>
 					</div>
 				{/if}
 				<div>
