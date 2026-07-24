@@ -33,6 +33,7 @@ func (h *HostHandler) RegisterRoutes(r chi.Router) {
 	r.Put("/{id}", h.UpdateHost)
 	r.Delete("/{id}", h.DeleteHost)
 	r.Post("/{id}/test", h.TestConnection)
+	r.Get("/{id}/stats", h.GetHostStats)
 	r.Post("/sshkey", h.SSHKeyGen)
 	r.Post("/pushkey", h.SSHPushKey)
 }
@@ -173,6 +174,67 @@ func (h *HostHandler) DeleteHost(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"message": "Host deleted"}, http.StatusOK)
 }
 
+func buildDockerCfg(target *model.DockerHost) service.DockerServiceConfig {
+	cfg := service.DockerServiceConfig{}
+	switch target.Driver {
+	case "tcp":
+		cfg.Host = "tcp://" + target.Endpoint
+	case "socket":
+		if strings.HasPrefix(target.Endpoint, "/") {
+			cfg.SocketPath = target.Endpoint
+		} else {
+			cfg.SocketPath = "/var/run/docker.sock"
+		}
+	case "ssh":
+		cfg.Host = "ssh://" + target.Endpoint
+		if target.SSHKey != "" {
+			cfg.SSHKey = target.SSHKey
+		}
+	}
+	return cfg
+}
+
+// GetHostStats returns connection status and container counts.
+func (h *HostHandler) GetHostStats(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	cfg := h.getConfig()
+	if cfg.DockerHosts == nil || cfg.DockerHosts.Hosts == nil {
+		writeError(w, "Host not found", model.ErrCodeValidationError, http.StatusNotFound)
+		return
+	}
+	target, ok := cfg.DockerHosts.Hosts[id]
+	if !ok {
+		writeError(w, "Host not found", model.ErrCodeValidationError, http.StatusNotFound)
+		return
+	}
+
+	result := map[string]interface{}{"status": "offline", "total": 0, "running": 0, "stopped": 0}
+	dockerCfg := buildDockerCfg(target)
+	dockerSvc, err := service.NewDockerService(dockerCfg)
+	if err != nil {
+		result["message"] = err.Error()
+		writeJSON(w, result, http.StatusOK)
+		return
+	}
+	if _, err := dockerSvc.GetDockerInfo(r.Context()); err != nil {
+		result["message"] = err.Error()
+		writeJSON(w, result, http.StatusOK)
+		return
+	}
+	result["status"] = "online"
+	containers, err := dockerSvc.ListContainers(r.Context())
+	if err == nil {
+		result["total"] = len(containers)
+		running := 0
+		for _, c := range containers {
+			if c.State == "running" { running++ }
+		}
+		result["running"] = running
+		result["stopped"] = len(containers) - running
+	}
+	writeJSON(w, result, http.StatusOK)
+}
+
 // TestConnection tests connectivity to a Docker host.
 func (h *HostHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -189,23 +251,7 @@ func (h *HostHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dockerCfg := service.DockerServiceConfig{}
-
-	switch target.Driver {
-	case "tcp":
-		dockerCfg.Host = "tcp://" + target.Endpoint
-	case "socket":
-		if strings.HasPrefix(target.Endpoint, "/") {
-			dockerCfg.SocketPath = target.Endpoint
-		} else {
-			dockerCfg.SocketPath = "/var/run/docker.sock"
-		}
-	case "ssh":
-		dockerCfg.Host = "ssh://" + target.Endpoint
-		if target.SSHKey != "" {
-			dockerCfg.SSHKey = target.SSHKey
-		}
-	}
+	dockerCfg := buildDockerCfg(target)
 
 	dockerSvc, err := service.NewDockerService(dockerCfg)
 	if err != nil {

@@ -33,9 +33,9 @@ type DockerHost struct {
 
 // HostMountPoint represents a browsable directory on a Docker host.
 type HostMountPoint struct {
-	Path     string `json:"path" mapstructure:"path"`
-	ReadOnly bool   `json:"readOnly" mapstructure:"read_only"`
-	IsDocker bool   `json:"isDocker" mapstructure:"is_docker"`
+	Path     string `json:"path" yaml:"path" mapstructure:"path"`
+	ReadOnly bool   `json:"readOnly" yaml:"read_only" mapstructure:"read_only"`
+	IsDocker bool   `json:"isDocker" yaml:"is_docker" mapstructure:"is_docker"`
 }
 
 // ServerConfig contains all server configuration options

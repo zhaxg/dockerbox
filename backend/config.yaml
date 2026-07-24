@@ -1,52 +1,52 @@
 allowed_origins: []
 chunk_size_mb: 5
 dockerhosts:
-    default: host-nas
-    hosts:
-        host-nas:
-            driver: ssh
-            endpoint: zhaxg@192.168.132.86:2322
-            id: host-nas
-            mountpoints:
-                docker:
-                    isdocker: true
-                    path: /vol1/1000/docker
-                    readonly: false
-            name: 主NAS
-            sshkey: ""
-            sshpubkey: ""
-            tags: []
+  default: host-nas
+  hosts:
+    host-nas:
+      driver: ssh
+      endpoint: zhaxg@192.168.132.86:2322
+      id: host-nas
+      mount_points:
+        docker:
+          is_docker: true
+          path: /vol1/1000/docker
+          read_only: false
+      name: 主NAS
+      ssh_key: ''
+      ssh_pub_key: ''
+      tags: []
 host: 0.0.0.0
 jwt_secret: change-me-in-production-use-a-long-random-string
 max_upload_mb: 10240
 mount_points:
-    - auto_discover: true
-      name: drives
-      path: /media/devmon
-      read_only: false
-    - name: root
-      path: /host_root
-      read_only: true
-    - name: home
-      path: /home/user
-      read_only: false
-    - name: desktop
-      path: /home/user/Desktop
-      read_only: false
-    - name: downloads
-      path: /home/user/Downloads
-      read_only: false
-    - name: documents
-      path: /home/user/Documents
-      read_only: false
-    - name: music
-      path: /home/user/Music
-      read_only: false
-    - name: pictures
-      path: /home/user/Pictures
-      read_only: false
-    - name: videos
-      path: /home/user/Videos
-      read_only: false
+- auto_discover: true
+  name: drives
+  path: /media/devmon
+  read_only: false
+- name: root
+  path: /host_root
+  read_only: true
+- name: home
+  path: /home/user
+  read_only: false
+- name: desktop
+  path: /home/user/Desktop
+  read_only: false
+- name: downloads
+  path: /home/user/Downloads
+  read_only: false
+- name: documents
+  path: /home/user/Documents
+  read_only: false
+- name: music
+  path: /home/user/Music
+  read_only: false
+- name: pictures
+  path: /home/user/Pictures
+  read_only: false
+- name: videos
+  path: /home/user/Videos
+  read_only: false
 port: 8080
 rate_limit_rps: 10

@@ -15,6 +15,7 @@
 	let pushLoading = $state(false);
 	let pushResult = $state('');
 	let genKeyLoading = $state(false);
+	let hostStats = $state<Record<string, { status: string; total: number; running: number; stopped: number; message?: string }>>({});
 
 	let modal = $state<{
 		open: boolean;
@@ -38,9 +39,27 @@
 
 	async function loadHosts() {
 		loading = true;
-		try { hostsConfig = await hostsApi.list(); if (!hostsConfig.hosts) hostsConfig.hosts = {}; }
-		catch (e) { console.error(e); }
+		try {
+			hostsConfig = await hostsApi.list();
+			if (!hostsConfig.hosts) hostsConfig.hosts = {};
+			// Auto-fetch stats for each host
+			for (const id of Object.keys(hostsConfig.hosts)) {
+				fetchHostStats(id);
+			}
+		} catch (e) { console.error(e); }
 		finally { loading = false; }
+	}
+
+	async function fetchHostStats(id: string) {
+		try {
+			const token = localStorage.getItem('accessToken') || '';
+			const resp = await fetch(`/api/v1/hosts/${id}/stats`, {
+				headers: { 'Authorization': 'Bearer ' + token }
+			});
+			if (resp.ok) {
+				hostStats[id] = await resp.json();
+			}
+		} catch (e) { hostStats[id] = { status: 'offline', total: 0, running: 0, stopped: 0 }; }
 	}
 
 	function showConfirm(title: string, message: string, onConfirm: () => void) {
