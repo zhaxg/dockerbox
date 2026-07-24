@@ -1,0 +1,48 @@
+- generic [ref=f18e2]:
+  - generic [ref=f18e25]:
+    - complementary [ref=f18e26]:
+      - heading "BoxBox" [level=1] [ref=f18e28]
+      - navigation [ref=f18e29]:
+        - button "概览" [ref=f18e30] [cursor=pointer]
+        - button "容器" [ref=f18e33] [cursor=pointer]
+        - button "Compose" [ref=f18e36] [cursor=pointer]
+        - button "镜像" [ref=f18e39] [cursor=pointer]
+        - button "网络" [ref=f18e42] [cursor=pointer]
+        - button "文件" [ref=f18e45] [cursor=pointer]
+        - generic [ref=f18e49]:
+          - generic [ref=f18e50]: 收藏目录
+          - generic [ref=f18e51]: 挂载目录
+          - button "root" [ref=f18e52] [cursor=pointer]
+          - button "根目录" [ref=f18e55] [cursor=pointer]
+        - button "设置" [ref=f18e58] [cursor=pointer]
+    - main [ref=f18e61]:
+      - generic [ref=f18e62]:
+        - generic [ref=f18e63]:
+          - generic [ref=f18e64]:
+            - button "Back" [disabled] [ref=f18e65]
+            - button "Forward" [disabled] [ref=f18e67]
+            - button "Up" [disabled] [ref=f18e69]
+          - button "Edit location" [ref=f18e71]:
+            - button "Go to root" [ref=f18e72] [cursor=pointer]
+            - generic [ref=f18e74]: This Server
+          - generic [ref=f18e76]:
+            - button "Upload files" [disabled] [ref=f18e77]
+            - button "Refresh" [ref=f18e79] [cursor=pointer]
+            - button "Settings" [ref=f18e81] [cursor=pointer]
+        - region "File browser content" [ref=f18e83]:
+          - button "/ 29.67 GB 6.63 GB used · 21.51 GB free /dev/sda1 · ext4 22.349709999483174 22.3%" [ref=f18e86] [cursor=pointer]:
+            - generic [ref=f18e89]:
+              - generic [ref=f18e90]:
+                - generic / [ref=f18e91]
+                - generic [ref=f18e92]: 29.67 GB
+              - generic [ref=f18e94]: 6.63 GB used · 21.51 GB free
+              - generic "/dev/sda1" [ref=f18e95]: /dev/sda1 · ext4
+              - generic [ref=f18e96]:
+                - progressbar [ref=f18e100]
+                - generic [ref=f18e101]: 22.3%
+        - generic [ref=f18e102]:
+          - generic [ref=f18e103]: 1 item
+          - generic [ref=f18e106]:
+            - button "List view" [pressed] [ref=f18e107] [cursor=pointer]
+            - button "Grid view" [ref=f18e109] [cursor=pointer]
+  - generic [ref=f18e24]: BoxBox

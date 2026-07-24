@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Spinner, Button } from '$lib/components/ui';
 	import { hostsApi, type DockerHost, type DockerHostsConfig, type HostMountPoint } from '$lib/api/hosts';
-	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, ChevronDown, ChevronUp } from 'lucide-svelte';
+	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Server } from 'lucide-svelte';
 
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let loading = $state(true);
@@ -11,21 +11,25 @@
 	});
 	let testResult = $state<{ hostId: string; status: string; message: string } | null>(null);
 	let testLoading = $state(false);
-	let sshCopied = $state<Record<string, boolean>>({});
+	let copied = $state<Record<string, boolean>>({});
+	let pushLoading = $state(false);
+	let pushResult = $state('');
+	let genKeyLoading = $state(false);
 
-	// Modal
 	let modal = $state<{
 		open: boolean;
 		mode: 'add' | 'edit';
-		host: DockerHost;
+		host: any;
 		mountKey: string;
 		mountPath: string;
 		mountReadOnly: boolean;
-		showSsh: boolean;
+		dockerDirKey: string;
+		sshPassword: string;
+		showPush: boolean;
 	}>({
 		open: false, mode: 'add',
-		host: { id: '', name: '', driver: 'ssh', endpoint: '', tags: [], mountPoints: {} },
-		mountKey: '', mountPath: '', mountReadOnly: false, showSsh: false
+		host: { id: '', name: '', driver: 'ssh', endpoint: '', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
+		mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: '', sshPassword: '', showPush: false
 	});
 
 	const hostList = $derived(Object.values(hostsConfig.hosts || {}));
@@ -34,10 +38,8 @@
 
 	async function loadHosts() {
 		loading = true;
-		try {
-			hostsConfig = await hostsApi.list();
-			if (!hostsConfig.hosts) hostsConfig.hosts = {};
-		} catch (e) { console.error(e); }
+		try { hostsConfig = await hostsApi.list(); if (!hostsConfig.hosts) hostsConfig.hosts = {}; }
+		catch (e) { console.error(e); }
 		finally { loading = false; }
 	}
 
@@ -49,20 +51,22 @@
 	function openAdd() {
 		modal = {
 			open: true, mode: 'add',
-			host: { id: '', name: '', driver: 'ssh', endpoint: '', tags: [], mountPoints: {} },
-			mountKey: '', mountPath: '', mountReadOnly: false, showSsh: false
+			host: { id: 'host-' + Date.now().toString(36), name: '', driver: 'ssh', endpoint: '', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
+			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: '', sshPassword: '', showPush: false
 		};
 	}
 
 	function openEdit(host: DockerHost) {
+		const mp = host.mountPoints || {};
+		const dockerKey = Object.entries(mp).find(([_, v]) => (v as any).isDocker)?.[0] || Object.keys(mp)[0] || '';
 		modal = {
 			open: true, mode: 'edit',
-			host: { ...host, mountPoints: { ...(host.mountPoints || {}) }, tags: [...(host.tags || [])] },
-			mountKey: '', mountPath: '', mountReadOnly: false, showSsh: false
+			host: { ...host, mountPoints: { ...mp }, tags: [...(host.tags || [])] },
+			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: dockerKey, sshPassword: '', showPush: false
 		};
 	}
 
-	function closeModal() { modal.open = false; }
+	function closeModal() { modal.open = false; pushResult = ''; }
 
 	function addMountPoint() {
 		const key = modal.mountKey.trim();
@@ -79,11 +83,61 @@
 		if (modal.host.mountPoints) {
 			delete modal.host.mountPoints[key];
 			modal.host.mountPoints = { ...modal.host.mountPoints };
+			if (modal.dockerDirKey === key) modal.dockerDirKey = Object.keys(modal.host.mountPoints)[0] || '';
 		}
+	}
+
+	async function genKeyPair() {
+		genKeyLoading = true;
+		try {
+			const result = await fetch('/api/v1/ssh/genkey', {
+				method: 'POST',
+				headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('accessToken') || '') }
+			}).then(r => r.json());
+			if (result.private_key) {
+				modal.host.sshKey = result.private_key;
+				modal.host.sshPubKey = result.public_key;
+			}
+		} catch (e) { console.error(e); }
+		finally { genKeyLoading = false; }
+	}
+
+	async function pushKey() {
+		if (!modal.host.endpoint || !modal.host.sshPubKey || !modal.sshPassword) return;
+		pushLoading = true;
+		pushResult = '';
+		try {
+			const [user, hostPort] = modal.host.endpoint.split('@');
+			const [host, port] = (hostPort || '').split(':');
+			const result = await fetch('/api/v1/ssh/pushkey', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('accessToken') || '') },
+				body: JSON.stringify({
+					user: user || 'root',
+					host: host || hostPort,
+					port: port || '22',
+					password: modal.sshPassword,
+					pubkey: modal.host.sshPubKey
+				})
+			}).then(r => r.json());
+			pushResult = result.status === 'ok' ? '公钥推送成功' : (result.message || '推送失败');
+		} catch (e) { pushResult = '推送失败: ' + String(e); }
+		finally { pushLoading = false; }
+	}
+
+	function copyText(text: string, key: string) {
+		navigator.clipboard.writeText(text);
+		copied[key] = true;
+		setTimeout(() => copied[key] = false, 2000);
 	}
 
 	async function saveHost() {
 		try {
+			// Mark selected docker dir
+			const mp = modal.host.mountPoints || {};
+			for (const k of Object.keys(mp)) {
+				mp[k] = { ...mp[k], isDocker: k === modal.dockerDirKey };
+			}
 			if (modal.mode === 'add') {
 				await hostsApi.create(modal.host);
 			} else {
@@ -101,18 +155,16 @@
 	}
 
 	async function testHost(id: string) {
-		testLoading = true;
-		testResult = null;
+		testLoading = true; testResult = null;
 		try {
 			const result = await hostsApi.test(id);
 			testResult = { hostId: id, status: result.status, message: result.message };
-		} catch (e) {
-			testResult = { hostId: id, status: 'error', message: String(e) };
-		} finally { testLoading = false; }
+		} catch (e) { testResult = { hostId: id, status: 'error', message: String(e) }; }
+		finally { testLoading = false; }
 	}
 
-	function getDriverLabel(d: string) { return d === 'tcp' ? 'TCP' : d === 'ssh' ? 'SSH' : 'Socket'; }
-	function getDriverColor(d: string) { return d === 'ssh' ? 'text-green-400' : d === 'tcp' ? 'text-blue-400' : 'text-orange-400'; }
+	function getDriverLabel(d: string) { return d === 'ssh' ? 'SSH' : 'Socket'; }
+	function getDriverColor(d: string) { return d === 'ssh' ? 'text-green-400' : 'text-orange-400'; }
 
 	const thClass = 'px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-text-muted border-b border-border-secondary select-none whitespace-nowrap';
 	const tdClass = 'px-3 py-2 text-[13px] text-text-primary border-b border-border-secondary/50';
@@ -174,23 +226,13 @@
 								</div>
 							</td>
 							<td class="{tdClass} text-text-secondary text-[12px]">
-								{#if host.mountPoints}
-									{Object.keys(host.mountPoints).length} 目录
-								{:else}
-									0 目录
-								{/if}
+								{#if host.mountPoints}{Object.keys(host.mountPoints).length} 目录{:else}0 目录{/if}
 							</td>
 							<td class="{tdClass}">
 								<div class="flex justify-end gap-1">
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => testHost(host.id)} title="测试连接" disabled={testLoading}>
-										<Plug size={13} />
-									</button>
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openEdit(host)} title="编辑">
-										<Pencil size={13} />
-									</button>
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteHost(host.id, host.name)} title="删除">
-										<Trash2 size={13} />
-									</button>
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => testHost(host.id)} title="测试连接" disabled={testLoading}><Plug size={13} /></button>
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openEdit(host)} title="编辑"><Pencil size={13} /></button>
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteHost(host.id, host.name)} title="删除"><Trash2 size={13} /></button>
 								</div>
 							</td>
 						</tr>
@@ -224,79 +266,72 @@
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={closeModal}><X size={16} /></button>
 			</div>
 			<div class="flex-1 overflow-auto p-4 space-y-4">
-				<!-- Basic info -->
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="mb-1 block text-[11px] text-text-muted">主机ID</label>
-						<input type="text" bind:value={modal.host.id} disabled={modal.mode === 'edit'}
-							placeholder="my-nas" class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none disabled:opacity-50" />
-					</div>
-					<div>
-						<label class="mb-1 block text-[11px] text-text-muted">显示名称</label>
-						<input type="text" bind:value={modal.host.name} placeholder="主NAS"
-							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
-					</div>
+				<!-- Name -->
+				<div>
+					<label class="mb-1 block text-[11px] text-text-muted">显示名称 <span class="text-red-400">*</span></label>
+					<input type="text" bind:value={modal.host.name} placeholder="主NAS"
+						class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 				</div>
 
-				<!-- Connection -->
-				<div class="grid grid-cols-2 gap-3">
+				<!-- Driver + Endpoint -->
+				<div class="grid grid-cols-3 gap-3">
 					<div>
 						<label class="mb-1 block text-[11px] text-text-muted">连接方式</label>
 						<select bind:value={modal.host.driver}
 							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none">
 							<option value="ssh">SSH</option>
-							<option value="tcp">TCP</option>
 							<option value="socket">Socket</option>
 						</select>
 					</div>
-					<div>
-						<label class="mb-1 block text-[11px] text-text-muted">
-							{modal.host.driver === 'ssh' ? 'user@host:port' : modal.host.driver === 'tcp' ? 'host:port' : '/var/run/docker.sock'}
-						</label>
+					<div class="col-span-2">
+						<label class="mb-1 block text-[11px] text-text-muted">{modal.host.driver === 'ssh' ? 'user@host:port' : '/var/run/docker.sock'}</label>
 						<input type="text" bind:value={modal.host.endpoint}
-							placeholder={modal.host.driver === 'ssh' ? 'root@192.168.1.100' : modal.host.driver === 'tcp' ? '192.168.1.100:2375' : '/var/run/docker.sock'}
+							placeholder={modal.host.driver === 'ssh' ? 'root@192.168.1.100:22' : '/var/run/docker.sock'}
 							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 					</div>
 				</div>
 
-				<!-- SSH Key -->
+				<!-- SSH Key Pair -->
 				{#if modal.host.driver === 'ssh'}
-					<div>
-						<button type="button" class="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300"
-							onclick={() => modal.showSsh = !modal.showSsh}>
-							{#if modal.showSsh}<ChevronUp size={12} />{:else}<ChevronDown size={12} />{/if}
-							SSH密钥配置帮助
-						</button>
-						{#if modal.showSsh}
-							<div class="mt-2 rounded border border-border-secondary bg-surface-secondary p-3 space-y-2 text-[11px] text-text-secondary">
-								<p class="text-text-muted font-medium">1. 生成密钥对：</p>
-								<div class="flex items-center gap-2 rounded bg-black/30 px-2 py-1 font-mono">
-									<span class="flex-1 truncate">ssh-keygen -t ed25519 -C "boxbox" -f ~/.ssh/boxbox_ed25519 -N ""</span>
-									<button type="button" class="shrink-0 text-text-muted hover:text-text-primary" onclick={() => { navigator.clipboard.writeText('ssh-keygen -t ed25519 -C "boxbox" -f ~/.ssh/boxbox_ed25519 -N ""'); sshCopied['gen'] = true; setTimeout(() => sshCopied['gen'] = false, 2000); }}>
-										{#if sshCopied['gen']}<Check size={12} class="text-green-400" />{:else}<Copy size={12} />{/if}
-									</button>
+					<div class="rounded border border-border-secondary bg-surface-secondary p-3 space-y-3">
+						<div class="flex items-center justify-between">
+							<span class="text-[11px] font-medium text-text-muted flex items-center gap-1"><Key size={12} /> ED25519 密钥对</span>
+							<Button variant="secondary" size="sm" onclick={genKeyPair} disabled={genKeyLoading}>
+								{#if genKeyLoading}<Spinner size={12} />{:else}一键生成密钥对{/if}
+							</Button>
+						</div>
+						<div>
+							<label class="mb-1 block text-[10px] text-text-muted">私钥</label>
+							<textarea bind:value={modal.host.sshKey} rows={3} placeholder="粘贴或点击生成"
+								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none resize-none"></textarea>
+						</div>
+						<div>
+							<label class="mb-1 block text-[10px] text-text-muted">公钥</label>
+							<textarea bind:value={modal.host.sshPubKey} rows={2} placeholder="粘贴或点击生成"
+								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none resize-none"></textarea>
+						</div>
+						<!-- Push to server -->
+						<div class="border-t border-border-secondary pt-3">
+							<button type="button" class="text-[11px] text-blue-400 hover:text-blue-300"
+								onclick={() => modal.showPush = !modal.showPush}>
+								{modal.showPush ? '收起' : '推送公钥到远程服务器'}
+							</button>
+							{#if modal.showPush}
+								<div class="mt-2 space-y-2">
+									<p class="text-[10px] text-text-muted">输入一次远程服务器密码（临时使用，不存储）</p>
+									<div class="flex items-center gap-2">
+										<input type="password" bind:value={modal.sshPassword} placeholder="远程服务器密码"
+											class="flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary focus:border-border-focus focus:outline-none" />
+										<Button variant="primary" size="sm" onclick={pushKey} disabled={pushLoading || !modal.sshPassword || !modal.host.sshPubKey}>
+											{#if pushLoading}<Spinner size={12} class="mr-1" />{:else}<Server size={12} class="mr-1" />{/if}推送
+										</Button>
+									</div>
+									{#if pushResult}
+										<p class="text-[11px] {pushResult.includes('成功') ? 'text-green-400' : 'text-red-400'}">{pushResult}</p>
+									{/if}
 								</div>
-								<p class="text-text-muted font-medium">2. 复制公钥到宿主机：</p>
-								<div class="flex items-center gap-2 rounded bg-black/30 px-2 py-1 font-mono">
-									<span class="flex-1 truncate">ssh-copy-id -i ~/.ssh/boxbox_ed25519.pub USER@HOST</span>
-									<button type="button" class="shrink-0 text-text-muted hover:text-text-primary" onclick={() => { navigator.clipboard.writeText('ssh-copy-id -i ~/.ssh/boxbox_ed25519.pub USER@HOST'); sshCopied['copy'] = true; setTimeout(() => sshCopied['copy'] = false, 2000); }}>
-										{#if sshCopied['copy']}<Check size={12} class="text-green-400" />{:else}<Copy size={12} />{/if}
-									</button>
-								</div>
-								<p class="text-text-muted font-medium">3. 验证连接：</p>
-								<div class="flex items-center gap-2 rounded bg-black/30 px-2 py-1 font-mono">
-									<span class="flex-1 truncate">ssh -i ~/.ssh/boxbox_ed25519 USER@HOST docker info</span>
-									<button type="button" class="shrink-0 text-text-muted hover:text-text-primary" onclick={() => { navigator.clipboard.writeText('ssh -i ~/.ssh/boxbox_ed25519 USER@HOST docker info'); sshCopied['test'] = true; setTimeout(() => sshCopied['test'] = false, 2000); }}>
-										{#if sshCopied['test']}<Check size={12} class="text-green-400" />{:else}<Copy size={12} />{/if}
-									</button>
-								</div>
-								<div>
-									<label class="mb-1 block text-[11px] text-text-muted">私钥路径（可选，默认 ~/.ssh/id_rsa）</label>
-									<input type="text" bind:value={modal.host.sshKey} placeholder="~/.ssh/boxbox_ed25519"
-										class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
-								</div>
-							</div>
-						{/if}
+							{/if}
+						</div>
 					</div>
 				{/if}
 
@@ -315,10 +350,16 @@
 					<div class="space-y-1.5 mb-2">
 						{#each Object.entries(modal.host.mountPoints || {}) as [key, mp]}
 							<div class="flex items-center gap-2 rounded border border-border-secondary bg-surface-secondary px-3 py-1.5">
+								<input type="radio" name="dockerDir" value={key} checked={modal.dockerDirKey === key}
+									onchange={() => modal.dockerDirKey = key}
+									class="accent-green-500" title="设为Docker主目录" />
 								<span class="text-[12px] font-medium text-text-primary min-w-[80px]">{key}</span>
 								<span class="flex-1 text-[11px] text-text-secondary font-mono truncate">{mp.path}</span>
 								{#if mp.readOnly}
 									<span class="text-[10px] text-text-muted">只读</span>
+								{/if}
+								{#if modal.dockerDirKey === key}
+									<span class="text-[10px] text-green-400">Docker主目录</span>
 								{/if}
 								<button type="button" class="text-text-muted hover:text-red-400" onclick={() => removeMountPoint(key)}>
 									<X size={12} />
@@ -340,7 +381,7 @@
 			</div>
 			<div class="flex items-center justify-end gap-2 border-t border-border-secondary px-4 py-3">
 				<Button variant="secondary" size="sm" onclick={closeModal}>取消</Button>
-				<Button variant="primary" size="sm" onclick={saveHost} disabled={!modal.host.id || !modal.host.name || !modal.host.endpoint}>
+				<Button variant="primary" size="sm" onclick={saveHost} disabled={!modal.host.name || !modal.host.endpoint}>
 					{modal.mode === 'add' ? '添加' : '保存'}
 				</Button>
 			</div>

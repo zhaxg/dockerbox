@@ -1,0 +1,15 @@
+- main [ref=f18e6]:
+  - generic [ref=f18e8]:
+    - generic [ref=f18e9]:
+      - heading "BoxBox" [level=1] [ref=f18e13]
+      - paragraph [ref=f18e14]: Sign in to access your files
+    - generic [ref=f18e15]:
+      - generic [ref=f18e16]:
+        - generic [ref=f18e17]: Username
+        - textbox "Username" [ref=f18e18]:
+          - /placeholder: Enter your username
+      - generic [ref=f18e19]:
+        - generic [ref=f18e20]: Password
+        - textbox "Password" [ref=f18e21]:
+          - /placeholder: Enter your password
+      - button "Sign In" [disabled] [ref=f18e22]

@@ -1,0 +1,256 @@
+- generic [ref=f7e5]:
+  - complementary [ref=f7e6]:
+    - heading "BoxBox" [level=1] [ref=f7e8]
+    - navigation [ref=f7e9]:
+      - button "概览" [ref=f7e10] [cursor=pointer]
+      - button "容器" [ref=f7e13] [cursor=pointer]
+      - button "Compose" [ref=f7e16] [cursor=pointer]
+      - button "镜像" [ref=f7e19] [cursor=pointer]
+      - button "网络" [ref=f7e22] [cursor=pointer]
+      - button "文件" [ref=f7e25] [cursor=pointer]
+      - generic [ref=f7e29]:
+        - generic [ref=f7e30]: 收藏目录
+        - generic [ref=f7e31]: 挂载目录
+        - button "root" [ref=f7e50] [cursor=pointer]
+        - button "根目录" [ref=f7e32] [cursor=pointer]
+      - button "设置" [ref=f7e35] [cursor=pointer]
+  - main [ref=f7e38]:
+    - generic [ref=f7e39]:
+      - generic [ref=f7e40]:
+        - heading "Compose 管理" [level=1] [ref=f7e41]
+        - generic [ref=f7e42]:
+          - button "新建" [ref=f7e43] [cursor=pointer]
+          - button "刷新" [ref=f7e45] [cursor=pointer]
+      - generic [ref=f7e418]:
+        - generic [ref=f7e420]:
+          - generic [ref=f7e423]:
+            - generic [ref=f7e424]: cloudflared
+            - generic [ref=f7e425]: /vol1/1000/docker/cloudflared
+          - generic [ref=f7e426]:
+            - generic [ref=f7e427]:
+              - generic [ref=f7e428]: 运行中
+              - generic [ref=f7e429]: "服务: 1/1"
+            - generic [ref=f7e430]:
+              - button "停止" [ref=f7e431] [cursor=pointer]
+              - button "重启" [ref=f7e433] [cursor=pointer]
+              - button "构建" [ref=f7e435] [cursor=pointer]
+              - button "重新部署" [ref=f7e437] [cursor=pointer]
+              - button "查看" [ref=f7e439] [cursor=pointer]
+        - generic [ref=f7e442]:
+          - generic [ref=f7e445]:
+            - generic [ref=f7e446]: boxbox
+            - generic [ref=f7e447]: /vol1/1000/docker/boxbox
+          - generic [ref=f7e448]:
+            - generic [ref=f7e449]:
+              - generic [ref=f7e450]: 运行中
+              - generic [ref=f7e451]: "服务: 1/1"
+            - generic [ref=f7e452]:
+              - button "停止" [ref=f7e453] [cursor=pointer]
+              - button "重启" [ref=f7e455] [cursor=pointer]
+              - button "构建" [ref=f7e457] [cursor=pointer]
+              - button "重新部署" [ref=f7e459] [cursor=pointer]
+              - button "查看" [ref=f7e461] [cursor=pointer]
+        - generic [ref=f7e464]:
+          - generic [ref=f7e467]:
+            - generic [ref=f7e468]: omniroute
+            - generic [ref=f7e469]: /vol1/1000/docker/omniroute
+          - generic [ref=f7e470]:
+            - generic [ref=f7e471]:
+              - generic [ref=f7e472]: 已停止
+              - generic [ref=f7e473]: "服务: 0/1"
+            - generic [ref=f7e474]:
+              - button "启动" [ref=f7e475] [cursor=pointer]
+              - button "构建" [ref=f7e477] [cursor=pointer]
+              - button "重新部署" [ref=f7e479] [cursor=pointer]
+              - button "查看" [ref=f7e481] [cursor=pointer]
+        - generic [ref=f7e484]:
+          - generic [ref=f7e487]:
+            - generic [ref=f7e488]: mihomo
+            - generic [ref=f7e489]: /vol1/1000/docker/mihomo
+          - generic [ref=f7e490]:
+            - generic [ref=f7e491]:
+              - generic [ref=f7e492]: 运行中
+              - generic [ref=f7e493]: "服务: 1/1"
+            - generic [ref=f7e494]:
+              - button "停止" [ref=f7e495] [cursor=pointer]
+              - button "重启" [ref=f7e497] [cursor=pointer]
+              - button "构建" [ref=f7e499] [cursor=pointer]
+              - button "重新部署" [ref=f7e501] [cursor=pointer]
+              - button "查看" [ref=f7e503] [cursor=pointer]
+        - generic [ref=f7e506]:
+          - generic [ref=f7e509]:
+            - generic [ref=f7e510]: 9router
+            - generic [ref=f7e511]: /vol1/1000/docker/9router
+          - generic [ref=f7e512]:
+            - generic [ref=f7e513]:
+              - generic [ref=f7e514]: 运行中
+              - generic [ref=f7e515]: "服务: 1/1"
+            - generic [ref=f7e516]:
+              - button "停止" [ref=f7e517] [cursor=pointer]
+              - button "重启" [ref=f7e519] [cursor=pointer]
+              - button "构建" [ref=f7e521] [cursor=pointer]
+              - button "重新部署" [ref=f7e523] [cursor=pointer]
+              - button "查看" [ref=f7e525] [cursor=pointer]
+        - generic [ref=f7e528]:
+          - generic [ref=f7e531]:
+            - generic [ref=f7e532]: netbird
+            - generic [ref=f7e533]: /vol1/1000/docker/netbird
+          - generic [ref=f7e534]:
+            - generic [ref=f7e535]:
+              - generic [ref=f7e536]: 运行中
+              - generic [ref=f7e537]: "服务: 1/1"
+            - generic [ref=f7e538]:
+              - button "停止" [ref=f7e539] [cursor=pointer]
+              - button "重启" [ref=f7e541] [cursor=pointer]
+              - button "构建" [ref=f7e543] [cursor=pointer]
+              - button "重新部署" [ref=f7e545] [cursor=pointer]
+              - button "查看" [ref=f7e547] [cursor=pointer]
+        - generic [ref=f7e550]:
+          - generic [ref=f7e553]:
+            - generic [ref=f7e554]: tailscale
+            - generic [ref=f7e555]: /vol1/1000/docker/tailscale
+          - generic [ref=f7e556]:
+            - generic [ref=f7e557]:
+              - generic [ref=f7e558]: 运行中
+              - generic [ref=f7e559]: "服务: 1/1"
+            - generic [ref=f7e560]:
+              - button "停止" [ref=f7e561] [cursor=pointer]
+              - button "重启" [ref=f7e563] [cursor=pointer]
+              - button "构建" [ref=f7e565] [cursor=pointer]
+              - button "重新部署" [ref=f7e567] [cursor=pointer]
+              - button "查看" [ref=f7e569] [cursor=pointer]
+        - generic [ref=f7e572]:
+          - generic [ref=f7e575]:
+            - generic [ref=f7e576]: frpc
+            - generic [ref=f7e577]: /vol1/1000/docker/frpc
+          - generic [ref=f7e578]:
+            - generic [ref=f7e579]:
+              - generic [ref=f7e580]: 运行中
+              - generic [ref=f7e581]: "服务: 1/1"
+            - generic [ref=f7e582]:
+              - button "停止" [ref=f7e583] [cursor=pointer]
+              - button "重启" [ref=f7e585] [cursor=pointer]
+              - button "构建" [ref=f7e587] [cursor=pointer]
+              - button "重新部署" [ref=f7e589] [cursor=pointer]
+              - button "查看" [ref=f7e591] [cursor=pointer]
+        - generic [ref=f7e594]:
+          - generic [ref=f7e597]:
+            - generic [ref=f7e598]: watchtower
+            - generic [ref=f7e599]: /vol1/1000/docker/watchtower
+          - generic [ref=f7e600]:
+            - generic [ref=f7e601]:
+              - generic [ref=f7e602]: 运行中
+              - generic [ref=f7e603]: "服务: 1/1"
+            - generic [ref=f7e604]:
+              - button "停止" [ref=f7e605] [cursor=pointer]
+              - button "重启" [ref=f7e607] [cursor=pointer]
+              - button "构建" [ref=f7e609] [cursor=pointer]
+              - button "重新部署" [ref=f7e611] [cursor=pointer]
+              - button "查看" [ref=f7e613] [cursor=pointer]
+        - generic [ref=f7e616]:
+          - generic [ref=f7e619]:
+            - generic [ref=f7e620]: vpngate
+            - generic [ref=f7e621]: /vol1/1000/docker/vpngate
+          - generic [ref=f7e622]:
+            - generic [ref=f7e623]:
+              - generic [ref=f7e624]: 已停止
+              - generic [ref=f7e625]: "服务: 0/1"
+            - generic [ref=f7e626]:
+              - button "启动" [ref=f7e627] [cursor=pointer]
+              - button "构建" [ref=f7e629] [cursor=pointer]
+              - button "重新部署" [ref=f7e631] [cursor=pointer]
+              - button "查看" [ref=f7e633] [cursor=pointer]
+        - generic [ref=f7e636]:
+          - generic [ref=f7e639]:
+            - generic [ref=f7e640]: rclone-manager
+            - generic [ref=f7e641]: /vol1/1000/docker/rclone-manager
+          - generic [ref=f7e642]:
+            - generic [ref=f7e643]:
+              - generic [ref=f7e644]: 运行中
+              - generic [ref=f7e645]: "服务: 1/1"
+            - generic [ref=f7e646]:
+              - button "停止" [ref=f7e647] [cursor=pointer]
+              - button "重启" [ref=f7e649] [cursor=pointer]
+              - button "构建" [ref=f7e651] [cursor=pointer]
+              - button "重新部署" [ref=f7e653] [cursor=pointer]
+              - button "查看" [ref=f7e655] [cursor=pointer]
+        - generic [ref=f7e658]:
+          - generic [ref=f7e661]:
+            - generic [ref=f7e662]: subconverter
+            - generic [ref=f7e663]: /vol1/1000/docker/subconverter
+          - generic [ref=f7e664]:
+            - generic [ref=f7e665]:
+              - generic [ref=f7e666]: 已停止
+              - generic [ref=f7e667]: "服务: 0/1"
+            - generic [ref=f7e668]:
+              - button "启动" [ref=f7e669] [cursor=pointer]
+              - button "构建" [ref=f7e671] [cursor=pointer]
+              - button "重新部署" [ref=f7e673] [cursor=pointer]
+              - button "查看" [ref=f7e675] [cursor=pointer]
+        - generic [ref=f7e678]:
+          - generic [ref=f7e681]:
+            - generic [ref=f7e682]: nginx
+            - generic [ref=f7e683]: /vol1/1000/docker/nginx
+          - generic [ref=f7e684]:
+            - generic [ref=f7e685]:
+              - generic [ref=f7e686]: 运行中
+              - generic [ref=f7e687]: "服务: 2/2"
+            - generic [ref=f7e688]:
+              - button "停止" [ref=f7e689] [cursor=pointer]
+              - button "重启" [ref=f7e691] [cursor=pointer]
+              - button "构建" [ref=f7e693] [cursor=pointer]
+              - button "重新部署" [ref=f7e695] [cursor=pointer]
+              - button "查看" [ref=f7e697] [cursor=pointer]
+        - generic [ref=f7e700]:
+          - generic [ref=f7e703]:
+            - generic [ref=f7e704]: postgres
+            - generic [ref=f7e705]: /vol1/1000/docker/postgresql
+          - generic [ref=f7e706]:
+            - generic [ref=f7e707]:
+              - generic [ref=f7e708]: 运行中
+              - generic [ref=f7e709]: "服务: 1/1"
+            - generic [ref=f7e710]:
+              - button "停止" [ref=f7e711] [cursor=pointer]
+              - button "重启" [ref=f7e713] [cursor=pointer]
+              - button "构建" [ref=f7e715] [cursor=pointer]
+              - button "重新部署" [ref=f7e717] [cursor=pointer]
+              - button "查看" [ref=f7e719] [cursor=pointer]
+        - generic [ref=f7e722]:
+          - generic [ref=f7e725]:
+            - generic [ref=f7e726]: redis
+            - generic [ref=f7e727]: /vol1/1000/docker/redis
+          - generic [ref=f7e728]:
+            - generic [ref=f7e729]:
+              - generic [ref=f7e730]: 运行中
+              - generic [ref=f7e731]: "服务: 1/1"
+            - generic [ref=f7e732]:
+              - button "停止" [ref=f7e733] [cursor=pointer]
+              - button "重启" [ref=f7e735] [cursor=pointer]
+              - button "构建" [ref=f7e737] [cursor=pointer]
+              - button "重新部署" [ref=f7e739] [cursor=pointer]
+              - button "查看" [ref=f7e741] [cursor=pointer]
+        - generic [ref=f7e744]:
+          - generic [ref=f7e747]:
+            - generic [ref=f7e748]: hmx-tools
+            - generic [ref=f7e749]: /vol1/1000/docker/hmx-tools
+          - generic [ref=f7e750]:
+            - generic [ref=f7e751]:
+              - generic [ref=f7e752]: 运行中
+              - generic [ref=f7e753]: "服务: 1/1"
+            - generic [ref=f7e754]:
+              - button "停止" [ref=f7e755] [cursor=pointer]
+              - button "重启" [ref=f7e757] [cursor=pointer]
+              - button "构建" [ref=f7e759] [cursor=pointer]
+              - button "重新部署" [ref=f7e761] [cursor=pointer]
+              - button "查看" [ref=f7e763] [cursor=pointer]
+        - generic [ref=f7e766]:
+          - generic [ref=f7e769]:
+            - generic [ref=f7e770]: test-nginx
+            - generic [ref=f7e771]: /vol1/1000/docker/test-nginx
+          - generic [ref=f7e772]:
+            - generic [ref=f7e773]: "服务: 0/0"
+            - generic [ref=f7e775]:
+              - button "启动" [ref=f7e776] [cursor=pointer]
+              - button "构建" [ref=f7e778] [cursor=pointer]
+              - button "重新部署" [ref=f7e780] [cursor=pointer]
+              - button "查看" [ref=f7e782] [cursor=pointer]

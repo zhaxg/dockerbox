@@ -1,0 +1,52 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e5]:
+    - complementary [ref=f3e6]:
+      - heading "BoxBox" [level=1] [ref=f3e8]
+      - navigation [ref=f3e9]:
+        - button "概览" [ref=f3e10] [cursor=pointer]
+        - button "容器" [ref=f3e13] [cursor=pointer]
+        - button "镜像" [ref=f3e16] [cursor=pointer]
+        - button "Compose" [ref=f3e19] [cursor=pointer]
+        - button "网络" [ref=f3e22] [cursor=pointer]
+        - button "文件" [ref=f3e25] [cursor=pointer]
+        - generic [ref=f3e29]:
+          - generic [ref=f3e30]: 收藏目录
+          - generic [ref=f3e31]: 挂载目录
+          - button "root" [ref=f3e32] [cursor=pointer]
+          - button "根目录" [ref=f3e35] [cursor=pointer]
+        - button "设置" [ref=f3e38] [cursor=pointer]
+    - main [ref=f3e41]:
+      - generic [ref=f3e42]:
+        - generic [ref=f3e43]:
+          - generic [ref=f3e44]:
+            - button "返回" [ref=f3e45] [cursor=pointer]
+            - heading "boxbox" [level=1] [ref=f3e47]
+          - generic [ref=f3e48]:
+            - button "启动" [ref=f3e49] [cursor=pointer]
+            - button "停止" [ref=f3e51] [cursor=pointer]
+            - button "重启" [ref=f3e53] [cursor=pointer]
+            - button "构建" [ref=f3e55] [cursor=pointer]
+            - button "重新部署" [ref=f3e57] [cursor=pointer]
+        - generic [ref=f3e59]:
+          - button "docker-compose.yml" [ref=f3e60]
+          - button ".env" [active] [ref=f3e61]
+        - generic [ref=f3e217]:
+          - generic [ref=f3e218]:
+            - generic [ref=f3e219]: Editable No changes
+            - button "Save" [disabled] [ref=f3e221]
+          - code [ref=f3e223]:
+            - generic [ref=f3e224]:
+              - textbox "Editor content" [ref=f3e225]
+              - textbox [ref=f3e226]
+              - generic [ref=f3e228]:
+                - generic [ref=f3e229]: "1"
+                - generic [ref=f3e232]: "2"
+                - generic [ref=f3e234]: "3"
+                - generic [ref=f3e236]: "4"
+              - generic [ref=f3e244]:
+                - generic [ref=f3e245]: BOXBOX_JWT_SECRET=boxbox-test-secret-key-2025
+                - generic [ref=f3e247]: BOXBOX_USERS_admin=admin123
+                - generic [ref=f3e249]: HOST_PORT=8080
+  - generic [ref=f3e215]:
+    - alert
+    - alert

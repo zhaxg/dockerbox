@@ -1,0 +1,25 @@
+- generic [ref=e2]:
+  - generic [ref=e25]:
+    - complementary [ref=e26]:
+      - heading "BoxBox" [level=1] [ref=e28]
+      - navigation [ref=e29]:
+        - button "概览" [ref=e30] [cursor=pointer]
+        - button "容器" [ref=e33] [cursor=pointer]
+        - button "镜像" [ref=e36] [cursor=pointer]
+        - button "Compose" [ref=e39] [cursor=pointer]
+        - button "网络" [ref=e42] [cursor=pointer]
+        - button "文件" [ref=e45] [cursor=pointer]
+        - generic [ref=e49]:
+          - generic [ref=e50]: 收藏目录
+          - generic [ref=e51]: 挂载目录
+          - button "根目录" [ref=e52] [cursor=pointer]
+        - button "设置" [ref=e55] [cursor=pointer]
+    - main [ref=e58]:
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - heading "Compose 管理" [level=1] [ref=e94]
+          - button "刷新" [ref=e95] [cursor=pointer]
+        - generic [ref=e98]:
+          - paragraph [ref=e99]: Missing authorization
+          - button "重试" [ref=e100] [cursor=pointer]
+  - generic [ref=e24]: BoxBox

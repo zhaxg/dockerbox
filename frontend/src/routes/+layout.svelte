@@ -41,6 +41,7 @@
 		page.url.pathname.startsWith('/overview') ||
 		page.url.pathname.startsWith('/containers') ||
 		page.url.pathname.startsWith('/compose') ||
+		page.url.pathname.startsWith('/hosts') |
 		page.url.pathname.startsWith('/images') ||
 		page.url.pathname.startsWith('/networks')
 	);

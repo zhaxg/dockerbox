@@ -42,4 +42,16 @@ export const hostsApi = {
 		test_connect: string;
 		public_key_path: string;
 	}>('/ssh-instructions'),
+
+	genKeyPair: () => fetch('/api/v1/hosts/sshkey', {
+		method: 'POST',
+		headers: { 'Authorization': 'Bearer ' + (typeof localStorage !== 'undefined' ? localStorage.getItem('accessToken') || '' : '') }
+	}).then(r => r.json()),
+
+	pushKey: (data: { user: string; host: string; port: string; password: string; pubkey: string }) =>
+		fetch('/api/v1/hosts/pushkey', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (typeof localStorage !== 'undefined' ? localStorage.getItem('accessToken') || '' : '') },
+			body: JSON.stringify(data)
+		}).then(r => r.json()),
 };

@@ -1,0 +1,344 @@
+- generic [ref=e2]:
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - heading "BoxBox" [level=1] [ref=e8]
+      - navigation [ref=e9]:
+        - button "概览" [ref=e10] [cursor=pointer]
+        - button "容器" [ref=e13] [cursor=pointer]
+        - button "Compose" [ref=e16] [cursor=pointer]
+        - button "文件" [ref=e19] [cursor=pointer]
+        - generic [ref=e23]:
+          - generic [ref=e24]: 收藏目录
+          - generic [ref=e25]: 挂载目录
+          - button "drives" [ref=e26] [cursor=pointer]
+          - button "root" [ref=e29] [cursor=pointer]
+          - button "home" [ref=e32] [cursor=pointer]
+          - button "desktop" [ref=e35] [cursor=pointer]
+          - button "downloads" [ref=e38] [cursor=pointer]
+          - button "documents" [ref=e41] [cursor=pointer]
+          - button "music" [ref=e44] [cursor=pointer]
+          - button "pictures" [ref=e47] [cursor=pointer]
+          - button "videos" [ref=e50] [cursor=pointer]
+          - button "根目录" [ref=e53] [cursor=pointer]
+        - button "设置" [ref=e56] [cursor=pointer]
+    - main [ref=e59]:
+      - generic [ref=e110]:
+        - generic [ref=e111]:
+          - heading "容器 (17)" [level=1] [ref=e112]
+          - generic [ref=e113]:
+            - textbox "搜索容器..." [ref=e116]
+            - button "清理未使用的镜像和网络" [ref=e117] [cursor=pointer]
+            - button [ref=e119] [cursor=pointer]
+        - table [ref=e122]:
+          - rowgroup [ref=e132]:
+            - row [ref=e133]:
+              - columnheader "Name" [ref=e134]
+              - columnheader "State" [ref=e135]
+              - columnheader "Uptime" [ref=e136]
+              - columnheader "CPU" [ref=e137]
+              - columnheader "Mem" [ref=e138]
+              - columnheader "Trans" [ref=e139]
+              - columnheader "Ports" [ref=e140]
+              - columnheader "Actions" [ref=e141]
+          - rowgroup [ref=e142]:
+            - row [ref=e143]:
+              - cell "netbird" [ref=e144]:
+                - generic "netbird" [ref=e147]
+              - cell "运行中" [ref=e148]
+              - cell "9h 27m" [ref=e150]
+              - cell "0.5%" [ref=e151]
+              - cell "50 MB" [ref=e152]
+              - cell "-" [ref=e153]
+              - cell [ref=e154]
+              - cell [ref=e155]:
+                - generic [ref=e156]:
+                  - button "停止" [ref=e157]
+                  - button "重启" [ref=e160]
+                  - button "日志" [ref=e162]
+                  - button "终端" [ref=e164]
+                  - button "Inspect" [ref=e166]
+            - row [ref=e168]:
+              - cell "cloudflared" [ref=e169]:
+                - generic "cloudflared" [ref=e172]
+              - cell "运行中" [ref=e173]
+              - cell "15h 44m" [ref=e175]
+              - cell "0.3%" [ref=e176]
+              - cell "19.7 MB" [ref=e177]
+              - cell "-" [ref=e178]
+              - cell [ref=e179]
+              - cell [ref=e180]:
+                - generic [ref=e181]:
+                  - button "停止" [ref=e182]
+                  - button "重启" [ref=e185]
+                  - button "日志" [ref=e187]
+                  - button "终端" [ref=e189]
+                  - button "Inspect" [ref=e191]
+            - row [ref=e193]:
+              - cell "boxbox" [ref=e194]:
+                - generic "boxbox" [ref=e197]
+              - cell "运行中" [ref=e198]
+              - cell "15h 59m" [ref=e200]
+              - cell "0.0%" [ref=e201]
+              - cell "18.1 MB" [ref=e202]
+              - cell "↓7.5 MB ↑6.3 MB" [ref=e203]
+              - cell [ref=e204]:
+                - link "8080" [ref=e206] [cursor=pointer]:
+                  - /url: http://192.168.132.86:8080
+              - cell [ref=e208]:
+                - generic [ref=e209]:
+                  - button "停止" [ref=e210]
+                  - button "重启" [ref=e213]
+                  - button "日志" [ref=e215]
+                  - button "终端" [active] [ref=e217]
+                  - button "Inspect" [ref=e219]
+            - row [ref=e221]:
+              - cell "omniroute" [ref=e222]:
+                - generic "omniroute" [ref=e225]
+              - cell "已停止" [ref=e226]
+              - cell "-" [ref=e228]
+              - cell "0.0%" [ref=e229]
+              - cell "0 B" [ref=e230]
+              - cell "-" [ref=e231]
+              - cell [ref=e232]
+              - cell [ref=e233]:
+                - generic [ref=e234]:
+                  - button "启动" [ref=e235]
+                  - button "日志" [ref=e237]
+                  - button "终端" [ref=e239]
+                  - button "Inspect" [ref=e241]
+            - row [ref=e243]:
+              - cell "mihomo" [ref=e244]:
+                - generic "mihomo" [ref=e247]
+              - cell "运行中" [ref=e248]
+              - cell "2d 21h" [ref=e250]
+              - cell "0.0%" [ref=e251]
+              - cell "120.3 MB" [ref=e252]
+              - cell "↓10.2 GB ↑165 MB" [ref=e253]
+              - cell [ref=e254]:
+                - generic [ref=e255]:
+                  - link "9090" [ref=e256] [cursor=pointer]:
+                    - /url: http://192.168.132.86:9090
+                  - link "7891" [ref=e258] [cursor=pointer]:
+                    - /url: http://192.168.132.86:7891
+                  - link "7892" [ref=e260] [cursor=pointer]:
+                    - /url: http://192.168.132.86:7892
+                  - link "5830" [ref=e262] [cursor=pointer]:
+                    - /url: http://192.168.132.86:5830
+              - cell [ref=e264]:
+                - generic [ref=e265]:
+                  - button "停止" [ref=e266]
+                  - button "重启" [ref=e269]
+                  - button "日志" [ref=e271]
+                  - button "终端" [ref=e273]
+                  - button "Inspect" [ref=e275]
+            - row [ref=e277]:
+              - cell "9router" [ref=e278]:
+                - generic "9router" [ref=e281]
+              - cell "运行中" [ref=e282]
+              - cell "3d 15h" [ref=e284]
+              - cell "0.0%" [ref=e285]
+              - cell "181.4 MB" [ref=e286]
+              - cell "↓5.3 GB ↑5.2 GB" [ref=e287]
+              - cell [ref=e288]:
+                - link "20128" [ref=e290] [cursor=pointer]:
+                  - /url: http://192.168.132.86:20128
+              - cell [ref=e292]:
+                - generic [ref=e293]:
+                  - button "停止" [ref=e294]
+                  - button "重启" [ref=e297]
+                  - button "日志" [ref=e299]
+                  - button "终端" [ref=e301]
+                  - button "Inspect" [ref=e303]
+            - row [ref=e305]:
+              - cell "tailscale" [ref=e306]:
+                - generic "tailscale" [ref=e309]
+              - cell "运行中" [ref=e310]
+              - cell "7d 3h" [ref=e312]
+              - cell "0.0%" [ref=e313]
+              - cell "150.1 MB" [ref=e314]
+              - cell "-" [ref=e315]
+              - cell [ref=e316]
+              - cell [ref=e317]:
+                - generic [ref=e318]:
+                  - button "停止" [ref=e319]
+                  - button "重启" [ref=e322]
+                  - button "日志" [ref=e324]
+                  - button "终端" [ref=e326]
+                  - button "Inspect" [ref=e328]
+            - row [ref=e330]:
+              - cell "frpc-client-cn" [ref=e331]:
+                - generic "frpc-client-cn" [ref=e334]
+              - cell "运行中" [ref=e335]
+              - cell "19d 19h" [ref=e337]
+              - cell "0.0%" [ref=e338]
+              - cell "18.6 MB" [ref=e339]
+              - cell "-" [ref=e340]
+              - cell [ref=e341]
+              - cell [ref=e342]:
+                - generic [ref=e343]:
+                  - button "停止" [ref=e344]
+                  - button "重启" [ref=e347]
+                  - button "日志" [ref=e349]
+                  - button "终端" [ref=e351]
+                  - button "Inspect" [ref=e353]
+            - row [ref=e355]:
+              - cell "watchtower" [ref=e356]:
+                - generic "watchtower" [ref=e359]
+              - cell "运行中" [ref=e360]
+              - cell "23d 12h" [ref=e362]
+              - cell "0.0%" [ref=e363]
+              - cell "7 MB" [ref=e364]
+              - cell "↓684.7 KB ↑44.8 KB" [ref=e365]
+              - cell [ref=e366]
+              - cell [ref=e367]:
+                - generic [ref=e368]:
+                  - button "停止" [ref=e369]
+                  - button "重启" [ref=e372]
+                  - button "日志" [ref=e374]
+                  - button "终端" [ref=e376]
+                  - button "Inspect" [ref=e378]
+            - row [ref=e380]:
+              - cell "vpngate" [ref=e381]:
+                - generic "vpngate" [ref=e384]
+              - cell "已停止" [ref=e385]
+              - cell "-" [ref=e387]
+              - cell "0.0%" [ref=e388]
+              - cell "0 B" [ref=e389]
+              - cell "-" [ref=e390]
+              - cell [ref=e391]
+              - cell [ref=e392]:
+                - generic [ref=e393]:
+                  - button "启动" [ref=e394]
+                  - button "日志" [ref=e396]
+                  - button "终端" [ref=e398]
+                  - button "Inspect" [ref=e400]
+            - row [ref=e402]:
+              - cell "rclone-manager" [ref=e403]:
+                - generic "rclone-manager" [ref=e406]
+              - cell "运行中" [ref=e407]
+              - cell "49d 13h" [ref=e409]
+              - cell "0.1%" [ref=e410]
+              - cell "196.8 MB" [ref=e411]
+              - cell "↓133.6 MB ↑6.2 MB" [ref=e412]
+              - cell [ref=e413]:
+                - link "8288" [ref=e415] [cursor=pointer]:
+                  - /url: http://192.168.132.86:8288
+              - cell [ref=e417]:
+                - generic [ref=e418]:
+                  - button "停止" [ref=e419]
+                  - button "重启" [ref=e422]
+                  - button "日志" [ref=e424]
+                  - button "终端" [ref=e426]
+                  - button "Inspect" [ref=e428]
+            - row [ref=e430]:
+              - cell "subconverter" [ref=e431]:
+                - generic "subconverter" [ref=e434]
+              - cell "已停止" [ref=e435]
+              - cell "-" [ref=e437]
+              - cell "0.0%" [ref=e438]
+              - cell "0 B" [ref=e439]
+              - cell "-" [ref=e440]
+              - cell [ref=e441]
+              - cell [ref=e442]:
+                - generic [ref=e443]:
+                  - button "启动" [ref=e444]
+                  - button "日志" [ref=e446]
+                  - button "终端" [ref=e448]
+                  - button "Inspect" [ref=e450]
+            - row [ref=e452]:
+              - cell "nginx" [ref=e453]:
+                - generic "nginx" [ref=e456]
+              - cell "运行中" [ref=e457]
+              - cell "313d 13h" [ref=e459]
+              - cell "0.0%" [ref=e460]
+              - cell "18.5 MB" [ref=e461]
+              - cell "↓50.5 MB ↑775.9 KB" [ref=e462]
+              - cell [ref=e463]:
+                - generic [ref=e464]:
+                  - link "7883" [ref=e465] [cursor=pointer]:
+                    - /url: http://192.168.132.86:7883
+                  - link "7880" [ref=e467] [cursor=pointer]:
+                    - /url: http://192.168.132.86:7880
+              - cell [ref=e469]:
+                - generic [ref=e470]:
+                  - button "停止" [ref=e471]
+                  - button "重启" [ref=e474]
+                  - button "日志" [ref=e476]
+                  - button "终端" [ref=e478]
+                  - button "Inspect" [ref=e480]
+            - row [ref=e482]:
+              - cell "acme_sh" [ref=e483]:
+                - generic "acme_sh" [ref=e486]
+              - cell "运行中" [ref=e487]
+              - cell "313d 13h" [ref=e489]
+              - cell "0.0%" [ref=e490]
+              - cell "15.3 MB" [ref=e491]
+              - cell "↓49.9 MB ↑64.8 KB" [ref=e492]
+              - cell [ref=e493]
+              - cell [ref=e494]:
+                - generic [ref=e495]:
+                  - button "停止" [ref=e496]
+                  - button "重启" [ref=e499]
+                  - button "日志" [ref=e501]
+                  - button "终端" [ref=e503]
+                  - button "Inspect" [ref=e505]
+            - row [ref=e507]:
+              - cell "postgres" [ref=e508]:
+                - generic "postgres" [ref=e511]
+              - cell "运行中" [ref=e512]
+              - cell "423d 0h" [ref=e514]
+              - cell "0.0%" [ref=e515]
+              - cell "24.6 MB" [ref=e516]
+              - cell "↓49.5 MB ↑103.9 KB" [ref=e517]
+              - cell [ref=e518]:
+                - link "5532" [ref=e520] [cursor=pointer]:
+                  - /url: http://192.168.132.86:5532
+              - cell [ref=e522]:
+                - generic [ref=e523]:
+                  - button "停止" [ref=e524]
+                  - button "重启" [ref=e527]
+                  - button "日志" [ref=e529]
+                  - button "终端" [ref=e531]
+                  - button "Inspect" [ref=e533]
+            - row [ref=e535]:
+              - cell "redis" [ref=e536]:
+                - generic "redis" [ref=e539]
+              - cell "运行中" [ref=e540]
+              - cell "423d 12h" [ref=e542]
+              - cell "0.3%" [ref=e543]
+              - cell "17.1 MB" [ref=e544]
+              - cell "↓49.3 MB ↑126 B" [ref=e545]
+              - cell [ref=e546]:
+                - link "6379" [ref=e548] [cursor=pointer]:
+                  - /url: http://192.168.132.86:6379
+              - cell [ref=e550]:
+                - generic [ref=e551]:
+                  - button "停止" [ref=e552]
+                  - button "重启" [ref=e555]
+                  - button "日志" [ref=e557]
+                  - button "终端" [ref=e559]
+                  - button "Inspect" [ref=e561]
+            - row [ref=e563]:
+              - cell "hmx-tools" [ref=e564]:
+                - generic "hmx-tools" [ref=e567]
+              - cell "运行中" [ref=e568]
+              - cell "438d 14h" [ref=e570]
+              - cell "0.1%" [ref=e571]
+              - cell "135.8 MB" [ref=e572]
+              - cell "↓49.8 MB ↑704.8 KB" [ref=e573]
+              - cell [ref=e574]:
+                - link "8035" [ref=e576] [cursor=pointer]:
+                  - /url: http://192.168.132.86:8035
+              - cell [ref=e578]:
+                - generic [ref=e579]:
+                  - button "停止" [ref=e580]
+                  - button "重启" [ref=e583]
+                  - button "日志" [ref=e585]
+                  - button "终端" [ref=e587]
+                  - button "Inspect" [ref=e589]
+      - generic [ref=e592]:
+        - generic [ref=e593]:
+          - heading "终端 - boxbox" [level=3] [ref=e595]
+          - button [ref=e597]
+        - generic [ref=e599]: "已连接到容器终端... /app # \x1b[6n"
+  - generic [ref=e109]: BoxBox

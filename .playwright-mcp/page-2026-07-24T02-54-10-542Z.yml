@@ -1,0 +1,59 @@
+- generic [ref=f4e5]:
+  - complementary [ref=f4e6]:
+    - heading "BoxBox" [level=1] [ref=f4e8]
+    - navigation [ref=f4e9]:
+      - button "概览" [ref=f4e10] [cursor=pointer]
+      - button "容器" [ref=f4e13] [cursor=pointer]
+      - button "Compose" [ref=f4e16] [cursor=pointer]
+      - button "文件" [ref=f4e19] [cursor=pointer]
+      - generic [ref=f4e23]:
+        - generic [ref=f4e24]: 收藏目录
+        - generic [ref=f4e25]: 挂载目录
+        - button "drives" [ref=f4e26] [cursor=pointer]
+        - button "root" [ref=f4e29] [cursor=pointer]
+        - button "home" [ref=f4e32] [cursor=pointer]
+        - button "desktop" [ref=f4e35] [cursor=pointer]
+        - button "downloads" [ref=f4e38] [cursor=pointer]
+        - button "documents" [ref=f4e41] [cursor=pointer]
+        - button "music" [ref=f4e44] [cursor=pointer]
+        - button "pictures" [ref=f4e47] [cursor=pointer]
+        - button "videos" [ref=f4e50] [cursor=pointer]
+        - button "根目录" [ref=f4e53] [cursor=pointer]
+      - button "设置" [ref=f4e56] [cursor=pointer]
+  - main [ref=f4e59]:
+    - generic [ref=f4e61]:
+      - heading "概览" [level=1] [ref=f4e62]
+      - generic [ref=f4e63]:
+        - generic [ref=f4e64]:
+          - generic [ref=f4e65]: CPU
+          - generic [ref=f4e68]: 3%
+          - generic [ref=f4e69]: 2 核心
+        - generic [ref=f4e70]:
+          - generic [ref=f4e71]: 内存
+          - generic [ref=f4e74]: 22%
+          - generic [ref=f4e75]: 1.3 GB / 5.8 GB
+        - generic [ref=f4e76]:
+          - generic [ref=f4e77]: 网络
+          - generic [ref=f4e80]: ↓0 B
+          - generic [ref=f4e81]: ↑6.4 KB
+        - generic [ref=f4e82]:
+          - generic [ref=f4e83]: 负载
+          - generic [ref=f4e86]: "0.05"
+          - generic [ref=f4e87]: 5m 0.3 · 15m 0.3
+      - generic [ref=f4e88]:
+        - generic [ref=f4e89]:
+          - generic [ref=f4e90]: 容器
+          - generic [ref=f4e93]: 14/17
+          - generic [ref=f4e94]: 运行中
+        - generic [ref=f4e95]:
+          - generic [ref=f4e96]: Compose
+          - generic [ref=f4e99]: "0"
+          - generic [ref=f4e100]: 项目
+        - generic [ref=f4e101]:
+          - generic [ref=f4e102]: 镜像
+          - generic [ref=f4e105]: "18"
+          - generic [ref=f4e106]: 4.3 GB
+        - generic [ref=f4e107]:
+          - generic [ref=f4e108]: 已停止
+          - generic [ref=f4e111]: "3"
+          - generic [ref=f4e112]: 0 暂停

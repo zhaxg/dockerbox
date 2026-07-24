@@ -1,0 +1,23 @@
+- generic [ref=f7e5]:
+  - complementary [ref=f7e6]:
+    - heading "BoxBox" [level=1] [ref=f7e8]
+    - navigation [ref=f7e9]:
+      - button "概览" [ref=f7e10] [cursor=pointer]
+      - button "容器" [ref=f7e13] [cursor=pointer]
+      - button "Compose" [ref=f7e16] [cursor=pointer]
+      - button "镜像" [ref=f7e19] [cursor=pointer]
+      - button "网络" [ref=f7e22] [cursor=pointer]
+      - button "文件" [ref=f7e25] [cursor=pointer]
+      - generic [ref=f7e29]:
+        - generic [ref=f7e30]: 收藏目录
+        - generic [ref=f7e31]: 挂载目录
+        - button "根目录" [ref=f7e32] [cursor=pointer]
+      - button "设置" [ref=f7e35] [cursor=pointer]
+  - main [ref=f7e38]:
+    - generic [ref=f7e39]:
+      - generic [ref=f7e40]:
+        - heading "Compose 管理" [level=1] [ref=f7e41]
+        - generic [ref=f7e42]:
+          - button "新建" [ref=f7e43] [cursor=pointer]
+          - button "刷新" [ref=f7e45] [cursor=pointer]
+      - status "Loading" [ref=f7e48]

@@ -1,0 +1,24 @@
+- generic [ref=e2]:
+  - generic [ref=e25]:
+    - complementary [ref=e26]:
+      - heading "BoxBox" [level=1] [ref=e28]
+      - navigation [ref=e29]:
+        - button "概览" [ref=e30] [cursor=pointer]
+        - button "容器" [ref=e33] [cursor=pointer]
+        - button "Compose" [ref=e36] [cursor=pointer]
+        - button "文件" [ref=e39] [cursor=pointer]
+        - generic [ref=e43]:
+          - generic [ref=e44]: 收藏目录
+          - generic [ref=e45]: 挂载目录
+          - button "根目录" [ref=e46] [cursor=pointer]
+        - button "设置" [ref=e49] [cursor=pointer]
+    - main [ref=e52]:
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - heading "Compose (0)" [level=1] [ref=e88]
+          - generic [ref=e89]:
+            - textbox "搜索..." [ref=e92]
+            - button "新建" [ref=e93] [cursor=pointer]
+            - button "刷新" [ref=e95] [cursor=pointer]
+        - generic [ref=e97]: 暂无 Compose 项目
+  - generic [ref=e24]: BoxBox

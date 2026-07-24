@@ -8,6 +8,7 @@ import (
 
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
 	"github.com/spf13/viper"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // MigrationWarning describes a deprecated deployment input detected while
@@ -45,6 +46,8 @@ var scalarEnvAliases = []envAlias{
 	{Key: "chunk_size_mb", Legacy: "FM_CHUNK_SIZE_MB", Replacement: "BOXBOX_CHUNK_SIZE_MB"},
 }
 
+var savedConfigPath string
+
 var defaultConfigSearchPaths = []configSearchPath{
 	{Path: "."},
 	{Path: "./config"},
@@ -63,20 +66,46 @@ func Load(configPath string) (*model.ServerConfig, error) {
 
 // Save persists the current config back to the config file.
 func Save(cfg *model.ServerConfig) error {
-	configPath := os.Getenv("CONFIG_PATH")
+	configPath := savedConfigPath
 	if configPath == "" {
-		configPath = "/app/config.yaml"
+		configPath = os.Getenv("CONFIG_PATH")
 	}
-	v := viper.New()
-	v.SetConfigFile(configPath)
+	if configPath == "" {
+		configPath = "config.yaml"
+	}
 
-	// Read existing config first to preserve other settings
-	_ = v.ReadInConfig()
+	// Read existing YAML file
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config: %w", err)
+	}
 
-	// Set dockerhosts
-	v.Set("dockerhosts", cfg.DockerHosts)
+	// Parse into generic map
+	var doc map[string]interface{}
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
 
-	return v.WriteConfig()
+	// Marshal dockerhosts
+	hostsData, err := yaml.Marshal(cfg.DockerHosts)
+	if err != nil {
+		return fmt.Errorf("failed to marshal dockerhosts: %w", err)
+	}
+
+	var hostsMap interface{}
+	if err := yaml.Unmarshal(hostsData, &hostsMap); err != nil {
+		return fmt.Errorf("failed to unmarshal dockerhosts: %w", err)
+	}
+
+	doc["dockerhosts"] = hostsMap
+
+	// Write back
+	out, err := yaml.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	return os.WriteFile(configPath, out, 0644)
 }
 
 // LoadWithReport reads configuration from file and environment variables,
@@ -86,6 +115,9 @@ func LoadWithReport(configPath string) (*LoadResult, error) {
 }
 
 func loadWithReport(configPath string, searchPaths []configSearchPath) (*LoadResult, error) {
+	if configPath != "" {
+		savedConfigPath = configPath
+	}
 	v := viper.New()
 	warnings := make([]MigrationWarning, 0)
 
