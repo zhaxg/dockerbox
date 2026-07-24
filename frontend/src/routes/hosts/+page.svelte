@@ -115,10 +115,7 @@
 	}
 
 	function getCopyCmd() {
-		const ep = modal.host.endpoint || '';
-		const [u, hp] = ep.split('@');
-		const [h, p] = (hp || '').split(':');
-		return `echo '${modal.host.sshPubKey || ''}' | ssh -p ${p || '22'} ${u || 'root'}@${h || hp} 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'`;
+		return `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${modal.host.sshPubKey || ''}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
 	}
 
 	async function saveHost() {
