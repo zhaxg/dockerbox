@@ -756,7 +756,8 @@ func (h *DockerHandler) ExecWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	execID, err := h.dockerService.CreateExec(r.Context(), id, []string{"/bin/sh"})
+	shell := h.dockerService.DetectShell(r.Context(), id)
+	execID, err := h.dockerService.CreateExec(r.Context(), id, []string{shell})
 	if err != nil {
 		conn.WriteMessage(websocket.TextMessage, []byte("Error: "+err.Error()))
 		return

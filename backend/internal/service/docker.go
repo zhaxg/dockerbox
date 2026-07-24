@@ -21,6 +21,17 @@ import (
 	"github.com/jR4dh3y/BoxBox/backend/internal/model"
 )
 
+// composeCommand returns the available docker compose command (V2 plugin first, then V1 binary).
+func composeCommand(ctx context.Context, args ...string) *exec.Cmd {
+	// Try V2 plugin first: "docker compose ..."
+	if err := exec.CommandContext(ctx, "docker", "compose", "version").Run(); err == nil {
+		fullArgs := append([]string{"compose"}, args...)
+		return exec.CommandContext(ctx, "docker", fullArgs...)
+	}
+	// Fallback to V1: "docker-compose ..."
+	return composeCommand(ctx, args...)
+}
+
 // DockerService handles Docker operations.
 type DockerService struct {
 	client *client.Client
@@ -392,7 +403,7 @@ func (s *DockerService) CreateComposeProject(ctx context.Context, name, composeC
 }
 
 func (s *DockerService) ComposeUp(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := exec.CommandContext(ctx, "docker-compose", "up", "-d")
+	cmd := composeCommand(ctx, "up", "-d")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -413,7 +424,7 @@ func (s *DockerService) ComposeUp(ctx context.Context, projectPath string) (*mod
 
 // ComposeDown runs docker-compose down.
 func (s *DockerService) ComposeDown(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := exec.CommandContext(ctx, "docker-compose", "down")
+	cmd := composeCommand(ctx, "down")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -434,7 +445,7 @@ func (s *DockerService) ComposeDown(ctx context.Context, projectPath string) (*m
 
 // ComposeBuild runs docker-compose build.
 func (s *DockerService) ComposeBuild(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := exec.CommandContext(ctx, "docker-compose", "build")
+	cmd := composeCommand(ctx, "build")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -455,7 +466,7 @@ func (s *DockerService) ComposeBuild(ctx context.Context, projectPath string) (*
 
 // ComposeRestart runs docker-compose restart.
 func (s *DockerService) ComposeRestart(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := exec.CommandContext(ctx, "docker-compose", "restart")
+	cmd := composeCommand(ctx, "restart")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -476,7 +487,7 @@ func (s *DockerService) ComposeRestart(ctx context.Context, projectPath string) 
 
 // ComposePull runs docker-compose pull.
 func (s *DockerService) ComposePull(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := exec.CommandContext(ctx, "docker-compose", "pull")
+	cmd := composeCommand(ctx, "pull")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -501,7 +512,7 @@ func (s *DockerService) ComposeLogs(ctx context.Context, projectPath string, tai
 		tail = 100
 	}
 
-	cmd := exec.CommandContext(ctx, "docker-compose", "logs", "--tail", fmt.Sprintf("%d", tail))
+	cmd := composeCommand(ctx, "logs", "--tail", fmt.Sprintf("%d", tail))
 	cmd.Dir = projectPath
 
 	output, err := cmd.Output()
@@ -624,6 +635,33 @@ func (s *DockerService) CreateExec(ctx context.Context, containerID string, cmd 
 // StartExec attaches to an exec instance and returns the I/O streams.
 func (s *DockerService) StartExec(ctx context.Context, execID string) (types.HijackedResponse, error) {
 	return s.client.ContainerExecAttach(ctx, execID, types.ExecStartCheck{Tty: true})
+}
+
+// DetectShell probes the container for available shell interpreters.
+func (s *DockerService) DetectShell(ctx context.Context, containerID string) string {
+	candidates := []string{"/bin/bash", "/bin/zsh", "/bin/sh", "/bin/ash", "/usr/bin/bash", "/usr/bin/zsh", "/usr/bin/sh"}
+	for _, shell := range candidates {
+		execCfg := types.ExecConfig{
+			AttachStdout: true,
+			AttachStderr: true,
+			Cmd:          []string{shell, "-c", "exit 0"},
+		}
+		resp, err := s.client.ContainerExecCreate(ctx, containerID, execCfg)
+		if err != nil {
+			continue
+		}
+		if err := s.client.ContainerExecStart(ctx, resp.ID, types.ExecStartCheck{}); err != nil {
+			continue
+		}
+		inspect, err := s.client.ContainerExecInspect(ctx, resp.ID)
+		if err != nil {
+			continue
+		}
+		if inspect.ExitCode == 0 {
+			return shell
+		}
+	}
+	return "/bin/sh" // final fallback
 }
 
 // convertContainer converts Docker API container to our model.
