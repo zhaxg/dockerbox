@@ -54,7 +54,7 @@ func NewDockerService(cfg DockerServiceConfig) (*DockerService, error) {
 	// Use TCP/SSH host if provided, otherwise use socket
 	if cfg.Host != "" {
 		if strings.HasPrefix(cfg.Host, "ssh://") {
-			// SSH connection via connhelper
+			// SSH connection - use connhelper
 			helper, err := connhelper.GetConnectionHelper(cfg.Host)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create SSH connection helper: %w", err)
