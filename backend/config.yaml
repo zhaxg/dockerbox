@@ -1,44 +1,42 @@
-port: 8081
-host: 0.0.0.0
-jwt_secret: boxbox-dev-secret-k3y-2026
-max_upload_mb: 10240
+allowed_origins: []
 chunk_size_mb: 5
 dev_mode: false
-rate_limit_rps: 10
-allowed_origins: []
-
-users:
-    admin: admin123
-
 dockerhosts:
-    default: host-mrymssal
+    default: host-nas
     hosts:
         host-mrymssal:
-            id: host-mrymssal
-            name: "210"
             driver: socket
             endpoint: /var/run/docker.sock
+            id: host-mrymssal
             mount_points:
                 docker:
+                    is_docker: true
                     path: /opt/docker
                     read_only: false
-                    is_docker: true
+            name: "210"
         host-nas:
-            id: host-nas
-            name: fnos
             driver: ssh
             endpoint: zhaxg@192.168.132.86:2322
+            id: host-nas
+            mount_points:
+                docker:
+                    is_docker: true
+                    path: /vol1/1000/docker
+                    read_only: false
+            name: fnos
             ssh_key: |-
                 -----BEGIN OPENSSH PRIVATE KEY-----
                 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
                 QyNTUxOQAAACC6VO6rFccUT6ld3/33DX1SbBuOnP1m53QpCFtDdsdZJgAAAJCEn4/fhJ+P
                 3wAAAAtzc2gtZWQyNTUxOQAAACC6VO6rFccUT6ld3/33DX1SbBuOnP1m53QpCFtDdsdZJg
                 AAAEATfUWYDQZCo04oWsPbsYYec+6WaGNEL0jlPfKov1p/fbpU7qsVxxRPqV3f/fcNfVJs
-                G46c/WbndCkIW0N2x1kmAAAABmJveGJveCAECAwQFBgc=
+                G46c/WbndCkIW0N2x1kmAAAABmJveGJveAECAwQFBgc=
                 -----END OPENSSH PRIVATE KEY-----
             ssh_pub_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILpU7qsVxxRPqV3f/fcNfVJsG46c/WbndCkIW0N2x1km boxbox
-            mount_points:
-                docker:
-                    path: /vol1/1000/docker
-                    read_only: false
-                    is_docker: true
+host: 0.0.0.0
+jwt_secret: boxbox-dev-secret-k3y-2026
+max_upload_mb: 10240
+port: 8081
+rate_limit_rps: 10
+users:
+    admin: admin123
