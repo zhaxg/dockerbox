@@ -15,6 +15,7 @@
 	import { websocketStore } from '$lib/stores/websocket';
 	import {
 		applyAccentColor,
+		applyFonts,
 		resolvedBackgroundImageUrl,
 		settingsStore
 	} from '$lib/stores/settings';
@@ -104,6 +105,7 @@
 
 	$effect(() => {
 		applyAccentColor($settingsStore.accentColor);
+		applyFonts($settingsStore.uiFont, $settingsStore.cjkFont);
 	});
 
 	async function handleLogout() {

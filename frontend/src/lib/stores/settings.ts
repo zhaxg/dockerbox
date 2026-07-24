@@ -53,6 +53,8 @@ export interface UserSettings {
 	frostedGlass: boolean;
 	previewOnSingleClick: boolean;
 	compactMode: boolean;
+	uiFont: string;
+	cjkFont: string;
 	driveNameOverrides: Record<string, string>;
 	favoriteFolders: FavoriteFolder[];
 }
@@ -90,6 +92,8 @@ const defaultSettings: UserSettings = {
 	frostedGlass: false,
 	previewOnSingleClick: false,
 	compactMode: false,
+	uiFont: '',
+	cjkFont: '',
 	driveNameOverrides: {},
 	favoriteFolders: []
 };
@@ -193,6 +197,21 @@ function mixColor(color: string, target: string, amount: number): string {
 		sourceRgb[1] + (targetRgb[1] - sourceRgb[1]) * amount,
 		sourceRgb[2] + (targetRgb[2] - sourceRgb[2]) * amount
 	]);
+}
+
+export function applyFonts(uiFont: string, cjkFont: string): void {
+	if (typeof document === 'undefined') return;
+	const rootStyle = document.documentElement.style;
+	if (uiFont) {
+		rootStyle.setProperty('--font-ui', uiFont);
+	} else {
+		rootStyle.removeProperty('--font-ui');
+	}
+	if (cjkFont) {
+		rootStyle.setProperty('--font-cjk', cjkFont);
+	} else {
+		rootStyle.removeProperty('--font-cjk');
+	}
 }
 
 export function applyAccentColor(accentColor: string | null): void {
