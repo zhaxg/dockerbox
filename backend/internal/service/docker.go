@@ -29,7 +29,7 @@ func composeCommand(ctx context.Context, args ...string) *exec.Cmd {
 		return exec.CommandContext(ctx, "docker", fullArgs...)
 	}
 	// Fallback to V1: "docker-compose ..."
-	return composeCommand(ctx, args...)
+	return exec.CommandContext(ctx, "docker-compose", args...)
 }
 
 // DockerService handles Docker operations.
