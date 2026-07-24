@@ -51,3 +51,5 @@ vendor/
 .docker/
 boxbox-linux
 backend/internal/static/dist/
+.playwright-mcp/
+backend/boxbox
