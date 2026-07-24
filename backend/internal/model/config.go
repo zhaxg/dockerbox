@@ -50,9 +50,6 @@ type ServerConfig struct {
 	DevMode     bool         `mapstructure:"dev_mode"`
 
 	// Docker settings
-	DockerHost    string   `mapstructure:"docker_host"`     // e.g. tcp://192.168.1.100:2375
-	DockerSocket  string   `mapstructure:"docker_socket"`   // e.g. /var/run/docker.sock
-	ComposePaths  []string     `mapstructure:"compose_paths"`   // directories to scan for compose projects
 	DockerHosts   *DockerHostsConfig `mapstructure:"dockerhosts"`
 
 	// Security settings

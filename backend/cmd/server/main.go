@@ -158,21 +158,28 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 		DataDir: cfg.DataDir,
 	})
 
-	// Create Docker service (optional - may fail if Docker is not available)
-	dockerHost := cfg.DockerHost
-	dockerSocket := cfg.DockerSocket
-	if dockerHost == "" {
-		dockerHost = "tcp://192.168.132.86:2375"
-	}
-	if dockerSocket == "" {
-		dockerSocket = "/var/run/docker.sock"
-	}
-	dockerService, err := service.NewDockerService(service.DockerServiceConfig{
-		SocketPath: dockerSocket,
-		Host:       dockerHost,
-	})
-	if err != nil {
-		log.Warn().Err(err).Msg("Docker service not available, Docker features disabled")
+	// Create Docker service from first configured host (optional)
+	var dockerService *service.DockerService
+	if cfg.DockerHosts != nil {
+		for id, host := range cfg.DockerHosts.Hosts {
+			hostCfg := service.DockerServiceConfig{}
+			switch host.Driver {
+			case "tcp":
+				hostCfg.Host = "tcp://" + host.Endpoint
+			case "socket":
+				hostCfg.SocketPath = host.Endpoint
+			case "ssh":
+				hostCfg.Host = "ssh://" + host.Endpoint
+				hostCfg.SSHKey = host.SSHKey
+			}
+			svc, err := service.NewDockerService(hostCfg)
+			if err != nil {
+				log.Warn().Err(err).Str("host", id).Msg("Failed to create Docker service")
+				continue
+			}
+			dockerService = svc
+			break
+		}
 	}
 
 	// Create handlers
@@ -194,11 +201,7 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 		},
 	)
 	if dockerService != nil {
-		composePaths := cfg.ComposePaths
-		if len(composePaths) == 0 {
-			composePaths = []string{"/vol1/1000/docker"}
-		}
-		dockerHandler = handler.NewDockerHandler(dockerService, composePaths)
+		dockerHandler = handler.NewDockerHandler(dockerService, nil)
 		// Create DockerService for each configured host
 		if cfg.DockerHosts != nil {
 			dockerHandler.SetDefaultHost(cfg.DockerHosts.Default)

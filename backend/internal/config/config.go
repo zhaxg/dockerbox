@@ -160,8 +160,6 @@ func loadWithReport(configPath string, searchPaths []configSearchPath) (*LoadRes
 		"max_upload_mb",
 		"chunk_size_mb",
 		"data_dir",
-		"docker_host",
-		"docker_socket",
 		"dev_mode",
 	} {
 		if err := v.BindEnv(key); err != nil {
