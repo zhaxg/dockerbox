@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Spinner, Button } from '$lib/components/ui';
-	import { hostsApi, type DockerHost, type DockerHostsConfig, type HostMountPoint } from '$lib/api/hosts';
-	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Server, Terminal } from 'lucide-svelte';
+	import { hostsApi, type DockerHost, type DockerHostsConfig } from '$lib/api/hosts';
+	import { Plus, RefreshCw, Trash2, Pencil, Plug, X, Copy, Check, Key, Terminal } from 'lucide-svelte';
 
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let loading = $state(true);
@@ -16,23 +16,15 @@
 	let hostStats = $state<Record<string, { status: string; total: number; running: number; stopped: number; message?: string }>>({});
 
 	let modal = $state<{
-		open: boolean;
-		mode: 'add' | 'edit';
-		host: any;
-		mountKey: string;
-		mountPath: string;
-		mountReadOnly: boolean;
-		dockerDirKey: string;
-		sshPassword: string;
-		showPush: boolean;
+		open: boolean; mode: 'add' | 'edit'; host: any;
+		mountKey: string; mountPath: string; mountReadOnly: boolean; dockerDirKey: string;
 	}>({
 		open: false, mode: 'add',
 		host: { id: '', name: '', driver: 'ssh', endpoint: '', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
-		mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: '', sshPassword: '', showPush: false
+		mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: ''
 	});
 
 	const hostList = $derived(Object.values(hostsConfig.hosts || {}));
-
 	onMount(loadHosts);
 
 	async function loadHosts() {
@@ -40,10 +32,7 @@
 		try {
 			hostsConfig = await hostsApi.list();
 			if (!hostsConfig.hosts) hostsConfig.hosts = {};
-			// Auto-fetch stats for each host
-			for (const id of Object.keys(hostsConfig.hosts)) {
-				fetchHostStats(id);
-			}
+			for (const id of Object.keys(hostsConfig.hosts)) fetchHostStats(id);
 		} catch (e) { console.error(e); }
 		finally { loading = false; }
 	}
@@ -51,12 +40,8 @@
 	async function fetchHostStats(id: string) {
 		try {
 			const token = localStorage.getItem('accessToken') || '';
-			const resp = await fetch(`/api/v1/hosts/${id}/stats`, {
-				headers: { 'Authorization': 'Bearer ' + token }
-			});
-			if (resp.ok) {
-				hostStats[id] = await resp.json();
-			}
+			const resp = await fetch(`/api/v1/hosts/${id}/stats`, { headers: { 'Authorization': 'Bearer ' + token } });
+			if (resp.ok) hostStats[id] = await resp.json();
 		} catch (e) { hostStats[id] = { status: 'offline', total: 0, running: 0, stopped: 0 }; }
 	}
 
@@ -69,31 +54,28 @@
 		modal = {
 			open: true, mode: 'add',
 			host: { id: 'host-' + Date.now().toString(36), name: '', driver: 'ssh', endpoint: '', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
-			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: '', sshPassword: '', showPush: false
+			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: ''
 		};
 	}
 
 	function openEdit(host: DockerHost) {
 		const mp = host.mountPoints || {};
-		const dockerKey = Object.entries(mp).find(([_, v]) => (v as any).isDocker)?.[0] || Object.keys(mp)[0] || '';
+		const dockerKey = Object.entries(mp).find(([_, v]: [string, any]) => v.isDocker)?.[0] || Object.keys(mp)[0] || '';
 		modal = {
 			open: true, mode: 'edit',
 			host: { ...host, mountPoints: { ...mp }, tags: [...(host.tags || [])] },
-			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: dockerKey, sshPassword: '', showPush: false
+			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: dockerKey
 		};
 	}
 
-	function closeModal() { modal.open = false; pushResult = ''; }
+	function closeModal() { modal.open = false; }
 
 	function addMountPoint() {
-		const key = modal.mountKey.trim();
-		const path = modal.mountPath.trim();
+		const key = modal.mountKey.trim(), path = modal.mountPath.trim();
 		if (!key || !path) return;
 		if (!modal.host.mountPoints) modal.host.mountPoints = {};
 		modal.host.mountPoints[key] = { path, readOnly: modal.mountReadOnly };
-		modal.mountKey = '';
-		modal.mountPath = '';
-		modal.mountReadOnly = false;
+		modal.mountKey = ''; modal.mountPath = ''; modal.mountReadOnly = false;
 	}
 
 	function removeMountPoint(key: string) {
@@ -108,38 +90,11 @@
 		genKeyLoading = true;
 		try {
 			const result = await fetch('/api/v1/ssh/genkey', {
-				method: 'POST',
-				headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('accessToken') || '') }
+				method: 'POST', headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('accessToken') || '') }
 			}).then(r => r.json());
-			if (result.private_key) {
-				modal.host.sshKey = result.private_key;
-				modal.host.sshPubKey = result.public_key;
-			}
+			if (result.private_key) { modal.host.sshKey = result.private_key; modal.host.sshPubKey = result.public_key; }
 		} catch (e) { console.error(e); }
 		finally { genKeyLoading = false; }
-	}
-
-	async function pushKey() {
-		if (!modal.host.endpoint || !modal.host.sshPubKey || !modal.sshPassword) return;
-		pushLoading = true;
-		pushResult = '';
-		try {
-			const [user, hostPort] = modal.host.endpoint.split('@');
-			const [host, port] = (hostPort || '').split(':');
-			const result = await fetch('/api/v1/ssh/pushkey', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('accessToken') || '') },
-				body: JSON.stringify({
-					user: user || 'root',
-					host: host || hostPort,
-					port: port || '22',
-					password: modal.sshPassword,
-					pubkey: modal.host.sshPubKey
-				})
-			}).then(r => r.json());
-			pushResult = result.status === 'ok' ? '公钥推送成功' : (result.message || '推送失败');
-		} catch (e) { pushResult = '推送失败: ' + String(e); }
-		finally { pushLoading = false; }
 	}
 
 	function copyText(text: string, key: string) {
@@ -148,20 +103,20 @@
 		setTimeout(() => copied[key] = false, 2000);
 	}
 
+	function getCopyCmd() {
+		const ep = modal.host.endpoint || '';
+		const [u, hp] = ep.split('@');
+		const [h, p] = (hp || '').split(':');
+		return `echo '${modal.host.sshPubKey || ''}' | ssh -p ${p || '22'} ${u || 'root'}@${h || hp} 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'`;
+	}
+
 	async function saveHost() {
 		try {
-			// Mark selected docker dir
 			const mp = modal.host.mountPoints || {};
-			for (const k of Object.keys(mp)) {
-				mp[k] = { ...mp[k], isDocker: k === modal.dockerDirKey };
-			}
-			if (modal.mode === 'add') {
-				await hostsApi.create(modal.host);
-			} else {
-				await hostsApi.update(modal.host.id, modal.host);
-			}
-			closeModal();
-			await loadHosts();
+			for (const k of Object.keys(mp)) mp[k] = { ...mp[k], isDocker: k === modal.dockerDirKey };
+			if (modal.mode === 'add') await hostsApi.create(modal.host);
+			else await hostsApi.update(modal.host.id, modal.host);
+			closeModal(); await loadHosts();
 		} catch (e) { console.error(e); }
 	}
 
@@ -173,10 +128,8 @@
 
 	async function testHost(id: string) {
 		testLoading = true; testResult = null;
-		try {
-			const result = await hostsApi.test(id);
-			testResult = { hostId: id, status: result.status, message: result.message };
-		} catch (e) { testResult = { hostId: id, status: 'error', message: String(e) }; }
+		try { const result = await hostsApi.test(id); testResult = { hostId: id, status: result.status, message: result.message }; }
+		catch (e) { testResult = { hostId: id, status: 'error', message: String(e) }; }
 		finally { testLoading = false; }
 	}
 
@@ -203,7 +156,7 @@
 				<span class="text-sm">暂无主机配置</span>
 				<Button variant="primary" size="sm" onclick={openAdd}><Plus size={14} class="mr-1" /> 添加主机</Button>
 			</div>
-		{:else} 
+		{:else}
 			<table class="w-full min-w-[900px] border-collapse text-[13px] leading-5">
 				<thead><tr>
 					<th class="{thClass}">Name</th>
@@ -218,11 +171,8 @@
 						<tr class="transition-colors hover:bg-surface-secondary">
 							<td class="{tdClass}">
 								<div class="flex items-center gap-2">
-									{#if hostsConfig.default === host.id}
-										<span class="h-2 w-2 rounded-full bg-green-500 shrink-0"></span>
-									{:else} 
-										<span class="h-2 w-2 rounded-full bg-gray-500 shrink-0"></span>
-									{/if}
+									{#if hostsConfig.default === host.id}<span class="h-2 w-2 rounded-full bg-green-500 shrink-0"></span>
+									{:else}<span class="h-2 w-2 rounded-full bg-gray-500 shrink-0"></span>{/if}
 									<span class="font-medium">{host.name}</span>
 									<span class="text-[11px] {getDriverColor(host.driver)}">{getDriverLabel(host.driver)}</span>
 								</div>
@@ -230,9 +180,11 @@
 							<td class="{tdClass} font-mono text-[12px] text-text-secondary">{host.endpoint}</td>
 							<td class="{tdClass}">
 								{#if hostStats[host.id]}
-									<span class="text-[11px] {hostStats[host.id].status === 'online' ? 'text-green-400' : 'text-red-400'}">{hostStats[host.id].status === 'online' ? '在线' : '离线'}</span>
-								{:else} 
-									<span class="text-[11px] text-text-muted">未检测</span>
+									<span class="text-[11px] {hostStats[host.id].status === 'online' ? 'text-green-400' : 'text-red-400'}">
+										{hostStats[host.id].status === 'online' ? '在线' : '离线'}
+									</span>
+								{:else}
+									<span class="text-[11px] text-text-muted">检测中...</span>
 								{/if}
 							</td>
 							<td class="{tdClass}">
@@ -244,11 +196,9 @@
 							</td>
 							<td class="{tdClass} text-text-secondary text-[12px]">
 								{#if hostStats[host.id]}
-								<span class="text-green-400">{hostStats[host.id].running}</span>/<span>{hostStats[host.id].total}</span>
-								{#if hostStats[host.id].stopped > 0}<span class="text-red-400 ml-1">({hostStats[host.id].stopped} 停止)</span>{/if}
-							{:else}
-								-
-							{/if}
+									<span class="text-green-400">{hostStats[host.id].running}</span>/<span>{hostStats[host.id].total}</span>
+									{#if hostStats[host.id].stopped > 0}<span class="text-red-400 ml-1">({hostStats[host.id].stopped} 停止)</span>{/if}
+								{:else}-{/if}
 							</td>
 							<td class="{tdClass}">
 								<div class="flex justify-end gap-1">
@@ -279,8 +229,6 @@
 	</div>
 {/if}
 
-
-
 <!-- Add/Edit Modal -->
 {#if modal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -290,115 +238,74 @@
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={closeModal}><X size={16} /></button>
 			</div>
 			<div class="flex-1 overflow-auto p-4 space-y-4">
-				<!-- Name -->
 				<div>
 					<label class="mb-1 block text-[11px] text-text-muted">显示名称 <span class="text-red-400">*</span></label>
-					<input type="text" bind:value={modal.host.name} placeholder="主NAS"
-						class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+					<input type="text" bind:value={modal.host.name} placeholder="主NAS" class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 				</div>
-
-				<!-- Driver + Endpoint -->
 				<div class="grid grid-cols-3 gap-3">
 					<div>
 						<label class="mb-1 block text-[11px] text-text-muted">连接方式</label>
-						<select bind:value={modal.host.driver}
-							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none">
+						<select bind:value={modal.host.driver} class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none">
 							<option value="ssh">SSH</option>
 							<option value="socket">Socket</option>
 						</select>
 					</div>
 					<div class="col-span-2">
 						<label class="mb-1 block text-[11px] text-text-muted">{modal.host.driver === 'ssh' ? 'user@host:port' : '/var/run/docker.sock'}</label>
-						<input type="text" bind:value={modal.host.endpoint}
-							placeholder={modal.host.driver === 'ssh' ? 'root@192.168.1.100:22' : '/var/run/docker.sock'}
-							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+						<input type="text" bind:value={modal.host.endpoint} placeholder={modal.host.driver === 'ssh' ? 'root@192.168.1.100:22' : '/var/run/docker.sock'} class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 					</div>
 				</div>
-
-				<!-- SSH Key Pair -->
 				{#if modal.host.driver === 'ssh'}
 					<div class="rounded border border-border-secondary bg-surface-secondary p-3 space-y-3">
 						<div class="flex items-center justify-between">
 							<span class="text-[11px] font-medium text-text-muted flex items-center gap-1"><Key size={12} /> ED25519 密钥对</span>
 							<Button variant="secondary" size="sm" onclick={genKeyPair} disabled={genKeyLoading}>
-								{#if genKeyLoading}<Spinner size={12} />{:else} 一键生成密钥对{/if}
+								{#if genKeyLoading}<Spinner size={12} />{:else}一键生成密钥对{/if}
 							</Button>
 						</div>
 						<div>
 							<label class="mb-1 block text-[10px] text-text-muted">私钥</label>
-							<textarea bind:value={modal.host.sshKey} rows={3} placeholder="粘贴或点击生成"
-								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none resize-none"></textarea>
+							<textarea bind:value={modal.host.sshKey} rows={3} readonly placeholder="点击生成或粘贴" class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:outline-none resize-none cursor-default"></textarea>
 						</div>
 						<div>
 							<label class="mb-1 block text-[10px] text-text-muted">公钥</label>
-							<textarea bind:value={modal.host.sshPubKey} rows={2} placeholder="粘贴或点击生成"
-								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none resize-none"></textarea>
+							<textarea bind:value={modal.host.sshPubKey} rows={2} readonly placeholder="点击生成或粘贴" class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 text-[11px] text-green-400 font-mono placeholder:text-text-muted focus:outline-none resize-none cursor-default"></textarea>
 						</div>
-						<!-- Push to server -->
-						<div class="border-t border-border-secondary pt-3">
-							<button type="button" class="text-[11px] text-blue-400 hover:text-blue-300"
-								onclick={() => modal.showPush = !modal.showPush}>
-								{modal.showPush ? '收起' : '推送公钥到远程服务器'}
+						<div class="flex items-center gap-1 pt-2 border-t border-border-secondary">
+							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制私钥" onclick={() => copyText(modal.host.sshKey || '', 'priv')} disabled={!modal.host.sshKey}>
+								{#if copied['priv']}<Check size={10} class="text-green-400" />已复制{:else}<Copy size={10} />私钥{/if}
 							</button>
-							{#if modal.showPush}
-								<div class="mt-2 space-y-2">
-									<p class="text-[10px] text-text-muted">输入一次远程服务器密码（临时使用，不存储）</p>
-									<div class="flex items-center gap-2">
-										<input type="password" bind:value={modal.sshPassword} placeholder="远程服务器密码"
-											class="flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary focus:border-border-focus focus:outline-none" />
-										<Button variant="primary" size="sm" onclick={pushKey} disabled={pushLoading || !modal.sshPassword || !modal.host.sshPubKey}>
-											{#if pushLoading}<Spinner size={12} class="mr-1" />{:else} <Server size={12} class="mr-1" />{/if}推送
-										</Button>
-									</div>
-									{#if pushResult}
-										<p class="text-[11px] {pushResult.includes('成功') ? 'text-green-400' : 'text-red-400'}">{pushResult}</p>
-									{/if}
-								</div>
-							{/if}
+							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制公钥" onclick={() => copyText(modal.host.sshPubKey || '', 'pub')} disabled={!modal.host.sshPubKey}>
+								{#if copied['pub']}<Check size={10} class="text-green-400" />已复制{:else}<Copy size={10} />公钥{/if}
+							</button>
+							<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors" title="复制推送命令" onclick={() => copyText(getCopyCmd(), 'cmd')} disabled={!modal.host.sshPubKey || !modal.host.endpoint}>
+								{#if copied['cmd']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal size={10} />推送命令{/if}
+							</button>
 						</div>
 					</div>
 				{/if}
-
-				<!-- Tags -->
 				<div>
 					<label class="mb-1 block text-[11px] text-text-muted">标签（逗号分隔）</label>
-					<input type="text" value={(modal.host.tags || []).join(', ')}
-						onchange={(e) => { modal.host.tags = (e.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean); }}
-						placeholder="home, nas, prod"
-						class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+					<input type="text" value={(modal.host.tags || []).join(', ')} onchange={(e) => { modal.host.tags = (e.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean); }} placeholder="home, nas, prod" class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 				</div>
-
-				<!-- Mount Points -->
 				<div>
 					<label class="mb-2 block text-[11px] text-text-muted font-medium">挂载目录</label>
 					<div class="space-y-1.5 mb-2">
 						{#each Object.entries(modal.host.mountPoints || {}) as [key, mp]}
 							<div class="flex items-center gap-2 rounded border border-border-secondary bg-surface-secondary px-3 py-1.5">
-								<input type="radio" name="dockerDir" value={key} checked={modal.dockerDirKey === key}
-									onchange={() => modal.dockerDirKey = key}
-									class="accent-green-500" title="设为Docker主目录" />
+								<input type="radio" name="dockerDir" value={key} checked={modal.dockerDirKey === key} onchange={() => modal.dockerDirKey = key} class="accent-green-500" title="设为Docker主目录" />
 								<span class="text-[12px] font-medium text-text-primary min-w-[80px]">{key}</span>
 								<span class="flex-1 text-[11px] text-text-secondary font-mono truncate">{mp.path}</span>
-								{#if mp.readOnly}
-									<span class="text-[10px] text-text-muted">只读</span>
-								{/if}
-								{#if modal.dockerDirKey === key}
-									<span class="text-[10px] text-green-400">Docker主目录</span>
-								{/if}
-								<button type="button" class="text-text-muted hover:text-red-400" onclick={() => removeMountPoint(key)}>
-									<X size={12} />
-								</button>
+								{#if mp.readOnly}<span class="text-[10px] text-text-muted">只读</span>{/if}
+								{#if modal.dockerDirKey === key}<span class="text-[10px] text-green-400">Docker主目录</span>{/if}
+								<button type="button" class="text-text-muted hover:text-red-400" onclick={() => removeMountPoint(key)}><X size={12} /></button>
 							</div>
 						{/each}
 					</div>
 					<div class="flex items-center gap-2">
-						<input type="text" bind:value={modal.mountKey} placeholder="名称 (如: docker)"
-							class="w-28 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
-						<input type="text" bind:value={modal.mountPath} placeholder="/opt/docker"
-							class="flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
-						<label class="flex items-center gap-1 text-[11px] text-text-muted cursor-pointer">
-							<input type="checkbox" bind:checked={modal.mountReadOnly} class="rounded" /> 只读
-						</label>
+						<input type="text" bind:value={modal.mountKey} placeholder="名称 (如: docker)" class="w-28 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+						<input type="text" bind:value={modal.mountPath} placeholder="/opt/docker" class="flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary font-mono placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+						<label class="flex items-center gap-1 text-[11px] text-text-muted cursor-pointer"><input type="checkbox" bind:checked={modal.mountReadOnly} class="rounded" /> 只读</label>
 						<button type="button" class="rounded bg-surface-tertiary px-2 py-1 text-[11px] text-text-primary hover:bg-surface-secondary" onclick={addMountPoint}>添加</button>
 					</div>
 				</div>
