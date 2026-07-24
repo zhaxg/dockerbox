@@ -176,7 +176,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="relative h-full w-full overflow-auto bg-surface-primary {compactMode ? 'compact' : ''}"
+	class="relative h-full w-full overflow-auto bg-surface-primary select-none {compactMode ? 'compact' : ''}"
 	oncontextmenu={handleBackgroundContextMenu}
 >
 	{#if isLoading}

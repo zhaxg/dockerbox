@@ -159,7 +159,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="relative h-full w-full overflow-auto bg-surface-primary"
+	class="relative h-full w-full overflow-auto bg-surface-primary select-none"
 	oncontextmenu={handleBackgroundContextMenu}
 >
 	{#if isLoading}
