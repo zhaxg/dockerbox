@@ -355,14 +355,9 @@
 				</div>
 			</div>
 			<div class="flex items-center justify-between border-t border-border-secondary px-4 py-3">
-				<div>
-					<Button variant="ghost" size="sm" onclick={saveAndTest} disabled={testLoading || !modal.host.name || !modal.host.endpoint}>
-						{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug size={12} class="mr-1" />{/if}保存并测试
-					</Button>
-					{#if testResult && testResult.hostId === modal.host.id}
-						<span class="ml-2 text-[11px] {testResult.status === 'ok' ? 'text-green-400' : 'text-red-400'}">{testResult.status === 'ok' ? '连接成功' : '连接失败'}</span>
-					{/if}
-				</div>
+				<Button variant="ghost" size="sm" onclick={saveAndTest} disabled={testLoading || !modal.host.name || !modal.host.endpoint}>
+					{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug size={12} class="mr-1" />{/if}测试连接
+				</Button>
 				<div class="flex items-center gap-2">
 					<Button variant="secondary" size="sm" onclick={closeModal}>取消</Button>
 					<Button variant="primary" size="sm" onclick={saveHost} disabled={!modal.host.name || !modal.host.endpoint}>
