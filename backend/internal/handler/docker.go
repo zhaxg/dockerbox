@@ -17,8 +17,10 @@ import (
 
 // DockerHandler handles Docker-related HTTP requests.
 type DockerHandler struct {
-	dockerService *service.DockerService
+	dockerService *service.DockerService // default/fallback
 	composePaths  []string
+	services      map[string]*service.DockerService // host ID → service
+	defaultHostID string
 }
 
 // NewDockerHandler creates a new Docker handler.
@@ -29,7 +31,35 @@ func NewDockerHandler(dockerService *service.DockerService, composePaths []strin
 	return &DockerHandler{
 		dockerService: dockerService,
 		composePaths:  composePaths,
+		services:      make(map[string]*service.DockerService),
 	}
+}
+
+// SetService registers a DockerService for a host ID.
+func (h *DockerHandler) SetService(hostID string, svc *service.DockerService) {
+	h.services[hostID] = svc
+}
+
+// SetDefaultHost sets the default host ID.
+func (h *DockerHandler) SetDefaultHost(hostID string) {
+	h.defaultHostID = hostID
+}
+
+// getService returns the DockerService for the current request's host.
+func (h *DockerHandler) getService(r *http.Request) *service.DockerService {
+	hostID := r.Header.Get("X-Host-ID")
+	if hostID != "" {
+		if svc, ok := h.services[hostID]; ok {
+			return svc
+		}
+	}
+	// fallback to default or first available
+	if h.defaultHostID != "" {
+		if svc, ok := h.services[h.defaultHostID]; ok {
+			return svc
+		}
+	}
+	return h.dockerService
 }
 
 // RegisterRoutes registers Docker routes on the given router.
@@ -85,13 +115,13 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 
 // GetHostIP returns the Docker host's IP address.
 func (h *DockerHandler) GetHostIP(w http.ResponseWriter, r *http.Request) {
-	hostIP := h.dockerService.GetHostIP(r.Context())
+	hostIP := h.getService(r).GetHostIP(r.Context())
 	writeJSON(w, map[string]string{"ip": hostIP}, http.StatusOK)
 }
 
 // ListContainers returns all Docker containers.
 func (h *DockerHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
-	containers, err := h.dockerService.ListContainers(r.Context())
+	containers, err := h.getService(r).ListContainers(r.Context())
 	if err != nil {
 		writeError(w, "Failed to list containers", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -103,7 +133,7 @@ func (h *DockerHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				cpu, mem, net, err := h.dockerService.GetStats(r.Context(), containers[idx].ID)
+				cpu, mem, net, err := h.getService(r).GetStats(r.Context(), containers[idx].ID)
 				if err == nil {
 					containers[idx].CPU = cpu
 					containers[idx].Memory = mem
@@ -125,7 +155,7 @@ func (h *DockerHandler) GetContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	container, err := h.dockerService.GetContainer(r.Context(), id)
+	container, err := h.getService(r).GetContainer(r.Context(), id)
 	if err != nil {
 		writeError(w, "Failed to get container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -153,7 +183,7 @@ func (h *DockerHandler) InspectContainer(w http.ResponseWriter, r *http.Request)
 
 // ListImages returns all Docker images.
 func (h *DockerHandler) ListImages(w http.ResponseWriter, r *http.Request) {
-	images, err := h.dockerService.ListImages(r.Context())
+	images, err := h.getService(r).ListImages(r.Context())
 	if err != nil {
 		writeError(w, "Failed to list images", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -170,7 +200,7 @@ func (h *DockerHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.dockerService.DeleteImage(r.Context(), id); err != nil {
+	if err := h.getService(r).DeleteImage(r.Context(), id); err != nil {
 		writeError(w, "Failed to delete image", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -193,7 +223,7 @@ func (h *DockerHandler) PullImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.dockerService.PullImage(r.Context(), req.Image); err != nil {
+	if err := h.getService(r).PullImage(r.Context(), req.Image); err != nil {
 		writeError(w, "Failed to pull image", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -213,7 +243,7 @@ func (h *DockerHandler) PruneImages(w http.ResponseWriter, r *http.Request) {
 
 // GetStats returns Docker system statistics.
 func (h *DockerHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	stats, err := h.dockerService.GetDockerStats(r.Context())
+	stats, err := h.getService(r).GetDockerStats(r.Context())
 	if err != nil {
 		writeError(w, "Failed to get Docker stats", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -230,7 +260,7 @@ func (h *DockerHandler) StartContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.dockerService.StartContainer(r.Context(), id); err != nil {
+	if err := h.getService(r).StartContainer(r.Context(), id); err != nil {
 		writeError(w, "Failed to start container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -246,7 +276,7 @@ func (h *DockerHandler) StopContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.dockerService.StopContainer(r.Context(), id); err != nil {
+	if err := h.getService(r).StopContainer(r.Context(), id); err != nil {
 		writeError(w, "Failed to stop container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -262,7 +292,7 @@ func (h *DockerHandler) RestartContainer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.dockerService.RestartContainer(r.Context(), id); err != nil {
+	if err := h.getService(r).RestartContainer(r.Context(), id); err != nil {
 		writeError(w, "Failed to restart container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -299,7 +329,7 @@ func (h *DockerHandler) DeleteContainer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.dockerService.DeleteContainer(r.Context(), id); err != nil {
+	if err := h.getService(r).DeleteContainer(r.Context(), id); err != nil {
 		writeError(w, "Failed to delete container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -322,7 +352,7 @@ func (h *DockerHandler) GetContainerLogs(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	logs, err := h.dockerService.GetContainerLogs(r.Context(), id, tail)
+	logs, err := h.getService(r).GetContainerLogs(r.Context(), id, tail)
 	if err != nil {
 		writeError(w, "Failed to get container logs", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -393,7 +423,7 @@ func (h *DockerHandler) ComposeUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.dockerService.ComposeUp(r.Context(), path)
+	result, err := h.getService(r).ComposeUp(r.Context(), path)
 	if err != nil {
 		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -416,7 +446,7 @@ func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.dockerService.ComposeDown(r.Context(), path)
+	result, err := h.getService(r).ComposeDown(r.Context(), path)
 	if err != nil {
 		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -439,7 +469,7 @@ func (h *DockerHandler) ComposeBuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.dockerService.ComposeBuild(r.Context(), path)
+	result, err := h.getService(r).ComposeBuild(r.Context(), path)
 	if err != nil {
 		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -462,7 +492,7 @@ func (h *DockerHandler) ComposeRestart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.dockerService.ComposeRestart(r.Context(), path)
+	result, err := h.getService(r).ComposeRestart(r.Context(), path)
 	if err != nil {
 		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -485,7 +515,7 @@ func (h *DockerHandler) ComposePull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.dockerService.ComposePull(r.Context(), path)
+	result, err := h.getService(r).ComposePull(r.Context(), path)
 	if err != nil {
 		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -509,14 +539,14 @@ func (h *DockerHandler) ComposeRedeploy(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// First down
-	downResult, err := h.dockerService.ComposeDown(r.Context(), path)
+	downResult, err := h.getService(r).ComposeDown(r.Context(), path)
 	if err != nil {
 		writeError(w, downResult.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
 
 	// Then up
-	upResult, err := h.dockerService.ComposeUp(r.Context(), path)
+	upResult, err := h.getService(r).ComposeUp(r.Context(), path)
 	if err != nil {
 		writeError(w, upResult.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -600,7 +630,7 @@ func (h *DockerHandler) SaveComposeFile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.dockerService.SaveComposeFile(path, req.Content); err != nil {
+	if err := h.getService(r).SaveComposeFile(path, req.Content); err != nil {
 		writeError(w, "Failed to save compose file", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -622,7 +652,7 @@ func (h *DockerHandler) GetComposeEnv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content, err := h.dockerService.GetComposeEnv(r.Context(), path)
+	content, err := h.getService(r).GetComposeEnv(r.Context(), path)
 	if err != nil {
 		writeError(w, "Failed to get env file", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -653,7 +683,7 @@ func (h *DockerHandler) SaveComposeEnv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.dockerService.SaveComposeEnv(path, req.Content); err != nil {
+	if err := h.getService(r).SaveComposeEnv(path, req.Content); err != nil {
 		writeError(w, "Failed to save env file", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -685,7 +715,7 @@ func (h *DockerHandler) DeleteComposeProject(w http.ResponseWriter, r *http.Requ
 
 // ListNetworks returns all Docker networks.
 func (h *DockerHandler) ListNetworks(w http.ResponseWriter, r *http.Request) {
-	networks, err := h.dockerService.ListNetworks(r.Context())
+	networks, err := h.getService(r).ListNetworks(r.Context())
 	if err != nil {
 		writeError(w, "Failed to list networks", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -701,7 +731,7 @@ func (h *DockerHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.dockerService.RemoveNetwork(r.Context(), id); err != nil {
+	if err := h.getService(r).RemoveNetwork(r.Context(), id); err != nil {
 		writeError(w, "Failed to remove network", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -711,7 +741,7 @@ func (h *DockerHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
 
 // PruneNetworks removes unused Docker networks.
 func (h *DockerHandler) PruneNetworks(w http.ResponseWriter, r *http.Request) {
-	reclaimed, err := h.dockerService.PruneNetworks(r.Context())
+	reclaimed, err := h.getService(r).PruneNetworks(r.Context())
 	if err != nil {
 		writeError(w, "Failed to prune networks", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -757,13 +787,13 @@ func (h *DockerHandler) ExecWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shell := h.dockerService.DetectShell(r.Context(), id)
-	execID, err := h.dockerService.CreateExec(r.Context(), id, []string{shell, "-i"})
+	execID, err := h.getService(r).CreateExec(r.Context(), id, []string{shell, "-i"})
 	if err != nil {
 		conn.WriteMessage(websocket.TextMessage, []byte("Error: 无法创建exec: "+err.Error()+"\n容器可能没有可用的shell工具"))
 		return
 	}
 
-	hijack, err := h.dockerService.StartExec(r.Context(), execID)
+	hijack, err := h.getService(r).StartExec(r.Context(), execID)
 	if err != nil {
 		conn.WriteMessage(websocket.TextMessage, []byte("Error: "+err.Error()))
 		return

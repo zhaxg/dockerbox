@@ -199,6 +199,28 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 			composePaths = []string{"/vol1/1000/docker"}
 		}
 		dockerHandler = handler.NewDockerHandler(dockerService, composePaths)
+		// Create DockerService for each configured host
+		if cfg.DockerHosts != nil {
+			dockerHandler.SetDefaultHost(cfg.DockerHosts.Default)
+			for id, host := range cfg.DockerHosts.Hosts {
+				hostCfg := service.DockerServiceConfig{}
+				switch host.Driver {
+				case "tcp":
+					hostCfg.Host = "tcp://" + host.Endpoint
+				case "socket":
+					hostCfg.SocketPath = host.Endpoint
+				case "ssh":
+					hostCfg.Host = "ssh://" + host.Endpoint
+					hostCfg.SSHKey = host.SSHKey
+				}
+				svc, err := service.NewDockerService(hostCfg)
+				if err != nil {
+					log.Warn().Err(err).Str("host", id).Msg("Failed to create Docker service for host")
+					continue
+				}
+				dockerHandler.SetService(id, svc)
+			}
+		}
 		collector := service.NewCollector(ctx, dockerService, composePaths)
 		sseHandler = handler.NewSSEHandler(dockerService, collector)
 		_ = collector // stopped via context cancel

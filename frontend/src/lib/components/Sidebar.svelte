@@ -62,7 +62,7 @@
 	async function switchHost(id: string) {
 		hostsConfig.default = id;
 		hostDropdownOpen = false;
-		// Save to backend
+		localStorage.setItem('currentHostId', id);
 		try {
 			const host = hostsConfig.hosts[id];
 			if (host) await hostsApi.update(id, { ...host, isDefault: true });
