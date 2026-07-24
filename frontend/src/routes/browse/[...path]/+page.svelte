@@ -596,10 +596,8 @@
 	}
 
 	// Setup upload store callbacks
-	uploadStore.onComplete = (fileName: string, success: boolean, error?: string) => {
-		if (success) {
-			toastStore.success(`${fileName} uploaded successfully`);
-		} else {
+	uploadStore.onComplete = (_fileName: string, success: boolean, error?: string) => {
+		if (!success) {
 			toastStore.error(`Upload failed: ${error || 'Unknown error'}`);
 		}
 	};
