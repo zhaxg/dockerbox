@@ -37,6 +37,7 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 	// Container routes
 	r.Route("/containers", func(r chi.Router) {
 		r.Get("/", h.ListContainers)
+		r.Get("/host-ip", h.GetHostIP)
 		r.Get("/stats", h.GetStats)
 		r.Get("/{id}", h.GetContainer)
 		r.Get("/{id}/inspect", h.InspectContainer)
@@ -59,6 +60,7 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 	// Compose routes
 	r.Route("/compose", func(r chi.Router) {
 		r.Get("/", h.ListComposeProjects)
+		r.Post("/", h.CreateComposeProject)
 		r.Post("/{id}/up", h.ComposeUp)
 		r.Post("/{id}/down", h.ComposeDown)
 		r.Post("/{id}/build", h.ComposeBuild)
@@ -80,6 +82,12 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 	})
 }
 
+// GetHostIP returns the Docker host's IP address.
+func (h *DockerHandler) GetHostIP(w http.ResponseWriter, r *http.Request) {
+	hostIP := h.dockerService.GetHostIP(r.Context())
+	writeJSON(w, map[string]string{"ip": hostIP}, http.StatusOK)
+}
+
 // ListContainers returns all Docker containers.
 func (h *DockerHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
 	containers, err := h.dockerService.ListContainers(r.Context())
@@ -94,10 +102,11 @@ func (h *DockerHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				cpu, mem, err := h.dockerService.GetStats(r.Context(), containers[idx].ID)
+				cpu, mem, net, err := h.dockerService.GetStats(r.Context(), containers[idx].ID)
 				if err == nil {
 					containers[idx].CPU = cpu
 					containers[idx].Memory = mem
+					containers[idx].Network = net
 				}
 			}(i)
 		}
@@ -332,6 +341,43 @@ func (h *DockerHandler) ListComposeProjects(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, map[string]interface{}{"projects": projects}, http.StatusOK)
 }
 
+// CreateComposeProject creates a new compose project.
+func (h *DockerHandler) CreateComposeProject(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name            string `json:"name"`
+		ComposeContent  string `json:"composeContent"`
+		EnvContent      string `json:"envContent"`
+		BasePath        string `json:"basePath"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		writeError(w, "Project name is required", model.ErrCodeValidationError, http.StatusBadRequest)
+		return
+	}
+
+	if req.ComposeContent == "" {
+		writeError(w, "Compose content is required", model.ErrCodeValidationError, http.StatusBadRequest)
+		return
+	}
+
+	// Default base path
+	if req.BasePath == "" {
+		req.BasePath = "/vol1/1000/docker"
+	}
+
+	result, err := h.dockerService.CreateComposeProject(r.Context(), req.Name, req.ComposeContent, req.EnvContent, req.BasePath)
+	if err != nil {
+		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, result, http.StatusOK)
+}
+
 // ComposeUp starts a compose project.
 func (h *DockerHandler) ComposeUp(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -522,7 +568,7 @@ func (h *DockerHandler) GetComposeFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content, err := h.dockerService.GetComposeFile(path)
+	content, err := h.dockerService.GetComposeFile(r.Context(), path)
 	if err != nil {
 		writeError(w, "Failed to get compose file", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -575,7 +621,7 @@ func (h *DockerHandler) GetComposeEnv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content, err := h.dockerService.GetComposeEnv(path)
+	content, err := h.dockerService.GetComposeEnv(r.Context(), path)
 	if err != nil {
 		writeError(w, "Failed to get env file", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return

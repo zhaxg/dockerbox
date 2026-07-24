@@ -1,4 +1,5 @@
 name: Publish Release Docker Image
+if: false
 
 on:
   push:

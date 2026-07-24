@@ -140,10 +140,10 @@ func (h *SSEHandler) StreamHostStats(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			cpu := readFile("/host/proc/stat")
-			mem := readFile("/host/proc/meminfo")
-			net := readFile("/host/proc/net/dev")
-			load := readFile("/host/proc/loadavg")
+			cpu := readFile("/host_root/proc/stat")
+			mem := readFile("/host_root/proc/meminfo")
+			net := readFile("/host_root/proc/net/dev")
+			load := readFile("/host_root/proc/loadavg")
 
 			data := fmt.Sprintf(`{"cpu":%s,"memory":%s,"network":%s,"load":%s}`,
 				wrapRaw(cpu), wrapRaw(mem), wrapRaw(net), wrapRaw(load))

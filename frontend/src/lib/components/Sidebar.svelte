@@ -6,7 +6,6 @@
 		LayoutDashboard,
 		Container,
 		Package,
-		Image,
 		FolderOpen,
 		Star,
 		Settings,
@@ -27,9 +26,7 @@
 	const navItems = [
 		{ name: '概览', path: '/overview', icon: LayoutDashboard },
 		{ name: '容器', path: '/containers', icon: Container },
-		{ name: '镜像', path: '/images', icon: Image },
 		{ name: 'Compose', path: '/compose', icon: Package },
-		{ name: '网络', path: '/networks', icon: Network },
 		{
 			name: '文件',
 			path: '/browse',
@@ -99,8 +96,8 @@
 				{#each $settingsStore.favoriteFolders as fav}
 				<button
 				type="button"
-				class="nav-item-sub {isActive(fav.path) ? 'active' : ''}"
-				onclick={() => handleNavigate(`/browse${fav.path}`)}
+				class="nav-item-sub {isActive(`/browse/${fav.path}`) ? 'active' : ''}"
+				onclick={() => handleNavigate(`/browse/${fav.path}`)}
 				>
 				<Star size={14} class="shrink-0 opacity-80" />
 				<span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{fav.name}</span>
@@ -112,8 +109,8 @@
 				 {#each mountPoints as mp}
 				 <button
 				 type="button"
-				 class="nav-item-sub {isActive(mp.path) ? 'active' : ''}"
-				 onclick={() => handleNavigate(`/browse${mp.path}`)}
+				 class="nav-item-sub {isActive(`/browse/${mp.name}`) ? 'active' : ''}"
+				 onclick={() => handleNavigate(`/browse/${mp.name}`)}
 				 >
 				 <Server size={14} class="shrink-0 opacity-80" />
 				 <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{mp.name}</span>

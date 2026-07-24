@@ -139,7 +139,7 @@
 			{:else if isWorkspacePage}
 				<div class="flex h-screen">
 					<Sidebar />
-					<main class="flex-1 overflow-auto">
+					<main class="flex flex-1 flex-col min-w-0">
 						{@render children()}
 					</main>
 				</div>

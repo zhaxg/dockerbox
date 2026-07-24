@@ -2,143 +2,184 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api/client';
-	import { Card, Spinner, Button } from '$lib/components/ui';
-	import { ArrowLeft, Play, StopCircle, Hammer, RefreshCw, Save, RotateCcw, Download } from 'lucide-svelte';
+	import { Spinner, Button } from '$lib/components/ui';
+	import { ArrowLeft, Save, Play } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import CodePreview from '$lib/components/preview/CodePreview.svelte';
+	import type * as Monaco from 'monaco-editor';
 
 	const projectId = $derived(page.params.id);
+	const isNew = $derived(projectId === 'new');
 
-	let composeFile = $state('');
-	let envFile = $state('');
+	let composeContent = $state('');
 	let loading = $state(true);
 	let saving = $state(false);
-	let activeTab = $state<'compose' | 'env'>('compose');
+	let projectName = $state('');
+	let projectPath = $state('/vol1/1000/docker');
+	let error = $state('');
+	let containerElement: HTMLDivElement | null = $state(null);
+	let editor: Monaco.editor.IStandaloneCodeEditor | null = $state(null);
+	let monaco: typeof Monaco | null = $state(null);
+	let dirty = $state(false);
+
+	const canSave = $derived(dirty && !saving && !loading);
 
 	onMount(async () => {
-		await loadFiles();
+		if (!isNew) {
+			await loadComposeFile();
+		} else {
+			composeContent = "services:\n  my-service:\n    image: nginx:latest\n    ports:\n      - \"8080:80\"\n";
+			loading = false;
+		}
+		await loadMonaco();
 	});
 
-	async function loadFiles() {
+	async function loadComposeFile() {
 		loading = true;
 		try {
-			const [composeData, envData] = await Promise.all([
-				api.get<{ content: string }>(`/docker/compose/${projectId}/file`).catch(() => ({ content: '' })),
-				api.get<{ content: string }>(`/docker/compose/${projectId}/env`).catch(() => ({ content: '' }))
-			]);
-			composeFile = composeData.content || '';
-			envFile = envData.content || '';
+			const data = await api.get<{ content: string }>(`/docker/compose/${projectId}/file`);
+			composeContent = data?.content || '';
 		} catch (e) {
-			console.error('Failed to load files:', e);
+			error = e instanceof Error ? e.message : '加载失败';
 		} finally {
 			loading = false;
 		}
 	}
 
-	async function saveComposeFile() {
-		saving = true;
+	async function loadMonaco() {
+		if (typeof window === 'undefined') return;
 		try {
-			await api.put(`/docker/compose/${projectId}/file`, { content: composeFile });
+			const monacoModule = await import('monaco-editor');
+			monaco = monacoModule.default || monacoModule;
+			if (containerElement && !editor) {
+				createEditor();
+			}
 		} catch (e) {
-			console.error('Failed to save compose file:', e);
-		} finally {
-			saving = false;
+			console.error('Failed to load Monaco:', e);
 		}
 	}
 
-	async function saveEnvFile() {
-		saving = true;
-		try {
-			await api.put(`/docker/compose/${projectId}/env`, { content: envFile });
-		} catch (e) {
-			console.error('Failed to save env file:', e);
-		} finally {
-			saving = false;
+	function createEditor() {
+		if (!monaco || !containerElement || editor) return;
+
+		monaco.editor.defineTheme('boxbox-dark', {
+			base: 'vs-dark',
+			inherit: true,
+			rules: [],
+			colors: {
+				'editor.background': '#1e1e1e',
+				'editor.foreground': '#d4d4d4',
+				'editorLineNumber.foreground': '#5a5a5a',
+				'editorLineNumber.activeForeground': '#c6c6c6',
+				'editor.selectionBackground': '#264f78',
+				'editor.lineHighlightBackground': '#2a2a2a'
+			}
+		});
+
+		editor = monaco.editor.create(containerElement, {
+			value: composeContent,
+			language: 'yaml',
+			theme: 'boxbox-dark',
+			minimap: { enabled: false },
+			fontSize: 13,
+			lineNumbers: 'on',
+			scrollBeyondLastLine: false,
+			automaticLayout: true,
+			tabSize: 2,
+			wordWrap: 'on'
+		});
+
+		editor.onDidChangeModelContent(() => {
+			composeContent = editor?.getValue() || '';
+			dirty = true;
+		});
+	}
+
+	$effect(() => {
+		if (containerElement && monaco && !editor) {
+			createEditor();
 		}
-	}
+	});
 
-	async function composeUp() {
-		await api.post(`/docker/compose/${projectId}/up`);
-	}
+	$effect(() => {
+		if (editor && !loading) {
+			editor.setValue(composeContent);
+			dirty = false;
+		}
+	});
 
-	async function composeDown() {
-		await api.post(`/docker/compose/${projectId}/down`);
-	}
-
-	async function composeBuild() {
-		await api.post(`/docker/compose/${projectId}/build`);
-	}
-
-	async function composeRestart() {
-		await api.post(`/docker/compose/${projectId}/restart`);
-	}
-
-	async function composeRedeploy() {
-		if (!confirm('确定要重新部署这个项目吗？')) return;
-		await api.post(`/docker/compose/${projectId}/redeploy`);
+	async function handleSave() {
+		if (isNew) {
+			// Create new project
+			if (!projectName.trim()) { error = '请输入项目名称'; return; }
+			saving = true; error = '';
+			try {
+				await api.post('/docker/compose', {
+					name: projectName.trim(),
+					composeContent,
+					basePath: projectPath
+				});
+				goto(resolve('/compose'));
+			} catch (e) {
+				error = e instanceof Error ? e.message : '创建失败';
+			} finally {
+				saving = false;
+			}
+		} else {
+			// Update existing project
+			saving = true; error = '';
+			try {
+				await api.put(`/docker/compose/${projectId}/file`, { content: composeContent });
+				dirty = false;
+			} catch (e) {
+				error = e instanceof Error ? e.message : '保存失败';
+			} finally {
+				saving = false;
+			}
+		}
 	}
 </script>
 
-<div class="flex h-full flex-col p-6">
+<div class="flex h-full flex-col bg-surface-primary">
 	<!-- Header -->
-	<div class="mb-6 flex items-center justify-between">
-		<div class="flex items-center gap-4">
-			<Button variant="secondary" onclick={() => goto(resolve('/compose'))}>
-				<ArrowLeft size={16} class="mr-2" />
-				返回
-			</Button>
-			<h1 class="text-2xl font-semibold text-text-primary">{projectId}</h1>
+	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
+		<div class="flex items-center gap-3">
+			<button type="button" class="text-text-muted hover:text-text-primary" onclick={() => goto(resolve('/compose'))}>
+				<ArrowLeft size={18} />
+			</button>
+			<h1 class="text-base font-semibold text-text-primary">
+				{isNew ? '新建 Compose 项目' : projectId}
+			</h1>
+			{#if dirty}
+				<span class="text-[11px] text-orange-400">● 已修改</span>
+			{/if}
 		</div>
-		<div class="flex gap-2">
-			<Button variant="primary" size="sm" onclick={composeUp} title="启动"><Play size={14} class="mr-1" />启动</Button>
-			<Button variant="secondary" size="sm" onclick={composeDown} title="停止"><StopCircle size={14} class="mr-1" />停止</Button>
-			<Button variant="secondary" size="sm" onclick={composeRestart} title="重启"><RotateCcw size={14} class="mr-1" />重启</Button>
-			<Button variant="secondary" size="sm" onclick={composeBuild} title="构建"><Hammer size={14} class="mr-1" />构建</Button>
-			<Button variant="secondary" size="sm" onclick={composeRedeploy} title="重新部署"><RefreshCw size={14} class="mr-1" />重新部署</Button>
+		<div class="flex items-center gap-2">
+			{#if isNew}
+				<input type="text" bind:value={projectName} placeholder="项目名称"
+					class="h-7 w-40 rounded border border-border-secondary bg-surface-secondary px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+				<input type="text" bind:value={projectPath} placeholder="存储路径"
+					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+			{/if}
+			{#if error}
+				<span class="text-xs text-red-400">{error}</span>
+			{/if}
+			<Button variant="primary" size="sm" onclick={handleSave} disabled={!canSave}>
+				{#if saving}
+					<Spinner size={14} class="mr-1" /> 保存中...
+				{:else}
+					<Save size={14} class="mr-1" /> {isNew ? '创建' : '保存'}
+				{/if}
+			</Button>
 		</div>
 	</div>
 
-	{#if loading}
-		<Spinner size="lg" />
-	{:else}
-		<!-- Tabs -->
-		<div class="mb-4 flex gap-2 border-b border-border-secondary">
-			<button
-				class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'compose' ? 'border-accent text-accent' : 'border-transparent text-text-secondary hover:text-text-primary'}"
-				onclick={() => (activeTab = 'compose')}
-			>
-				docker-compose.yml
-			</button>
-			<button
-				class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'env' ? 'border-accent text-accent' : 'border-transparent text-text-secondary hover:text-text-primary'}"
-				onclick={() => (activeTab = 'env')}
-			>
-				.env
-			</button>
-		</div>
-
-		<!-- Editor -->
-		<div class="flex-1">
-			{#if activeTab === 'compose'}
-				<div class="h-[500px]">
-					<CodePreview
-						url={`/api/v1/docker/compose/${projectId}/file`}
-						filename="docker-compose.yml"
-						path={`/docker/compose/${projectId}/file`}
-						onSaved={() => loadFiles()}
-					/>
-				</div>
-			{:else}
-				<div class="h-[500px]">
-					<CodePreview
-						url={`/api/v1/docker/compose/${projectId}/env`}
-						filename=".env"
-						path={`/docker/compose/${projectId}/env`}
-						onSaved={() => loadFiles()}
-					/>
-				</div>
-			{/if}
-		</div>
-	{/if}
+	<!-- Editor -->
+	<div class="flex-1 overflow-hidden">
+		{#if loading}
+			<div class="flex items-center justify-center py-12"><Spinner size="lg" /></div>
+		{:else}
+			<div bind:this={containerElement} class="h-full w-full"></div>
+		{/if}
+	</div>
 </div>

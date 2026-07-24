@@ -14,7 +14,14 @@ type Container struct {
 	Ports     []PortBinding     `json:"ports"`
 	CPU       float64           `json:"cpu"`    // CPU usage percentage
 	Memory    MemoryUsage       `json:"memory"`
+	Network   NetworkTraffic    `json:"network"`
 	Labels    map[string]string `json:"labels"`
+}
+
+// NetworkTraffic represents network I/O stats.
+type NetworkTraffic struct {
+	RxBytes uint64 `json:"rxBytes"`
+	TxBytes uint64 `json:"txBytes"`
 }
 
 // PortBinding represents a port mapping between host and container.
@@ -76,12 +83,13 @@ type ComposeAction struct {
 
 // Network represents a Docker network.
 type Network struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Driver   string `json:"driver"`
-	Scope    string `json:"scope"`
-	Created  string `json:"created"`
-	Subnet   string `json:"subnet"`
-	Gateway  string `json:"gateway"`
-	Internal bool   `json:"internal"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Driver     string `json:"driver"`
+	Scope      string `json:"scope"`
+	Created    string `json:"created"`
+	Subnet     string `json:"subnet"`
+	Gateway    string `json:"gateway"`
+	Internal   bool   `json:"internal"`
+	Containers int    `json:"containers"`
 }

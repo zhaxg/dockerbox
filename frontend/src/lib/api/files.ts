@@ -260,8 +260,22 @@ export function getDownloadUrl(path: string): string {
  * Fetch file content as text (for code/text preview)
  */
 export async function getFileContent(path: string): Promise<string> {
-	// If path is already a full URL (from getPreviewUrl), use it directly
-	const url = path.startsWith('/api/') || path.startsWith('http') ? path : getPreviewUrl(path);
+	// If path is already a full API URL, use it with auth header
+	if (path.startsWith('/api/') || path.startsWith('http')) {
+		const token = tokenStorage.getAccessToken();
+		const headers: Record<string, string> = {};
+		if (token) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+		const response = await fetch(path, { headers });
+		if (!response.ok) {
+			throw new Error(`Failed to fetch file: ${response.statusText}`);
+		}
+		const data = await response.json();
+		return data.content || '';
+	}
+	// Otherwise use preview URL (token in query param)
+	const url = getPreviewUrl(path);
 	const response = await fetch(url);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch file: ${response.statusText}`);
