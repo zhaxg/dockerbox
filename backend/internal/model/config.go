@@ -21,14 +21,14 @@ type DockerHostsConfig struct {
 
 // DockerHost represents a remote or local Docker host connection.
 type DockerHost struct {
-	ID          string              `json:"id" mapstructure:"id"`
-	Name        string              `json:"name" mapstructure:"name"`
-	Driver      string              `json:"driver" mapstructure:"driver"`       // tcp | ssh | socket
-	Endpoint    string              `json:"endpoint" mapstructure:"endpoint"`   // e.g. 192.168.1.100:2375, user@192.168.1.100, /var/run/docker.sock
-	SSHKey      string              `json:"sshKey,omitempty" mapstructure:"ssh_key"`
-	SSHPubKey   string              `json:"sshPubKey,omitempty" mapstructure:"ssh_pub_key"`
-	Tags        []string            `json:"tags,omitempty" mapstructure:"tags"`
-	MountPoints map[string]*HostMountPoint `json:"mountPoints" mapstructure:"mount_points"`
+	ID          string              `json:"id" yaml:"id" mapstructure:"id"`
+	Name        string              `json:"name" yaml:"name" mapstructure:"name"`
+	Driver      string              `json:"driver" yaml:"driver" mapstructure:"driver"`
+	Endpoint    string              `json:"endpoint" yaml:"endpoint" mapstructure:"endpoint"`
+	SSHKey      string              `json:"sshKey,omitempty" yaml:"ssh_key,omitempty" mapstructure:"ssh_key"`
+	SSHPubKey   string              `json:"sshPubKey,omitempty" yaml:"ssh_pub_key,omitempty" mapstructure:"ssh_pub_key"`
+	Tags        []string            `json:"tags,omitempty" yaml:"tags,omitempty" mapstructure:"tags"`
+	MountPoints map[string]*HostMountPoint `json:"mountPoints" yaml:"mount_points" mapstructure:"mount_points"`
 }
 
 // HostMountPoint represents a browsable directory on a Docker host.

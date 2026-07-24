@@ -11,6 +11,7 @@ export interface DockerHost {
 	driver: 'tcp' | 'ssh' | 'socket';
 	endpoint: string;
 	sshKey?: string;
+	sshPubKey?: string;
 	tags?: string[];
 	mountPoints?: Record<string, HostMountPoint>;
 }

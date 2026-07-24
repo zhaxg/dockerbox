@@ -132,6 +132,7 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 		existing.Endpoint = updates.Endpoint
 	}
 	existing.SSHKey = updates.SSHKey
+	existing.SSHPubKey = updates.SSHPubKey
 	existing.Tags = updates.Tags
 	if updates.MountPoints != nil {
 		existing.MountPoints = updates.MountPoints
