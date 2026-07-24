@@ -289,26 +289,36 @@ func (h *HostHandler) SSHKeyPairInstructions(w http.ResponseWriter, r *http.Requ
 
 // SSHKeyGen generates an ED25519 key pair and returns them.
 func (h *HostHandler) SSHKeyGen(w http.ResponseWriter, r *http.Request) {
-	// Generate ED25519 key pair via ssh-keygen
-	cmd := exec.Command("ssh-keygen", "-t", "ed25519", "-C", "boxbox", "-f", "/dev/stdout", "-N", "")
-	stdout, err := cmd.Output()
+	// Generate ED25519 key pair via temp files
+	tmpDir, err := os.MkdirTemp("", "boxbox-keygen-*")
 	if err != nil {
+		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("failed to create temp dir: %v", err)}, http.StatusOK)
+		return
+	}
+	defer os.RemoveAll(tmpDir)
+
+	keyPath := tmpDir + "/id_ed25519"
+	cmd := exec.Command("ssh-keygen", "-t", "ed25519", "-C", "boxbox", "-f", keyPath, "-N", "")
+	if err := cmd.Run(); err != nil {
 		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("keygen failed: %v", err)}, http.StatusOK)
 		return
 	}
-	// ssh-keygen prints: private key followed by public key comment
-	parts := strings.SplitN(string(stdout), "\n", 2)
-	if len(parts) < 2 {
-		writeJSON(w, map[string]interface{}{"status": "error", "message": "unexpected keygen output"}, http.StatusOK)
+
+	privKey, err := os.ReadFile(keyPath)
+	if err != nil {
+		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("failed to read private key: %v", err)}, http.StatusOK)
 		return
 	}
-	// Extract public key from the second part (it has a comment appended)
-	pubLines := strings.Split(parts[1], "\n")
-	pubKey := pubLines[0]
+
+	pubKey, err := os.ReadFile(keyPath + ".pub")
+	if err != nil {
+		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("failed to read public key: %v", err)}, http.StatusOK)
+		return
+	}
 
 	writeJSON(w, map[string]interface{}{
-		"private_key": parts[0],
-		"public_key":  pubKey,
+		"private_key": strings.TrimSpace(string(privKey)),
+		"public_key":  strings.TrimSpace(string(pubKey)),
 	}, http.StatusOK)
 }
 
