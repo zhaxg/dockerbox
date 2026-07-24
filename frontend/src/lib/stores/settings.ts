@@ -199,16 +199,55 @@ function mixColor(color: string, target: string, amount: number): string {
 	]);
 }
 
+// Google Fonts / CDN mapping: font-family value → URL
+const FONT_CDN: Record<string, string> = {
+	'"Inter", "Noto Sans", sans-serif':
+		'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap',
+	'"Roboto", "Noto Sans", sans-serif':
+		'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+	'"Source Sans 3", "Noto Sans", sans-serif':
+		'https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap',
+	'"LXGW WenKai", "Noto Sans SC", sans-serif':
+		'https://fonts.loli.net/css2?family=LXGW+WenKai:wght@400;700&display=swap',
+	'"Noto Sans SC", "Noto Sans CJK SC", sans-serif':
+		'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap',
+	'"Source Han Sans SC", "Noto Sans SC", sans-serif':
+		'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap',
+	'"Source Han Serif SC", "Noto Serif SC", sans-serif':
+		'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap',
+	'"LXGW Neo XiHei", sans-serif':
+		'https://fonts.loli.net/css2?family=LXGW+Neo+XiHei:wght@400;700&display=swap',
+	'"ZCOOL XiaoWei", sans-serif':
+		'https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap',
+};
+
+const loadedFonts = new Set<string>();
+
+function loadFontCDN(url: string) {
+	if (typeof document === 'undefined' || loadedFonts.has(url)) return;
+	loadedFonts.add(url);
+	const link = document.createElement('link');
+	link.rel = 'stylesheet';
+	link.href = url;
+	document.head.appendChild(link);
+}
+
 export function applyFonts(uiFont: string, cjkFont: string): void {
 	if (typeof document === 'undefined') return;
 	const rootStyle = document.documentElement.style;
+
 	if (uiFont) {
 		rootStyle.setProperty('--font-ui', uiFont);
+		const cdn = FONT_CDN[uiFont];
+		if (cdn) loadFontCDN(cdn);
 	} else {
 		rootStyle.removeProperty('--font-ui');
 	}
+
 	if (cjkFont) {
 		rootStyle.setProperty('--font-cjk', cjkFont);
+		const cdn = FONT_CDN[cjkFont];
+		if (cdn) loadFontCDN(cdn);
 	} else {
 		rootStyle.removeProperty('--font-cjk');
 	}
