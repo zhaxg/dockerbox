@@ -425,12 +425,11 @@ func ensureSSHKey(hostID, sshKey, endpoint string) {
 		port = hostPort[idx+1:]
 	}
 
-	// Update ~/.ssh/config
+	// Update ~/.ssh/config - remove ALL old entries for this host first
 	configPath := filepath.Join(sshDir, "config")
 	configData, _ := os.ReadFile(configPath)
 	configStr := string(configData)
 
-	// Remove old entry for this host
 	marker := "# boxbox:" + hostID
 	lines := strings.Split(configStr, "\n")
 	var newLines []string
@@ -440,12 +439,14 @@ func ensureSSHKey(hostID, sshKey, endpoint string) {
 			skip = true
 			continue
 		}
-		if skip && (strings.HasPrefix(strings.TrimSpace(line), "Host ") || line == "") {
-			skip = false
+		if skip {
+			if strings.HasPrefix(strings.TrimSpace(line), "Host ") || strings.TrimSpace(line) == "" {
+				skip = false
+			} else {
+				continue
+			}
 		}
-		if !skip {
-			newLines = append(newLines, line)
-		}
+		newLines = append(newLines, line)
 	}
 
 	// Add new entry
