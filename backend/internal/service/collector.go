@@ -215,9 +215,10 @@ func (h *HostStats) parseNet(raw string) {
 	for _, line := range strings.Split(raw, "\n") {
 		if strings.Contains(line, ":") && !strings.HasPrefix(line, "Inter") && !strings.HasPrefix(line, "face") {
 			fields := strings.Fields(strings.TrimLeft(line, " "))
+			// fields[0] = "intf:", fields[1..8] = RX, fields[9..] = TX
 			if len(fields) >= 10 {
-				rx, _ := strconv.ParseUint(fields[0], 10, 64)
-				tx, _ := strconv.ParseUint(fields[8], 10, 64)
+				rx, _ := strconv.ParseUint(fields[1], 10, 64)
+				tx, _ := strconv.ParseUint(fields[9], 10, 64)
 				h.NetRx += rx
 				h.NetTx += tx
 			}
