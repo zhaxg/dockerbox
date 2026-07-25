@@ -174,7 +174,8 @@
 	function connectSSE() {
 		const token = localStorage.getItem('accessToken');
 		if (!token) return;
-		eventSource = new EventSource(`/api/v1/sse/host?token=${token}`);
+		const hostId = localStorage.getItem('currentHostId') || '';
+		eventSource = new EventSource(`/api/v1/sse/host?token=${token}&host=${hostId}`);
 		eventSource.addEventListener('host', (event) => {
 			try {
 				const h = JSON.parse(event.data);
