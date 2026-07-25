@@ -11,6 +11,7 @@
 	import { Spinner, Button } from '$lib/components/ui';
 	import { FolderOpen } from 'lucide-svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import Toast from '$lib/components/ui/Toast.svelte';
 	import { activeJobs, jobsStore } from '$lib/stores/jobs';
 	import { websocketStore } from '$lib/stores/websocket';
 	import {
@@ -76,7 +77,7 @@
 		if (!$isAuthenticated && !isPublicRoute) {
 			goto(resolve('/login'));
 		} else if ($isAuthenticated && currentPath.startsWith('/login')) {
-			goto(resolve('/browse'));
+			goto(resolve('/overview'));
 		}
 	});
 
@@ -177,4 +178,6 @@
 			{/if}
 		</QueryClientProvider>
 	</div>
+
+	<Toast />
 </div>

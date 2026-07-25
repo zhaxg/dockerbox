@@ -85,7 +85,7 @@ func (h *StreamHandler) SetHostMountPoints(hostID string, mounts map[string]stri
 }
 
 func (h *StreamHandler) resolvePath(r *http.Request, boxPath string) string {
-	hostID := r.Header.Get("X-Host-ID")
+	hostID := getHostID(r)
 	if hostID == "" {
 		hostID = r.URL.Query().Get("host")
 	}
@@ -108,7 +108,7 @@ func (h *StreamHandler) resolvePath(r *http.Request, boxPath string) string {
 }
 
 func (h *StreamHandler) getHostAccess(r *http.Request) service.HostFileAccess {
-	hostID := r.Header.Get("X-Host-ID")
+	hostID := getHostID(r)
 	if hostID == "" {
 		hostID = r.URL.Query().Get("host")
 	}
@@ -129,7 +129,7 @@ func (h *StreamHandler) Download(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Path is required", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
-	log.Printf("Download: path=%s remote=%v hostID=%s", path, h.getHostAccess(r) != nil, r.Header.Get("X-Host-ID"))
+	log.Printf("Download: path=%s remote=%v hostID=%s", path, h.getHostAccess(r) != nil, getHostID(r))
 
 	if access := h.getHostAccess(r); access != nil {
 		h.serveRemoteFile(w, r, path, "attachment", access)

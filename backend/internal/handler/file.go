@@ -48,7 +48,7 @@ func (h *FileHandler) SetDefaultHost(hostID string) {
 
 // getMountPoints returns mount points for the current request's host.
 func (h *FileHandler) getMountPoints(r *http.Request) []model.MountPoint {
-	hostID := r.Header.Get("X-Host-ID")
+	hostID := getHostID(r)
 	if hostID != "" {
 		if mps, ok := h.hostMountPoints[hostID]; ok {
 			return mps
@@ -64,7 +64,7 @@ func (h *FileHandler) getMountPoints(r *http.Request) []model.MountPoint {
 
 // getHostAccess returns the HostFileAccess for the current request's host, or nil for local.
 func (h *FileHandler) getHostAccess(r *http.Request) service.HostFileAccess {
-	hostID := r.Header.Get("X-Host-ID")
+	hostID := getHostID(r)
 	if hostID != "" {
 		if access, ok := h.hostAccess[hostID]; ok {
 			return access

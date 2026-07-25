@@ -107,15 +107,16 @@ func (s *DockerService) sshExec(ctx context.Context, cmd string) (string, error)
 	return strings.TrimSpace(stdout.String()), nil
 }
 
-// composeCommand returns the available docker compose command (V2 plugin first, then V1 binary).
-func composeCommand(ctx context.Context, args ...string) *exec.Cmd {
-	// Try V2 plugin first: "docker compose ..."
-	if err := exec.CommandContext(ctx, "docker", "compose", "version").Run(); err == nil {
-		fullArgs := append([]string{"compose"}, args...)
-		return exec.CommandContext(ctx, "docker", fullArgs...)
+// composeCommand returns the compose command for the given runtime.
+// For podman: uses "podman compose" with PODMAN_COMPOSE_WARNING_LOGS=false to suppress wrapper message.
+// For docker: uses "docker compose".
+func composeCommand(ctx context.Context, runtime string, args ...string) *exec.Cmd {
+	if runtime == "podman" {
+		cmd := exec.CommandContext(ctx, "podman", append([]string{"compose"}, args...)...)
+		cmd.Env = append(os.Environ(), "PODMAN_COMPOSE_WARNING_LOGS=false")
+		return cmd
 	}
-	// Fallback to V1: "docker-compose ..."
-	return exec.CommandContext(ctx, "docker-compose", args...)
+	return exec.CommandContext(ctx, "docker", append([]string{"compose"}, args...)...)
 }
 
 // DockerService handles Docker operations.
@@ -123,6 +124,7 @@ type DockerService struct {
 	client  *client.Client
 	sshKey  string // SSH private key content
 	sshHost string // user@host:port
+	runtime string // "docker" or "podman"
 }
 
 // Client returns the underlying Docker API client.
@@ -169,7 +171,26 @@ func NewDockerService(cfg DockerServiceConfig) (*DockerService, error) {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)
 	}
 
-	return &DockerService{client: c, sshKey: cfg.SSHKey, sshHost: cfg.Host}, nil
+	// Detect runtime: podman binary present?
+	runtime := "docker"
+	if _, err := exec.LookPath("podman"); err == nil {
+		runtime = "podman"
+	}
+
+	return &DockerService{client: c, sshKey: cfg.SSHKey, sshHost: cfg.Host, runtime: runtime}, nil
+}
+
+// GetSSHHost returns the SSH host string (e.g., "user@host:port") for remote connections.
+func (s *DockerService) GetSSHHost() string {
+	if strings.HasPrefix(s.sshHost, "ssh://") {
+		return strings.TrimPrefix(s.sshHost, "ssh://")
+	}
+	return ""
+}
+
+// GetSSHKey returns the SSH private key content.
+func (s *DockerService) GetSSHKey() string {
+	return s.sshKey
 }
 
 // GetDockerInfo returns the Docker server version string.
@@ -178,7 +199,11 @@ func (s *DockerService) GetDockerInfo(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get Docker info: %w", err)
 	}
-	return info.Version, nil
+	name := "Docker"
+	if s.runtime == "podman" {
+		name = "Podman"
+	}
+	return fmt.Sprintf("%s %s", name, info.Version), nil
 }
 
 // ListContainers returns all containers with their status.
@@ -276,14 +301,16 @@ func (s *DockerService) GetContainerLogs(ctx context.Context, id string, tail in
 	}
 	defer reader.Close()
 
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read logs: %w", err)
+	// Demultiplex Docker stdcopy stream into stdout
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if _, err := stdcopy.StdCopy(&stdout, &stderr, reader); err != nil {
+		return nil, fmt.Errorf("failed to demultiplex logs: %w", err)
 	}
 
-	// Docker multiplexed stream format: 8-byte header + payload
-	// For simplicity, we'll split by newlines
-	logs := strings.Split(string(data), "\n")
+	// Combine stdout + stderr, split by newlines
+	combined := stdout.String() + stderr.String()
+	logs := strings.Split(strings.TrimSpace(combined), "\n")
 	return logs, nil
 }
 
@@ -481,8 +508,38 @@ func (s *DockerService) CreateComposeProject(ctx context.Context, name, composeC
 	}, nil
 }
 
+// GetComposeUpArgs detects container state and returns the appropriate compose command.
+func (s *DockerService) GetComposeUpArgs(ctx context.Context, projectName string) ([]string, string) {
+	containers, err := s.client.ContainerList(ctx, container.ListOptions{
+		All:     true,
+		Filters: filters.NewArgs(filters.Arg("label", "com.docker.compose.project="+projectName)),
+	})
+	if err != nil || len(containers) == 0 {
+		// No containers found — need full up, pull missing images
+		return []string{"up", "-d", "--pull", "missing"}, "Compose up started"
+	}
+
+	running := 0
+	for _, c := range containers {
+		if c.State == "running" {
+			running++
+		}
+	}
+
+	if running == len(containers) {
+		// All running — idempotent up
+		return []string{"up", "-d"}, "Compose up started"
+	}
+	if running > 0 {
+		// Partial — force recreate to sync
+		return []string{"up", "-d", "--force-recreate"}, "Compose recreate started"
+	}
+	// All stopped — start them
+	return []string{"start"}, "Compose start started"
+}
+
 func (s *DockerService) ComposeUp(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := composeCommand(ctx, "up", "-d")
+	cmd := composeCommand(ctx, s.runtime, "up", "-d")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -503,7 +560,7 @@ func (s *DockerService) ComposeUp(ctx context.Context, projectPath string) (*mod
 
 // ComposeDown runs docker-compose down.
 func (s *DockerService) ComposeDown(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := composeCommand(ctx, "down")
+	cmd := composeCommand(ctx, s.runtime, "down")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -522,9 +579,30 @@ func (s *DockerService) ComposeDown(ctx context.Context, projectPath string) (*m
 	}, nil
 }
 
+// ComposeClean stops and removes containers + volumes.
+func (s *DockerService) ComposeClean(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
+	cmd := composeCommand(ctx, s.runtime, "down", "-v")
+	cmd.Dir = projectPath
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return &model.ComposeAction{
+			Success: false,
+			Message: "Failed to clean compose project",
+			Output:  string(output),
+		}, err
+	}
+
+	return &model.ComposeAction{
+		Success: true,
+		Message: "Compose project cleaned",
+		Output:  string(output),
+	}, nil
+}
+
 // ComposeBuild runs docker-compose build.
 func (s *DockerService) ComposeBuild(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := composeCommand(ctx, "build")
+	cmd := composeCommand(ctx, s.runtime, "build")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -545,7 +623,7 @@ func (s *DockerService) ComposeBuild(ctx context.Context, projectPath string) (*
 
 // ComposeRestart runs docker-compose restart.
 func (s *DockerService) ComposeRestart(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := composeCommand(ctx, "restart")
+	cmd := composeCommand(ctx, s.runtime, "restart")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -566,7 +644,7 @@ func (s *DockerService) ComposeRestart(ctx context.Context, projectPath string) 
 
 // ComposePull runs docker-compose pull.
 func (s *DockerService) ComposePull(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := composeCommand(ctx, "pull")
+	cmd := composeCommand(ctx, s.runtime, "pull")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
@@ -591,7 +669,7 @@ func (s *DockerService) ComposeLogs(ctx context.Context, projectPath string, tai
 		tail = 100
 	}
 
-	cmd := composeCommand(ctx, "logs", "--tail", fmt.Sprintf("%d", tail))
+	cmd := composeCommand(ctx, s.runtime, "logs", "--tail", fmt.Sprintf("%d", tail))
 	cmd.Dir = projectPath
 
 	output, err := cmd.Output()
@@ -797,7 +875,54 @@ func (s *DockerService) PullImage(ctx context.Context, imageRef string) error {
 
 // PruneImages removes unused Docker images.
 func (s *DockerService) PruneImages(ctx context.Context) (types.ImagesPruneReport, error) {
+	if s.runtime == "podman" {
+		return s.pruneImagesCLI(ctx)
+	}
 	return s.client.ImagesPrune(ctx, filters.NewArgs())
+}
+
+// pruneImagesCLI runs "podman image prune -a --force" to remove all unused images.
+// Calculates space reclaimed by inspecting unused images before pruning.
+func (s *DockerService) pruneImagesCLI(ctx context.Context) (types.ImagesPruneReport, error) {
+	// Get images in use by containers
+	containerCmd := exec.CommandContext(ctx, "podman", "ps", "-a", "--format", "{{.Image}}")
+	containerOutput, _ := containerCmd.Output()
+	inUse := map[string]bool{}
+	for _, line := range strings.Split(strings.TrimSpace(string(containerOutput)), "\n") {
+		if img := strings.TrimSpace(line); img != "" {
+			inUse[img] = true
+		}
+	}
+	// Get all image IDs and their repo:tag, sum sizes of unused ones
+	repoCmd := exec.CommandContext(ctx, "podman", "images", "--format", "{{.ID}} {{.Repository}}:{{.Tag}}")
+	repoOutput, _ := repoCmd.Output()
+	var spaceReclaimed uint64
+	for _, line := range strings.Split(strings.TrimSpace(string(repoOutput)), "\n") {
+		parts := strings.Fields(strings.TrimSpace(line))
+		if len(parts) == 2 && !inUse[parts[1]] {
+			// Unused image — get size via inspect (returns bytes)
+			sizeCmd := exec.CommandContext(ctx, "podman", "image", "inspect", "--format", "{{.Size}}", parts[0])
+			if sizeOut, err := sizeCmd.Output(); err == nil {
+				if size, err := strconv.ParseUint(strings.TrimSpace(string(sizeOut)), 10, 64); err == nil {
+					spaceReclaimed += size
+				}
+			}
+		}
+	}
+	// Now prune
+	cmd := exec.CommandContext(ctx, "podman", "image", "prune", "-a", "--force")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return types.ImagesPruneReport{}, fmt.Errorf("podman image prune failed: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	var deleted []types.ImageDeleteResponseItem
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			deleted = append(deleted, types.ImageDeleteResponseItem{Deleted: line})
+		}
+	}
+	return types.ImagesPruneReport{ImagesDeleted: deleted, SpaceReclaimed: spaceReclaimed}, nil
 }
 
 // KillContainer sends a signal to a container.
@@ -851,11 +976,31 @@ func (s *DockerService) RemoveNetwork(ctx context.Context, id string) error {
 
 // PruneNetworks removes unused Docker networks.
 func (s *DockerService) PruneNetworks(ctx context.Context) (int64, error) {
+	if s.runtime == "podman" {
+		return s.pruneNetworksCLI(ctx)
+	}
 	report, err := s.client.NetworksPrune(ctx, filters.NewArgs())
 	if err != nil {
 		return 0, fmt.Errorf("failed to prune networks: %w", err)
 	}
 	return int64(len(report.NetworksDeleted)), nil
+}
+
+// pruneNetworksCLI runs "podman network prune --force" to remove unused networks.
+func (s *DockerService) pruneNetworksCLI(ctx context.Context) (int64, error) {
+	cmd := exec.CommandContext(ctx, "podman", "network", "prune", "--force")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, fmt.Errorf("podman network prune failed: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	// Count deleted networks (one ID per line)
+	count := 0
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if strings.TrimSpace(line) != "" {
+			count++
+		}
+	}
+	return int64(count), nil
 }
 
 // ReadComposeFilesViaDocker reads multiple compose files through a single temp container.
@@ -1291,4 +1436,9 @@ func parseLsOutput(output string) []model.FileInfo {
 		})
 	}
 	return files
+}
+
+// Runtime returns the detected container runtime ("docker" or "podman").
+func (s *DockerService) Runtime() string {
+	return s.runtime
 }

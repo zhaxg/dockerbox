@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { onMount, onDestroy } from 'svelte';
 	import { api } from '$lib/api/client';
+	import { dockerApi } from '$lib/api/docker';
 	import { Card, Spinner, Button } from '$lib/components/ui';
 	import { ArrowLeft, Play, StopCircle, RefreshCw, Trash2, Terminal, Skull, Info } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
@@ -41,7 +42,7 @@
 
 	async function loadContainer() {
 		try {
-			container = await api.get<ContainerInfo>(`/docker/containers/${containerId}`);
+			container = await dockerApi.get<ContainerInfo>(`/docker/containers/${containerId}`);
 		} catch (e) {
 			console.error('Failed to load container:', e);
 		} finally {
@@ -52,7 +53,7 @@
 	async function loadLogs() {
 		logsLoading = true;
 		try {
-			const data = await api.get<{ lines: string[] }>(`/docker/containers/${containerId}/logs?tail=${tail}`);
+			const data = await dockerApi.get<{ lines: string[] }>(`/docker/containers/${containerId}/logs?tail=${tail}`);
 			logs = data.lines || [];
 		} catch (e) {
 			console.error('Failed to load logs:', e);
@@ -73,7 +74,8 @@
 		const token = localStorage.getItem('token');
 		if (!token) return;
 
-		eventSource = new EventSource(`/api/v1/sse/logs/${containerId}?token=${token}`);
+		const hostId = localStorage.getItem('currentHostId') || '';
+		eventSource = new EventSource(`/api/v1/sse/logs/${containerId}?token=${token}&host=${hostId}`);
 		streaming = true;
 
 		eventSource.addEventListener('log', (event) => {
@@ -100,23 +102,23 @@
 	}
 
 	async function startContainer() {
-		await api.post(`/docker/containers/${containerId}/start`);
+		await dockerApi.post(`/docker/containers/${containerId}/start`);
 		await loadContainer();
 	}
 
 	async function stopContainer() {
-		await api.post(`/docker/containers/${containerId}/stop`);
+		await dockerApi.post(`/docker/containers/${containerId}/stop`);
 		await loadContainer();
 	}
 
 	async function restartContainer() {
-		await api.post(`/docker/containers/${containerId}/restart`);
+		await dockerApi.post(`/docker/containers/${containerId}/restart`);
 		await loadContainer();
 	}
 
 	async function inspectContainer() {
 		try {
-			inspectData = await api.get(`/docker/containers/${containerId}/inspect`);
+			inspectData = await dockerApi.get(`/docker/containers/${containerId}/inspect`);
 			showInspect = true;
 		} catch (e) {
 			console.error('Failed to inspect container:', e);

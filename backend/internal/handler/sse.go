@@ -48,7 +48,13 @@ func (h *SSEHandler) SetDefaultHost(hostID string) {
 
 // getCollector returns the collector for the current request's host.
 func (h *SSEHandler) getCollector(r *http.Request) *service.CollectorBackground {
-	hostID := r.Header.Get("X-Host-ID")
+	hostID := getHostID(r)
+	if hostID == "" {
+		hostID = r.URL.Query().Get("host")
+	}
+	if hostID == "" {
+		hostID = r.URL.Query().Get("host")
+	}
 	if hostID != "" {
 		if c, ok := h.hostCollectors[hostID]; ok {
 			return c
@@ -64,7 +70,13 @@ func (h *SSEHandler) getCollector(r *http.Request) *service.CollectorBackground 
 
 // getDockerService returns the DockerService for the current request's host.
 func (h *SSEHandler) getDockerService(r *http.Request) *service.DockerService {
-	hostID := r.Header.Get("X-Host-ID")
+	hostID := getHostID(r)
+	if hostID == "" {
+		hostID = r.URL.Query().Get("host")
+	}
+	if hostID == "" {
+		hostID = r.URL.Query().Get("host")
+	}
 	if hostID != "" {
 		if svc, ok := h.services[hostID]; ok {
 			return svc
@@ -164,10 +176,11 @@ func (h *SSEHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 
 	docker := h.getDockerService(r)
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	var lastLen int
+	// Track last seen line content to detect new logs
+	lastLines := make(map[string]bool)
 
 	fmt.Fprintf(w, "event: connected\ndata: {\"container\":\"%s\"}\n\n", escapeJSON(id))
 	flusher.Flush()
@@ -177,20 +190,28 @@ func (h *SSEHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			logs, err := docker.GetContainerLogs(r.Context(), id, 50)
+			logs, err := docker.GetContainerLogs(r.Context(), id, 200)
 			if err != nil {
-				fmt.Fprintf(w, "event: error\ndata: {\"error\":\"%s\"}\n\n", escapeJSON(err.Error()))
-				flusher.Flush()
 				continue
 			}
-			if len(logs) > lastLen {
-				for _, line := range logs[lastLen:] {
+			for _, line := range logs {
+				if line == "" {
+					continue
+				}
+				if !lastLines[line] {
+					lastLines[line] = true
+					fmt.Fprintf(w, "event: log\ndata: %s\n\n", escapeJSON(line))
+				}
+			}
+			flusher.Flush()
+			// Cleanup old entries if map grows too large
+			if len(lastLines) > 1000 {
+				lastLines = make(map[string]bool)
+				for _, line := range logs {
 					if line != "" {
-						fmt.Fprintf(w, "event: log\ndata: %s\n\n", escapeJSON(line))
+						lastLines[line] = true
 					}
 				}
-				flusher.Flush()
-				lastLen = len(logs)
 			}
 		}
 	}

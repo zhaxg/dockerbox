@@ -2,6 +2,8 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api/client';
+	import { dockerApi } from '$lib/api/docker';
+	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { Spinner, Button } from '$lib/components/ui';
 	import { ArrowLeft, Save, Play } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
@@ -22,9 +24,20 @@
 	let monaco: typeof Monaco | null = $state(null);
 	let dirty = $state(false);
 
+	let hostsConfig = $state<DockerHostsConfig>({ default: "", hosts: {} });
+
 	const canSave = $derived(dirty && !saving && !loading);
 
+	const currentHost = $derived(
+		hostsConfig.hosts?.[localStorage.getItem("currentHostId") || hostsConfig.default]
+	);
+
 	onMount(async () => {
+		try {
+			hostsConfig = await hostsApi.list();
+			if (!hostsConfig.hosts) hostsConfig.hosts = {};
+			projectPath = currentHost?.mountPoints?.docker?.path || "/opt/docker";
+		} catch (e) { console.error(e); }
 		if (!isNew) {
 			await loadComposeFile();
 		} else {
@@ -37,7 +50,7 @@
 	async function loadComposeFile() {
 		loading = true;
 		try {
-			const data = await api.get<{ content: string }>(`/docker/compose/${projectId}/file`);
+			const data = await dockerApi.get<{ content: string }>(`/docker/compose/${projectId}/file`);
 			composeContent = data?.content || '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : '加载失败';
@@ -114,7 +127,7 @@
 			if (!projectName.trim()) { error = '请输入项目名称'; return; }
 			saving = true; error = '';
 			try {
-				await api.post('/docker/compose', {
+				await dockerApi.post('/docker/compose', {
 					name: projectName.trim(),
 					composeContent,
 					basePath: projectPath
@@ -129,7 +142,7 @@
 			// Update existing project
 			saving = true; error = '';
 			try {
-				await api.put(`/docker/compose/${projectId}/file`, { content: composeContent });
+				await dockerApi.put(`/docker/compose/${projectId}/file`, { content: composeContent });
 				dirty = false;
 			} catch (e) {
 				error = e instanceof Error ? e.message : '保存失败';
@@ -137,6 +150,16 @@
 				saving = false;
 			}
 		}
+	}
+	// Check project name on blur
+	async function checkProjectName(name: string) {
+		if (!name.trim()) return;
+		try {
+			const result = await dockerApi.get<{ exists: boolean }>(`/docker/compose/check-name?name=${encodeURIComponent(name.trim())}`);
+			if (result.exists) {
+				error = '项目名称已存在';
+			}
+		} catch (e) { /* ignore */ }
 	}
 </script>
 
@@ -156,10 +179,7 @@
 		</div>
 		<div class="flex items-center gap-2">
 			{#if isNew}
-				<input type="text" bind:value={projectName} placeholder="项目名称"
-					class="h-7 w-40 rounded border border-border-secondary bg-surface-secondary px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
-				<input type="text" bind:value={projectPath} placeholder="存储路径"
-					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+				<span class="flex h-7 items-center rounded border border-border-secondary bg-surface-tertiary px-2 text-xs text-text-muted"><span class="whitespace-nowrap">{(currentHost?.mountPoints?.docker?.path || "/opt/docker")}/</span><input type="text" bind:value={projectName} placeholder="{name}" class="w-36 border-none bg-transparent px-0 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-0" onblur={() => checkProjectName(projectName)} oninput={() => { error = ''; }} /></span>
 			{/if}
 			{#if error}
 				<span class="text-xs text-red-400">{error}</span>

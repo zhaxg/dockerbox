@@ -137,6 +137,7 @@ export interface RequestOptions {
 	headers?: Record<string, string>;
 	skipAuth?: boolean;
 	params?: Record<string, string | number | boolean | undefined>;
+	hostId?: string;
 }
 
 /**
@@ -194,9 +195,14 @@ async function parseResponse<T>(response: Response): Promise<T> {
  * Main API request function with automatic token injection and refresh
  */
 export async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-	const { method = 'GET', body, headers = {}, skipAuth = false, params } = options;
+	const { method = 'GET', body, headers = {}, skipAuth = false, params, hostId } = options;
 
-	const url = buildUrl(endpoint, params);
+	// Merge hostId into params if provided
+	const mergedParams = params ? { ...params } : {};
+	if (hostId) {
+		mergedParams.hostId = hostId;
+	}
+	const url = buildUrl(endpoint, mergedParams);
 
 	const requestHeaders: Record<string, string> = {
 		...headers
@@ -215,13 +221,6 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
 		}
 	}
 
-	// Add current host ID for remote host routing
-	if (!skipAuth) {
-		const hostId = localStorage.getItem('currentHostId');
-		if (hostId) {
-			requestHeaders['X-Host-ID'] = hostId;
-		}
-	}
 
 	const fetchOptions: RequestInit = {
 		method,

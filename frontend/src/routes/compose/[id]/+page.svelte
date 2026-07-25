@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api/client';
+	import { dockerApi } from '$lib/api/docker';
 	import { Spinner, Button } from '$lib/components/ui';
 	import { ArrowLeft, Save, Play } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
@@ -37,7 +38,7 @@
 	async function loadComposeFile() {
 		loading = true;
 		try {
-			const data = await api.get<{ content: string }>(`/docker/compose/${projectId}/file`);
+			const data = await dockerApi.get<{ content: string }>(`/docker/compose/${projectId}/file`);
 			composeContent = data?.content || '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : '加载失败';
@@ -114,7 +115,7 @@
 			if (!projectName.trim()) { error = '请输入项目名称'; return; }
 			saving = true; error = '';
 			try {
-				await api.post('/docker/compose', {
+				await dockerApi.post('/docker/compose', {
 					name: projectName.trim(),
 					composeContent,
 					basePath: projectPath
@@ -129,7 +130,7 @@
 			// Update existing project
 			saving = true; error = '';
 			try {
-				await api.put(`/docker/compose/${projectId}/file`, { content: composeContent });
+				await dockerApi.put(`/docker/compose/${projectId}/file`, { content: composeContent });
 				dirty = false;
 			} catch (e) {
 				error = e instanceof Error ? e.message : '保存失败';

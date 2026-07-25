@@ -38,7 +38,7 @@ func (h *JobHandler) SetHostMountPoints(hostID string, mounts map[string]string)
 }
 
 func (h *JobHandler) getHostAccess(r *http.Request) service.HostFileAccess {
-	hostID := r.Header.Get("X-Host-ID")
+	hostID := getHostID(r)
 	if hostID != "" {
 		if access, ok := h.hostAccess[hostID]; ok {
 			return access
@@ -48,7 +48,7 @@ func (h *JobHandler) getHostAccess(r *http.Request) service.HostFileAccess {
 }
 
 func (h *JobHandler) resolvePath(r *http.Request, boxPath string) string {
-	hostID := r.Header.Get("X-Host-ID")
+	hostID := getHostID(r)
 	decoded, _ := url.PathUnescape(boxPath)
 	parts := strings.SplitN(decoded, "/", 2)
 	mountName := parts[0]
@@ -68,7 +68,7 @@ func (h *JobHandler) resolvePath(r *http.Request, boxPath string) string {
 }
 
 func (h *JobHandler) getHostID(r *http.Request) string {
-	return r.Header.Get("X-Host-ID")
+	return getHostID(r)
 }
 
 // RegisterRoutes registers job routes on the given router

@@ -2,6 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"crypto/rand"
+	"math/big"
 	"fmt"
 	"log"
 	"net/http"
@@ -61,6 +63,16 @@ func (h *HostHandler) ListHosts(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateHost adds a new Docker host.
+func generateHostID() string {
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	id := make([]byte, 6)
+	for i := range id {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		id[i] = chars[n.Int64()]
+	}
+	return "host" + string(id)
+}
+
 func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 	var host model.DockerHost
 	if err := json.NewDecoder(r.Body).Decode(&host); err != nil {
@@ -68,8 +80,13 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if host.ID == "" || host.Name == "" || host.Driver == "" || host.Endpoint == "" {
-		writeError(w, "id, name, driver, endpoint are required", model.ErrCodeValidationError, http.StatusBadRequest)
+	// Auto-generate ID if not provided
+	if host.ID == "" {
+		host.ID = generateHostID()
+	}
+
+	if host.Name == "" || host.Driver == "" || host.Endpoint == "" {
+		writeError(w, "name, driver, endpoint are required", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
 	if host.Driver != "tcp" && host.Driver != "ssh" && host.Driver != "socket" {
@@ -291,7 +308,7 @@ func (h *HostHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, map[string]interface{}{
 		"status":  "ok",
-		"message": fmt.Sprintf("Connected: Docker %s", info),
+		"message": fmt.Sprintf("Connected: %s", info),
 	}, http.StatusOK)
 }
 

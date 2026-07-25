@@ -41,6 +41,7 @@ type MemoryUsage struct {
 
 // ComposeProject represents a Docker Compose project.
 type ComposeProject struct {
+	HostID   string `json:"hostId"`
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Path     string `json:"path"`

@@ -60,48 +60,45 @@ func (h *DockerHandler) SetDefaultHost(hostID string) {
 }
 
 // getService returns the DockerService for the current request's host.
+// Requires hostId in request — use requireHostID middleware.
 func (h *DockerHandler) getService(r *http.Request) *service.DockerService {
-	hostID := r.Header.Get("X-Host-ID")
-	if hostID != "" {
-		if svc, ok := h.services[hostID]; ok {
-			return svc
-		}
-	}
-	// fallback to default or first available
-	if h.defaultHostID != "" {
-		if svc, ok := h.services[h.defaultHostID]; ok {
-			return svc
-		}
+	hostID := getHostID(r)
+	if svc, ok := h.services[hostID]; ok {
+		return svc
 	}
 	return h.dockerService
 }
 
 // getComposePaths returns compose scan directories for the current request's host.
 func (h *DockerHandler) getComposePaths(r *http.Request) []string {
-	hostID := r.Header.Get("X-Host-ID")
-	if hostID != "" {
-		if paths, ok := h.hostComposePaths[hostID]; ok {
-			return paths
-		}
-	}
-	if h.defaultHostID != "" {
-		if paths, ok := h.hostComposePaths[h.defaultHostID]; ok {
-			return paths
-		}
+	hostID := getHostID(r)
+	if paths, ok := h.hostComposePaths[hostID]; ok {
+		return paths
 	}
 	return h.composePaths
 }
 
 // resolveProjectPath resolves a project ID to its file system path using the request's host service.
 func (h *DockerHandler) resolveProjectPath(ctx context.Context, r *http.Request, id string) (string, error) {
+	// Check container labels first
 	projects, err := h.getService(r).ListComposeProjects(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to list projects: %w", err)
+	if err == nil {
+		for _, p := range projects {
+			if p.ID == id {
+				return p.Path, nil
+			}
+		}
 	}
 
-	for _, p := range projects {
-		if p.ID == id {
-			return p.Path, nil
+	// Fall back to compose store
+	hostID := getHostID(r)
+	if hostID == "" {
+		hostID = h.defaultHostID
+	}
+	store := service.GetComposeStore()
+	for _, sp := range store.ListByHost(hostID) {
+		if sp.Name == id {
+			return sp.Path, nil
 		}
 	}
 
@@ -109,7 +106,20 @@ func (h *DockerHandler) resolveProjectPath(ctx context.Context, r *http.Request,
 }
 
 // RegisterRoutes registers Docker routes on the given router.
+
+// requireHostID middleware enforces that every request carries a valid hostId.
+func requireHostID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if getHostID(r) == "" {
+			writeError(w, "hostId is required", model.ErrCodeValidationError, http.StatusBadRequest)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (h *DockerHandler) RegisterRoutes(r chi.Router) {
+	r.Use(requireHostID)
 	// Container routes
 	r.Route("/containers", func(r chi.Router) {
 		r.Get("/", h.ListContainers)
@@ -123,6 +133,7 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/kill", h.KillContainer)
 		r.Delete("/{id}", h.DeleteContainer)
 		r.Get("/{id}/logs", h.GetContainerLogs)
+		r.Get("/{id}/exec", h.ExecWebSocket)
 	})
 
 	// Image routes
@@ -136,6 +147,9 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 	// Compose routes
 	r.Route("/compose", func(r chi.Router) {
 		r.Get("/", h.ListComposeProjects)
+		r.Get("/available", h.ScanAvailableProjects)
+		r.Post("/import", h.ImportComposeProjects)
+		r.Get("/check-name", h.CheckComposeName)
 		r.Post("/", h.CreateComposeProject)
 		r.Post("/{id}/up", h.ComposeUp)
 		r.Post("/{id}/down", h.ComposeDown)
@@ -143,12 +157,17 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/restart", h.ComposeRestart)
 		r.Post("/{id}/pull", h.ComposePull)
 		r.Post("/{id}/redeploy", h.ComposeRedeploy)
+		r.Post("/{id}/rebuild", h.ComposeRebuild)
 		r.Get("/{id}/logs", h.ComposeLogs)
 		r.Get("/{id}/file", h.GetComposeFile)
 		r.Put("/{id}/file", h.SaveComposeFile)
 		r.Get("/{id}/env", h.GetComposeEnv)
 		r.Put("/{id}/env", h.SaveComposeEnv)
 		r.Delete("/{id}", h.DeleteComposeProject)
+		r.Get("/{id}/stream", h.StreamComposeLogs)
+		r.Post("/{id}/abort", h.AbortComposeOperation)
+		r.Post("/{id}/clean", h.ComposeClean)
+		r.Get("/{id}/status", h.GetComposeStatus)
 	})
 
 	// Network routes
@@ -347,426 +366,7 @@ func (h *DockerHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListImages returns all Docker images.
-func (h *DockerHandler) ListImages(w http.ResponseWriter, r *http.Request) {
-	images, err := h.getService(r).ListImages(r.Context())
-	if err != nil {
-		writeError(w, "Failed to list images", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]interface{}{"images": images}, http.StatusOK)
-}
-
-// DeleteImage removes a Docker image.
-func (h *DockerHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Image ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if err := h.getService(r).DeleteImage(r.Context(), id); err != nil {
-		writeError(w, "Failed to delete image", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Image deleted"}, http.StatusOK)
-}
-
-// PullImage pulls a Docker image.
-func (h *DockerHandler) PullImage(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Image string `json:"image"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if req.Image == "" {
-		writeError(w, "Image name is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if err := h.getService(r).PullImage(r.Context(), req.Image); err != nil {
-		writeError(w, "Failed to pull image", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Image pulled"}, http.StatusOK)
-}
-
-// PruneImages removes unused Docker images.
-func (h *DockerHandler) PruneImages(w http.ResponseWriter, r *http.Request) {
-	reclaimed, err := h.getService(r).PruneImages(r.Context())
-	if err != nil {
-		writeError(w, "Failed to prune images", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]interface{}{"reclaimed": reclaimed}, http.StatusOK)
-}
-
-// ListComposeProjects returns all compose projects.
-func (h *DockerHandler) ListComposeProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := h.getService(r).ListComposeProjects(r.Context())
-	if err != nil {
-		writeError(w, "Failed to list compose projects", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]interface{}{"projects": projects}, http.StatusOK)
-}
-
-// CreateComposeProject creates a new compose project.
-func (h *DockerHandler) CreateComposeProject(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Name            string `json:"name"`
-		ComposeContent  string `json:"composeContent"`
-		EnvContent      string `json:"envContent"`
-		BasePath        string `json:"basePath"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if req.Name == "" {
-		writeError(w, "Project name is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if req.ComposeContent == "" {
-		writeError(w, "Compose content is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	// Default to first compose path for current host
-	if req.BasePath == "" {
-		paths := h.getComposePaths(r)
-		if len(paths) > 0 {
-			req.BasePath = paths[0]
-		} else {
-			req.BasePath = "/vol1/1000/docker"
-		}
-	}
-
-	svc := h.getService(r)
-	result, err := svc.CreateComposeProject(r.Context(), req.Name, req.ComposeContent, req.EnvContent, req.BasePath)
-	if err != nil {
-		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, result, http.StatusOK)
-}
-
-// ComposeUp starts a compose project.
-func (h *DockerHandler) ComposeUp(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.getService(r).ComposeUp(r.Context(), path)
-	if err != nil {
-		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, result, http.StatusOK)
-}
-
-// ComposeDown stops a compose project.
-func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.getService(r).ComposeDown(r.Context(), path)
-	if err != nil {
-		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, result, http.StatusOK)
-}
-
-// ComposeBuild builds a compose project.
-func (h *DockerHandler) ComposeBuild(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.getService(r).ComposeBuild(r.Context(), path)
-	if err != nil {
-		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, result, http.StatusOK)
-}
-
-// ComposeRestart restarts a compose project.
-func (h *DockerHandler) ComposeRestart(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.getService(r).ComposeRestart(r.Context(), path)
-	if err != nil {
-		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, result, http.StatusOK)
-}
-
-// ComposePull pulls images for a compose project.
-func (h *DockerHandler) ComposePull(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.getService(r).ComposePull(r.Context(), path)
-	if err != nil {
-		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, result, http.StatusOK)
-}
-
-// ComposeRedeploy runs docker-compose down then up.
-func (h *DockerHandler) ComposeRedeploy(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	svc := h.getService(r)
-
-	// First down
-	downResult, err := svc.ComposeDown(r.Context(), path)
-	if err != nil {
-		writeError(w, downResult.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	// Then up
-	upResult, err := svc.ComposeUp(r.Context(), path)
-	if err != nil {
-		writeError(w, upResult.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Project redeployed"}, http.StatusOK)
-}
-
-// ComposeLogs returns compose project logs.
-func (h *DockerHandler) ComposeLogs(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	tail := 100
-	if t := r.URL.Query().Get("tail"); t != "" {
-		if parsed, err := strconv.Atoi(t); err == nil {
-			tail = parsed
-		}
-	}
-
-	logs, err := h.getService(r).ComposeLogs(r.Context(), path, tail)
-	if err != nil {
-		writeError(w, "Failed to get compose logs", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]interface{}{"lines": logs}, http.StatusOK)
-}
-
-// GetComposeFile returns the docker-compose.yml content.
-func (h *DockerHandler) GetComposeFile(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	content, err := h.getService(r).GetComposeFile(r.Context(), path)
-	if err != nil {
-		writeError(w, "Failed to get compose file", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"content": content}, http.StatusOK)
-}
-
-// SaveComposeFile saves the docker-compose.yml content.
-func (h *DockerHandler) SaveComposeFile(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	var req struct {
-		Content string `json:"content"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if err := h.getService(r).SaveComposeFile(path, req.Content); err != nil {
-		writeError(w, "Failed to save compose file", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Compose file saved"}, http.StatusOK)
-}
-
-// GetComposeEnv returns the .env content.
-func (h *DockerHandler) GetComposeEnv(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	content, err := h.getService(r).GetComposeEnv(r.Context(), path)
-	if err != nil {
-		writeError(w, "Failed to get env file", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"content": content}, http.StatusOK)
-}
-
-// SaveComposeEnv saves the .env content.
-func (h *DockerHandler) SaveComposeEnv(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	var req struct {
-		Content string `json:"content"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if err := h.getService(r).SaveComposeEnv(path, req.Content); err != nil {
-		writeError(w, "Failed to save env file", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Env file saved"}, http.StatusOK)
-}
-
-// DeleteComposeProject removes a compose project and its files.
-func (h *DockerHandler) DeleteComposeProject(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if err := h.getService(r).DeleteComposeProject(path); err != nil {
-		writeError(w, "Failed to delete project", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Project deleted"}, http.StatusOK)
-}
-
+// ListComposeProjects returns all compose projects for the current host.
 // ListNetworks returns all Docker networks.
 func (h *DockerHandler) ListNetworks(w http.ResponseWriter, r *http.Request) {
 	networks, err := h.getService(r).ListNetworks(r.Context())
@@ -800,7 +400,11 @@ func (h *DockerHandler) PruneNetworks(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Failed to prune networks", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, map[string]interface{}{"reclaimed": reclaimed}, http.StatusOK)
+
+	writeJSON(w, map[string]interface{}{
+		"deleted": reclaimed,
+		"message": fmt.Sprintf("deleted %d networks", reclaimed),
+	}, http.StatusOK)
 }
 
 // ExecWebSocket handles WebSocket terminal connections.
@@ -844,7 +448,8 @@ func (h *DockerHandler) ExecWebSocket(w http.ResponseWriter, r *http.Request) {
 	shell := svc.DetectShell(r.Context(), id)
 	execID, err := svc.CreateExec(r.Context(), id, []string{shell, "-i"})
 	if err != nil {
-		conn.WriteMessage(websocket.TextMessage, []byte("Error: 无法创建exec: "+err.Error()+"\n容器可能没有可用的shell工具"))
+		conn.WriteMessage(websocket.TextMessage, []byte("\r\n\x1b[31m错误: 无法创建exec: "+err.Error()+"\x1b[0m\r\n"))
+		conn.WriteMessage(websocket.TextMessage, []byte("\x1b[33m此容器可能没有可用的shell工具\x1b[0m\r\n"))
 		return
 	}
 
@@ -886,3 +491,5 @@ func (h *DockerHandler) ExecWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	select {}
 }
+
+// CheckComposeName checks if a project name already exists for the current host.

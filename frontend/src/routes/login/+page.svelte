@@ -20,7 +20,7 @@
 
 		const success = await authStore.login(username.trim(), password);
 		if (success) {
-			goto(resolve('/browse'));
+			goto(resolve('/overview'));
 		}
 	}
 

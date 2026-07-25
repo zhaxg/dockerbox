@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { Spinner } from '$lib/components/ui';
 	import { api } from '$lib/api/client';
+	import { dockerApi } from '$lib/api/docker';
 	import { Cpu, MemoryStick, Globe, Gauge, Container, Package, HardDrive, Activity } from 'lucide-svelte';
 	import * as echarts from 'echarts';
 
@@ -120,7 +121,7 @@
 	// Load overview data (latest + 1h history) from backend collector
 	async function loadOverview() {
 		try {
-			const data = await api.get<{ host: any; docker: any; history: any[] }>('/sse/overview');
+			const data = await dockerApi.get<{ host: any; docker: any; history: any[] }>('/sse/overview');
 
 			// Apply latest host stats
 			if (data.host) {

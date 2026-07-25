@@ -21,3 +21,14 @@
 // Protected routes require a valid JWT token in the Authorization header
 // or as a query parameter (for streaming endpoints).
 package handler
+
+import "net/http"
+
+// getHostID extracts the host ID from the request.
+// Priority: query param "hostId" > header "X-Host-ID".
+func getHostID(r *http.Request) string {
+	if id := r.URL.Query().Get("hostId"); id != "" {
+		return id
+	}
+	return r.Header.Get("X-Host-ID")
+}

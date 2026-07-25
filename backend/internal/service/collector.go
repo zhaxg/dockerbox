@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -90,6 +91,7 @@ func NewCollector(ctx context.Context, docker *DockerService) *CollectorBackgrou
 }
 
 func NewCollectorWithReader(ctx context.Context, docker *DockerService, reader FileReader) *CollectorBackground {
+	log.Printf("NewCollectorWithReader: reader type=%T", reader)
 	c := &CollectorBackground{
 		docker:       docker,
 		reader:       reader,

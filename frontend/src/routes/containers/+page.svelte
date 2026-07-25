@@ -3,6 +3,8 @@
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { api } from '$lib/api/client';
+	import { dockerApi } from '$lib/api/docker';
+	import { toastStore } from '$lib/stores/toast.svelte';
 	import {
 		Play,
 		StopCircle,
@@ -18,6 +20,10 @@
 		ChevronUp,
 		BrushCleaning
 	} from 'lucide-svelte';
+	import { Terminal as XTerminal } from '@xterm/xterm';
+	import { FitAddon } from '@xterm/addon-fit';
+	import { WebLinksAddon } from '@xterm/addon-web-links';
+	import '@xterm/xterm/css/xterm.css';
 
 	interface PortBinding {
 		hostIp: string;
@@ -61,6 +67,8 @@
 	let logsEventSource: EventSource | null = null;
 	let execWs: WebSocket | null = null;
 	let execTerminalEl: HTMLDivElement | null = null;
+	let xterm: XTerminal | null = null;
+	let fitAddon: FitAddon | null = null;
 
 	const filteredContainers = $derived(
 		searchQuery.trim()
@@ -95,11 +103,21 @@
 	function cleanupUnused() {
 		showConfirm('清理未使用资源', '确定要清理所有未使用的镜像和网络吗？', async () => {
 			try {
-				await Promise.all([
-					api.post('/docker/images/prune'),
-					api.post('/docker/networks/prune')
+				const [imgResult, netResult] = await Promise.all([
+					dockerApi.post<{ deleted: number; spaceMB: number; message: string }>('/docker/images/prune'),
+					dockerApi.post<{ deleted: number; message: string }>('/docker/networks/prune')
 				]);
+				const parts: string[] = [];
+				if (imgResult.deleted > 0) parts.push(imgResult.message);
+				if (netResult.deleted > 0) parts.push(netResult.message);
+				if (parts.length > 0) {
+					toastStore.success(parts.join('，'));
+				} else {
+					toastStore.info('没有需要清理的资源');
+				}
+				loadContainers();
 			} catch (e) {
+				toastStore.error('清理失败');
 				console.error(e);
 			}
 		});
@@ -119,7 +137,7 @@
 	async function loadContainers() {
 		loading = true;
 		try {
-			const data = await api.get<{ containers: ContainerInfo[] }>('/docker/containers');
+			const data = await dockerApi.get<{ containers: ContainerInfo[] }>('/docker/containers');
 			containers = data.containers || [];
 		} catch (e) {
 			console.error(e);
@@ -131,7 +149,8 @@
 	function connectSSE() {
 		const token = localStorage.getItem('accessToken');
 		if (!token) return;
-		eventSource = new EventSource(`/api/v1/sse/stats?token=${token}`);
+		const hostId = localStorage.getItem('currentHostId') || '';
+		eventSource = new EventSource(`/api/v1/sse/stats?token=${token}&host=${hostId}`);
 		eventSource.addEventListener('stats', (event) => {
 			try {
 				const data = JSON.parse(event.data);
@@ -160,7 +179,7 @@
 	// --- Actions (local state update) ---
 	async function startContainer(id: string) {
 		try {
-			await api.post(`/docker/containers/${id}/start`);
+			await dockerApi.post(`/docker/containers/${id}/start`);
 			const idx = containers.findIndex((c) => c.id === id);
 			if (idx !== -1) containers[idx] = { ...containers[idx], state: 'running', status: 'Up' };
 		} catch (e) { console.error(e); }
@@ -169,7 +188,7 @@
 	function stopContainer(id: string) {
 		showConfirm('停止容器', '确定要停止这个容器吗？', async () => {
 			try {
-				await api.post(`/docker/containers/${id}/stop`);
+				await dockerApi.post(`/docker/containers/${id}/stop`);
 				const idx = containers.findIndex((c) => c.id === id);
 				if (idx !== -1) containers[idx] = { ...containers[idx], state: 'exited', status: 'Exited', cpu: 0, memory: { usage: 0, limit: 0, percent: 0 }, network: { rxBytes: 0, txBytes: 0 } };
 			} catch (e) { console.error(e); }
@@ -179,7 +198,7 @@
 	function restartContainer(id: string) {
 		showConfirm('重启容器', '确定要重启这个容器吗？', async () => {
 			try {
-				await api.post(`/docker/containers/${id}/restart`);
+				await dockerApi.post(`/docker/containers/${id}/restart`);
 				const idx = containers.findIndex((c) => c.id === id);
 				if (idx !== -1) containers[idx] = { ...containers[idx], state: 'running', status: 'Up' };
 			} catch (e) { console.error(e); }
@@ -190,8 +209,8 @@
 	async function viewLogs(id: string, name: string) {
 		logsModal = { open: true, id, name, content: '', loading: true, tail: 100, streaming: false };
 		try {
-			const data = await api.get<{ lines: string[] }>(`/docker/containers/${id}/logs?tail=100`);
-			logsModal.content = (data.lines || []).join('\n');
+			const data = await dockerApi.get<{ lines: string[] }>(`/docker/containers/${id}/logs?tail=100`);
+			logsModal.content = (data.logs || []).join('\n');
 		} catch {
 			logsModal.content = 'Failed to load logs';
 		} finally {
@@ -199,13 +218,16 @@
 		}
 	}
 
+
+
 	function toggleLogsStream() {
 		if (logsModal.streaming) {
 			closeLogsStream();
 		} else {
 			const token = localStorage.getItem('accessToken');
 			if (!token) return;
-			logsEventSource = new EventSource(`/api/v1/sse/logs/${logsModal.id}?token=${token}`);
+			const hostId = localStorage.getItem('currentHostId') || '';
+			logsEventSource = new EventSource(`/api/v1/sse/logs/${logsModal.id}?token=${token}&host=${hostId}`);
 			logsModal.streaming = true;
 			logsEventSource.addEventListener('log', (event) => {
 				logsModal.content += '\n' + event.data;
@@ -225,7 +247,7 @@
 	async function viewInspect(id: string, name: string) {
 		inspectModal = { open: true, id, name, content: '', loading: true };
 		try {
-			const data = await api.get<any>(`/docker/containers/${id}/inspect`);
+			const data = await dockerApi.get<any>(`/docker/containers/${id}/inspect`);
 			inspectModal.content = JSON.stringify(data, null, 2);
 		} catch {
 			inspectModal.content = 'Failed to inspect container';
@@ -237,81 +259,63 @@
 	// --- Exec Modal ---
 	function openExec(id: string, name: string) {
 		execModal = { open: true, id, name, connected: false, output: '' };
+		// Init xterm after DOM update
+		setTimeout(() => initXterm(id), 50);
+	}
+
+	function initXterm(id: string) {
+		if (!execTerminalEl) return;
+		xterm = new XTerminal({
+			fontFamily: 'Menlo, Monaco, Consolas, monospace',
+			fontSize: 13,
+			theme: { background: '#000000', foreground: '#00ff00', cursor: '#00ff00' },
+			cursorBlink: true,
+			allowProposedApi: true
+		});
+		fitAddon = new FitAddon();
+		xterm.loadAddon(fitAddon);
+		xterm.loadAddon(new WebLinksAddon());
+		xterm.open(execTerminalEl);
+		fitAddon.fit();
+
+		xterm.onData((data) => {
+			if (execWs?.readyState === WebSocket.OPEN) {
+				execWs.send(new TextEncoder().encode(data));
+			}
+		});
+
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		const token = localStorage.getItem('accessToken') || '';
-		execWs = new WebSocket(`${protocol}//${window.location.host}/api/v1/docker/containers/${id}/exec`);
+		const hostId = localStorage.getItem('currentHostId') || '';
+		execWs = new WebSocket(`${protocol}//${window.location.host}/api/v1/docker/containers/${id}/exec?hostId=${hostId}`);
 		execWs.onopen = () => {
 			execModal.connected = true;
-			execModal.output = '已连接到容器终端...\r\n';
 			execWs?.send(JSON.stringify({ type: 'auth', token }));
 		};
 		execWs.onmessage = (event) => {
-			let text: string;
-			if (typeof event.data === 'string') {
-				text = event.data;
-			} else if (event.data instanceof ArrayBuffer) {
-				text = new TextDecoder().decode(event.data);
-			} else if (event.data instanceof Blob) {
+			if (event.data instanceof Blob) {
 				event.data.arrayBuffer().then((buf) => {
-					execModal.output += new TextDecoder().decode(buf);
-					scrollExec();
+					xterm?.write(new Uint8Array(buf));
 				});
-				return;
+			} else if (event.data instanceof ArrayBuffer) {
+				xterm?.write(new Uint8Array(event.data));
 			} else {
-				text = String(event.data);
+				xterm?.write(event.data);
 			}
-			execModal.output += text;
-			scrollExec();
 		};
 		execWs.onclose = () => { execModal.connected = false; };
 		execWs.onerror = () => { execModal.connected = false; };
+		// Handle resize
+		const ro = new ResizeObserver(() => fitAddon?.fit());
+		ro.observe(execTerminalEl);
 	}
 
-	function sendExecInput(e: KeyboardEvent) {
-		if (e.metaKey || e.ctrlKey) {
-			if (e.key === 'c') execSendRaw('\x03');
-			else if (e.key === 'd') execSendRaw('\x04');
-			e.preventDefault();
-			return;
-		}
-		if (e.key === 'Enter') {
-			execSendRaw('\r');
-		} else if (e.key === 'Backspace') {
-			execSendRaw('\x7f');
-		} else if (e.key === 'Tab') {
-			execSendRaw('\t');
-			e.preventDefault();
-		} else if (e.key === 'ArrowUp') {
-			execSendRaw('\x1b[A');
-			e.preventDefault();
-		} else if (e.key === 'ArrowDown') {
-			execSendRaw('\x1b[B');
-			e.preventDefault();
-		} else if (e.key === 'ArrowRight') {
-			execSendRaw('\x1b[C');
-			e.preventDefault();
-		} else if (e.key === 'ArrowLeft') {
-			execSendRaw('\x1b[D');
-			e.preventDefault();
-		} else if (e.key.length === 1 && !e.isComposing) {
-			execSendRaw(e.key);
-		}
-		e.preventDefault();
-	}
-
-	function execSendRaw(data: string) {
-		if (execWs?.readyState === WebSocket.OPEN) {
-			execWs.send(new TextEncoder().encode(data));
-		}
-	}
-
-	function scrollExec() {
-		const el = document.getElementById('exec-pre');
-		if (el) el.scrollTop = el.scrollHeight;
-	}
+	
 
 	function closeExec() {
 		if (execWs) { execWs.close(); execWs = null; }
+		if (xterm) { xterm.dispose(); xterm = null; }
+		fitAddon = null;
 		execModal.open = false;
 		execTerminalEl = null;
 	}
@@ -357,7 +361,7 @@
 	let hostIp = $state('localhost');
 	onMount(async () => {
 		try {
-			const data = await api.get<{ ip: string }>('/docker/containers/host-ip');
+			const data = await dockerApi.get<{ ip: string }>('/docker/containers/host-ip');
 			hostIp = data.ip || 'localhost';
 		} catch {}
 	});
@@ -508,32 +512,19 @@
 
 <!-- Logs Modal -->
 {#if logsModal.open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="flex h-[80vh] w-[900px] flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary">
-			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
-				<div class="flex items-center gap-3">
-					<h3 class="text-sm font-semibold text-text-primary">日志 - {logsModal.name}</h3>
-					<select bind:value={logsModal.tail} onchange={() => viewLogs(logsModal.id, logsModal.name)}
-						class="rounded border border-border-secondary bg-surface-secondary px-2 py-0.5 text-xs text-text-primary">
-						<option value={50}>50 行</option>
-						<option value={100}>100 行</option>
-						<option value={500}>500 行</option>
-						<option value={1000}>1000 行</option>
-					</select>
-					<button type="button" class="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs {logsModal.streaming ? 'bg-red-500/15 text-red-400' : 'bg-green-500/15 text-green-400'}"
-						onclick={toggleLogsStream}>
-						{#if logsModal.streaming}<ChevronDown size={12} /> 停止流{:else}<ChevronUp size={12} /> 实时流{/if}
-					</button>
-				</div>
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
+		<div class="flex h-[70vh] w-[750px] flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary">
+			<div class="flex items-center justify-between px-3 py-2">
+				<h3 class="text-sm font-semibold text-text-primary">日志 - {logsModal.name}</h3>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={() => { closeLogsStream(); logsModal.open = false; }}>
 					<X size={16} />
 				</button>
 			</div>
-			<div class="flex-1 overflow-auto p-4">
+			<div class="flex-1 overflow-auto rounded-md bg-black p-3">
 				{#if logsModal.loading}
 					<div class="flex items-center justify-center py-8"><Spinner /></div>
 				{:else}
-					<pre id="logs-pre" class="whitespace-pre-wrap font-mono text-xs text-text-secondary">{logsModal.content}</pre>
+					<pre class="whitespace-pre font-mono text-xs overflow-x-auto" style="color: #00ff00">{logsModal.content}</pre>
 				{/if}
 			</div>
 		</div>
@@ -563,30 +554,19 @@
 
 <!-- Exec Modal -->
 {#if execModal.open}
-	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="flex h-[80vh] w-[900px] flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary">
-			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
-				<div class="flex items-center gap-2">
-					<h3 class="text-sm font-semibold text-text-primary">终端 - {execModal.name}</h3>
-					<span class="h-2 w-2 rounded-full {execModal.connected ? 'bg-green-500' : 'bg-red-500'}"></span>
-					{#if !execModal.connected}<span class="text-[11px] text-text-muted">无可用shell</span>{/if}
-				</div>
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
+		<div class="flex h-[70vh] w-[750px] flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary">
+			<div class="flex items-center justify-between px-3 py-2">
+				<h3 class="text-sm font-semibold text-text-primary">终端 - {execModal.name}</h3>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={closeExec}>
 					<X size={16} />
 				</button>
 			</div>
-			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				bind:this={execTerminalEl}
-				class="flex-1 overflow-auto bg-black p-4 font-mono text-xs text-green-400 focus:outline-none cursor-text"
-				tabindex="0"
-				onfocus={() => execTerminalEl?.focus()}
-				onkeydown={sendExecInput}
-			>
-				<pre class="whitespace-pre-wrap">{execModal.output}</pre>
+			<div class="flex-1 rounded-md bg-black p-3">
+				<div
+					bind:this={execTerminalEl}
+					class="h-full w-full focus:outline-none"
+				></div>
 			</div>
 		</div>
 	</div>
