@@ -97,23 +97,14 @@ func (s *DockerService) sshExec(ctx context.Context, cmd string) (string, error)
 		addr,
 		cmd,
 	)
-	out, err := sshCmd.CombinedOutput()
+	var stdout, stderr bytes.Buffer
+	sshCmd.Stdout = &stdout
+	sshCmd.Stderr = &stderr
+	err = sshCmd.Run()
 	if err != nil {
-		// Filter out SSH warnings from stderr, keep stdout
-		lines := strings.Split(string(out), "\n")
-		var filtered []string
-		for _, line := range lines {
-			if !strings.HasPrefix(line, "Warning:") && !strings.Contains(line, "known hosts") {
-				filtered = append(filtered, line)
-			}
-		}
-		result := strings.TrimSpace(strings.Join(filtered, "\n"))
-		if result != "" {
-			return result, nil
-		}
-		return "", fmt.Errorf("ssh exec failed: %w", err)
+		return "", fmt.Errorf("ssh exec failed: %w (%s)", err, strings.TrimSpace(stderr.String()))
 	}
-	return string(out), nil
+	return strings.TrimSpace(stdout.String()), nil
 }
 
 // composeCommand returns the available docker compose command (V2 plugin first, then V1 binary).
@@ -137,6 +128,11 @@ type DockerService struct {
 // Client returns the underlying Docker API client.
 func (s *DockerService) Client() *client.Client {
 	return s.client
+}
+
+// SSHExec runs a command on the remote host via SSH and returns stdout.
+func (s *DockerService) SSHExec(ctx context.Context, cmd string) (string, error) {
+	return s.sshExec(ctx, cmd)
 }
 
 // DockerServiceConfig holds configuration for DockerService.

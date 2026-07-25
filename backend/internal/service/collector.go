@@ -42,8 +42,34 @@ type StatsSnapshot struct {
 }
 
 // CollectorBackground continuously collects host + Docker stats.
+// FileReader reads files from a host (local or remote via SSH).
+type FileReader interface {
+	ReadFile(path string) ([]byte, error)
+}
+
+// localFileReader reads from the local filesystem.
+type LocalFileReader struct{}
+
+func (r *LocalFileReader) ReadFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
+
+// sshFileReader reads files from a remote host via SSH.
+type SSHFileReader struct {
+	Docker *DockerService
+}
+
+func (r *SSHFileReader) ReadFile(path string) ([]byte, error) {
+	out, err := r.Docker.SSHExec(context.Background(), "cat "+path)
+	if err != nil {
+			return nil, err
+	}
+	return []byte(out), nil
+}
+
 type CollectorBackground struct {
 	docker       *DockerService
+	reader       FileReader // local or SSH
 
 	mu       sync.RWMutex
 	latest   StatsSnapshot
@@ -60,8 +86,13 @@ const (
 
 // NewCollector creates and starts a background stats collector.
 func NewCollector(ctx context.Context, docker *DockerService) *CollectorBackground {
+	return NewCollectorWithReader(ctx, docker, &LocalFileReader{})
+}
+
+func NewCollectorWithReader(ctx context.Context, docker *DockerService, reader FileReader) *CollectorBackground {
 	c := &CollectorBackground{
 		docker:       docker,
+		reader:       reader,
 		history:      make([]HostStats, 0, maxHistoryPoints),
 		maxPoints:    maxHistoryPoints,
 		stopCh:       make(chan struct{}),
@@ -130,41 +161,34 @@ func (c *CollectorBackground) collect() {
 
 func (c *CollectorBackground) readHostStats() HostStats {
 	h := HostStats{Timestamp: time.Now().UnixMilli()}
+	r := c.reader
 
-	// CPU
-	if data, err := os.ReadFile("/host_root/proc/stat"); err == nil {
-		h.parseCPU(string(data))
-	} else if data, err := os.ReadFile("/host/proc/stat"); err == nil {
-		h.parseCPU(string(data))
-	} else if data, err := os.ReadFile("/proc/stat"); err == nil {
-		h.parseCPU(string(data))
+	// Try multiple paths; remote hosts only have /proc/
+	procPaths := []string{"/proc", "/host_root/proc", "/host/proc"}
+
+	for _, base := range procPaths {
+		if data, err := r.ReadFile(base + "/stat"); err == nil {
+			h.parseCPU(string(data))
+			break
+		}
 	}
-
-	// Memory
-	if data, err := os.ReadFile("/host_root/proc/meminfo"); err == nil {
-		h.parseMem(string(data))
-	} else if data, err := os.ReadFile("/host/proc/meminfo"); err == nil {
-		h.parseMem(string(data))
-	} else if data, err := os.ReadFile("/proc/meminfo"); err == nil {
-		h.parseMem(string(data))
+	for _, base := range procPaths {
+		if data, err := r.ReadFile(base + "/meminfo"); err == nil {
+			h.parseMem(string(data))
+			break
+		}
 	}
-
-	// Network
-	if data, err := os.ReadFile("/host_root/proc/net/dev"); err == nil {
-		h.parseNet(string(data))
-	} else if data, err := os.ReadFile("/host/proc/net/dev"); err == nil {
-		h.parseNet(string(data))
-	} else if data, err := os.ReadFile("/proc/net/dev"); err == nil {
-		h.parseNet(string(data))
+	for _, base := range procPaths {
+		if data, err := r.ReadFile(base + "/net/dev"); err == nil {
+			h.parseNet(string(data))
+			break
+		}
 	}
-
-	// Load
-	if data, err := os.ReadFile("/host_root/proc/loadavg"); err == nil {
-		h.parseLoad(string(data))
-	} else if data, err := os.ReadFile("/host/proc/loadavg"); err == nil {
-		h.parseLoad(string(data))
-	} else if data, err := os.ReadFile("/proc/loadavg"); err == nil {
-		h.parseLoad(string(data))
+	for _, base := range procPaths {
+		if data, err := r.ReadFile(base + "/loadavg"); err == nil {
+			h.parseLoad(string(data))
+			break
+		}
 	}
 
 	return h
@@ -227,7 +251,8 @@ func (h *HostStats) parseNet(raw string) {
 }
 
 func (h *HostStats) parseLoad(raw string) {
-	fields := strings.Fields(strings.TrimSpace(raw))
+	trimmed := strings.TrimSpace(raw)
+	fields := strings.Fields(trimmed)
 	if len(fields) >= 3 {
 		h.Load1, _ = strconv.ParseFloat(fields[0], 64)
 		h.Load5, _ = strconv.ParseFloat(fields[1], 64)

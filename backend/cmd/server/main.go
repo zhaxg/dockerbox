@@ -289,7 +289,11 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 					continue
 				}
 				sseHandler.SetService(id, svc)
-				hostCollector := service.NewCollector(ctx, svc)
+				var reader service.FileReader = &service.LocalFileReader{}
+				if host.Driver == "ssh" {
+					reader = &service.SSHFileReader{Docker: svc}
+				}
+				hostCollector := service.NewCollectorWithReader(ctx, svc, reader)
 				sseHandler.SetCollector(id, hostCollector)
 			}
 		}
