@@ -619,7 +619,7 @@
 						{#if matchesSearch('ui font', 'western font', 'interface font', 'display font', 'font', '字体')}
 							<div class={settingRowClass}>
 								<div>
-									<div class="text-[13px] text-text-primary">字体 Font</div>
+									<div class="flex items-center gap-1.5 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>字体 Font</div>
 									<div class="text-[11px] text-text-muted">Interface font</div>
 								</div>
 								<div class="w-56">
