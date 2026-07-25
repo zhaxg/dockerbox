@@ -13,6 +13,8 @@
 		normalizeBackgroundImage,
 		normalizeAccentColor,
 		FONT_LIST,
+		applyAccentColor,
+		applyFonts,
 		settingsStore,
 		type UserSettings
 	} from '$lib/stores/settings';
@@ -46,6 +48,11 @@
 	type ApplyProgressVariant = 'default' | 'success' | 'danger';
 
 	let settings = $state<UserSettings>({ ...$settingsStore });
+
+	function handleFontChange(e: Event) {
+		settings.uiFont = (e.target as HTMLSelectElement).value;
+		applyFonts(settings.uiFont);
+	}
 	let activeCategory = $state<SettingsCategory>('all');
 	let searchQuery = $state('');
 	let isApplyingSettings = $state(false);
@@ -616,7 +623,11 @@
 									<div class="text-[11px] text-text-muted">Interface font</div>
 								</div>
 								<div class="w-56">
-									<Select options={uiFontOptions} bind:value={settings.uiFont} />
+									<select class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none" onchange={handleFontChange}>
+									{#each uiFontOptions as opt}
+										<option value={opt.value} selected={settings.uiFont === opt.value}>{opt.label}</option>
+									{/each}
+								</select>
 								</div>
 							</div>
 						{/if}
