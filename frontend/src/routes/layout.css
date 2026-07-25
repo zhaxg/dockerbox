@@ -167,9 +167,8 @@ body {
 
 :root {
 	--font-ui: system-ui, -apple-system, sans-serif;
-	--font-cjk: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
 body {
-	font-family: var(--font-ui), var(--font-cjk), sans-serif;
+	font-family: var(--font-ui), sans-serif;
 }

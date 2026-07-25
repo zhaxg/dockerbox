@@ -105,7 +105,7 @@
 
 	$effect(() => {
 		applyAccentColor($settingsStore.accentColor);
-		applyFonts($settingsStore.uiFont, $settingsStore.cjkFont);
+		applyFonts($settingsStore.uiFont);
 	});
 
 	async function handleLogout() {

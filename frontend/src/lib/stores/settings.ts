@@ -54,7 +54,6 @@ export interface UserSettings {
 	previewOnSingleClick: boolean;
 	compactMode: boolean;
 	uiFont: string;
-	cjkFont: string;
 	driveNameOverrides: Record<string, string>;
 	favoriteFolders: FavoriteFolder[];
 }
@@ -93,7 +92,6 @@ const defaultSettings: UserSettings = {
 	previewOnSingleClick: false,
 	compactMode: false,
 	uiFont: '',
-	cjkFont: '',
 	driveNameOverrides: {},
 	favoriteFolders: []
 };
@@ -199,27 +197,27 @@ function mixColor(color: string, target: string, amount: number): string {
 	]);
 }
 
-// Google Fonts / CDN mapping: font-family value → URL
-const FONT_CDN: Record<string, string> = {
-	'"Inter", "Noto Sans", sans-serif':
-		'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap',
-	'"Roboto", "Noto Sans", sans-serif':
-		'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
-	'"Source Sans 3", "Noto Sans", sans-serif':
-		'https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap',
-	'"LXGW WenKai", "Noto Sans SC", sans-serif':
-		'https://fonts.loli.net/css2?family=LXGW+WenKai:wght@400;700&display=swap',
-	'"Noto Sans SC", "Noto Sans CJK SC", sans-serif':
-		'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap',
-	'"Source Han Sans SC", "Noto Sans SC", sans-serif':
-		'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap',
-	'"Source Han Serif SC", "Noto Serif SC", sans-serif':
-		'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap',
-	'"LXGW Neo XiHei", sans-serif':
-		'https://fonts.loli.net/css2?family=LXGW+Neo+XiHei:wght@400;700&display=swap',
-	'"ZCOOL XiaoWei", sans-serif':
-		'https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap',
-};
+export interface FontEntry {
+	name: string;
+	family: string;
+	category: string;
+	cdn: string;
+	fallback: string;
+}
+
+export const FONT_LIST: FontEntry[] = [
+	{ name: 'JetBrains Mono', family: '"JetBrains Mono", monospace', category: 'monospace', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.2/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap' },
+	{ name: 'Cascadia Code', family: '"Cascadia Code", monospace', category: 'monospace', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/cascadia-code@5.0.20/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;600;700&display=swap' },
+	{ name: 'Fira Code', family: '"Fira Code", monospace', category: 'monospace', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/fira-code@5.0.22/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&display=swap' },
+	{ name: 'Geist Mono', family: '"Geist Mono", monospace', category: 'monospace', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.1.2/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;600;700&display=swap' },
+	{ name: 'IBM Plex Sans', family: '"IBM Plex Sans", sans-serif', category: 'sans-serif', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-sans@5.1.1/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap' },
+	{ name: 'Inter', family: '"Inter", sans-serif', category: 'sans-serif', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.2/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap' },
+	{ name: 'Noto Sans SC', family: '"Noto Sans SC", sans-serif', category: 'sans-serif', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.1.2/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700&display=swap' },
+	{ name: 'Noto Serif SC', family: '"Noto Serif SC", serif', category: 'serif', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5.1.2/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap' },
+	{ name: 'Roboto', family: '"Roboto", sans-serif', category: 'sans-serif', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.1.1/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap' },
+	{ name: 'Source Sans 3', family: '"Source Sans 3", sans-serif', category: 'sans-serif', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.1.2/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap' },
+	{ name: 'Space Grotesk', family: '"Space Grotesk", sans-serif', category: 'sans-serif', cdn: 'https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.2.10/index.min.css', fallback: 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap' },
+];
 
 const loadedFonts = new Set<string>();
 
@@ -232,24 +230,22 @@ function loadFontCDN(url: string) {
 	document.head.appendChild(link);
 }
 
-export function applyFonts(uiFont: string, cjkFont: string): void {
+function loadFontWithFallback(entry: FontEntry) {
+	loadFontCDN(entry.cdn);
+	// Also load fallback CDN in case primary fails
+	setTimeout(() => loadFontCDN(entry.fallback), 2000);
+}
+
+export function applyFonts(uiFont: string): void {
 	if (typeof document === 'undefined') return;
 	const rootStyle = document.documentElement.style;
 
 	if (uiFont) {
 		rootStyle.setProperty('--font-ui', uiFont);
-		const cdn = FONT_CDN[uiFont];
-		if (cdn) loadFontCDN(cdn);
+		const entry = FONT_LIST.find(f => f.family === uiFont);
+		if (entry) loadFontWithFallback(entry);
 	} else {
 		rootStyle.removeProperty('--font-ui');
-	}
-
-	if (cjkFont) {
-		rootStyle.setProperty('--font-cjk', cjkFont);
-		const cdn = FONT_CDN[cjkFont];
-		if (cdn) loadFontCDN(cdn);
-	} else {
-		rootStyle.removeProperty('--font-cjk');
 	}
 }
 

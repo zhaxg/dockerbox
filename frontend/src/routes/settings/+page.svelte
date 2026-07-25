@@ -12,6 +12,7 @@
 		isValidAccentColor,
 		normalizeBackgroundImage,
 		normalizeAccentColor,
+		FONT_LIST,
 		settingsStore,
 		type UserSettings
 	} from '$lib/stores/settings';
@@ -126,24 +127,7 @@
 
 	const uiFontOptions = [
 		{ value: '', label: '系统默认' },
-		{ value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', label: 'System UI' },
-		{ value: '"Inter", "Noto Sans", sans-serif', label: 'Inter' },
-		{ value: '"SF Pro Display", "SF Pro Text", system-ui, sans-serif', label: 'SF Pro (macOS)' },
-		{ value: '"Segoe UI", "Segoe UI Variable", system-ui, sans-serif', label: 'Segoe UI (Windows)' },
-		{ value: '"Roboto", "Noto Sans", sans-serif', label: 'Roboto' },
-		{ value: '"Source Sans 3", "Noto Sans", sans-serif', label: 'Source Sans' },
-		{ value: '"LXGW WenKai", "Noto Sans SC", sans-serif', label: 'LXGW WenKai' },
-	];
-
-	const cjkFontOptions = [
-		{ value: '', label: '系统默认' },
-		{ value: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif', label: '苹方 / 微软雅黑' },
-		{ value: '"Noto Sans SC", "Noto Sans CJK SC", sans-serif', label: 'Noto Sans SC' },
-		{ value: '"LXGW WenKai", sans-serif', label: '霞鹜文楷' },
-		{ value: '"LXGW Neo XiHei", sans-serif', label: '霞鹜新晰黑' },
-		{ value: '"Source Han Sans SC", "Noto Sans SC", sans-serif', label: '思源黑体' },
-		{ value: '"Source Han Serif SC", "Noto Serif SC", sans-serif', label: '思源宋体' },
-		{ value: '"ZCOOL XiaoWei", sans-serif', label: '站酷小薇体' },
+		...FONT_LIST.map(f => ({ value: f.family, label: f.name })),
 	];
 
 	const navButtonClass =
@@ -628,8 +612,8 @@
 						{#if matchesSearch('ui font', 'western font', 'interface font', 'display font', 'font', '字体')}
 							<div class={settingRowClass}>
 								<div>
-									<div class="text-[13px] text-text-primary">界面字体</div>
-									<div class="text-[11px] text-text-muted">UI font</div>
+									<div class="text-[13px] text-text-primary">字体 Font</div>
+									<div class="text-[11px] text-text-muted">Interface font</div>
 								</div>
 								<div class="w-56">
 									<Select options={uiFontOptions} bind:value={settings.uiFont} />
@@ -637,17 +621,7 @@
 							</div>
 						{/if}
 
-						{#if matchesSearch('cjk font', 'chinese font', '中文字体', 'font', '字体')}
-							<div class={settingRowClass}>
-								<div>
-									<div class="text-[13px] text-text-primary">中文字体</div>
-									<div class="text-[11px] text-text-muted">CJK font</div>
-								</div>
-								<div class="w-56">
-									<Select options={cjkFontOptions} bind:value={settings.cjkFont} />
-								</div>
-							</div>
-						{/if}
+
 						</div>
 					</section>
 				{/if}
