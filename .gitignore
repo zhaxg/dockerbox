@@ -57,3 +57,4 @@ backend/boxbox
 # Build output
 backend/server
 *.tmp
+.code-graph/

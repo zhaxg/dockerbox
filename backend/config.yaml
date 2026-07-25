@@ -2,19 +2,9 @@ allowed_origins: []
 chunk_size_mb: 5
 dev_mode: false
 dockerhosts:
-    default: host-nas
+    default: host086
     hosts:
-        host-mrymssal:
-            driver: socket
-            endpoint: /var/run/docker.sock
-            id: host-mrymssal
-            mount_points:
-                docker:
-                    is_docker: true
-                    path: /opt/docker
-                    read_only: false
-            name: "210"
-        host-nas:
+        host086:
             driver: ssh
             endpoint: zhaxg@192.168.132.86:2322
             id: host-nas
@@ -33,6 +23,16 @@ dockerhosts:
                 G46c/WbndCkIW0N2x1kmAAAABmJveGJveAECAwQFBgc=
                 -----END OPENSSH PRIVATE KEY-----
             ssh_pub_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILpU7qsVxxRPqV3f/fcNfVJsG46c/WbndCkIW0N2x1km boxbox
+        host210:
+            driver: socket
+            endpoint: /var/run/docker.sock
+            id: host-mrymssal
+            mount_points:
+                docker:
+                    is_docker: true
+                    path: /opt/docker
+                    read_only: false
+            name: 192.168.132.210
 host: 0.0.0.0
 jwt_secret: boxbox-dev-secret-k3y-2026
 max_upload_mb: 10240
