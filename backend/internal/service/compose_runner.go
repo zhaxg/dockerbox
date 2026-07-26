@@ -59,7 +59,7 @@ func GetComposeRunner() *ComposeRunner {
 }
 
 // Start launches a compose command and streams output.
-func (r *ComposeRunner) Start(id string, sshHost string, sshKey string, runtime string, args []string, workDir string) *ComposeRun {
+func (r *ComposeRunner) Start(id string, hostID string, sshHost string, sshKey string, runtime string, args []string, workDir string) *ComposeRun {
 	r.mu.Lock()
 	// Abort existing run for same ID
 	if existing, ok := r.runs[id]; ok {
@@ -99,7 +99,7 @@ func (r *ComposeRunner) Start(id string, sshHost string, sshKey string, runtime 
 		sshKey:    sshKey,
 	}
 	// Open log file for this project
-	logMgr, err := OpenLog(id)
+	logMgr, err := OpenLog(hostID, id)
 	if err == nil {
 		run.logMgr = logMgr
 	}
@@ -310,13 +310,16 @@ func (run *ComposeRun) Elapsed() time.Duration {
 }
 
 // StartRedeploy runs down, pull, up sequentially.
-func (r *ComposeRunner) StartRedeploy(id string, sshHost string, sshKey string, runtime string, workDir string) *ComposeRun {
+func (r *ComposeRunner) StartRedeploy(id string, hostID string, sshHost string, sshKey string, runtime string, workDir string) *ComposeRun {
 	r.mu.Lock()
 	if existing, ok := r.runs[id]; ok {
 		existing.Abort()
 	}
 
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	// Open log file for this project
+	logMgr, _ := OpenLog(hostID, id)
+
 	run := &ComposeRun{
 		ID:        id,
 		Status:    ComposeRunning,
@@ -326,6 +329,7 @@ func (r *ComposeRunner) StartRedeploy(id string, sshHost string, sshKey string, 
 		startTime: time.Now(),
 		sshHost:   sshHost,
 		runtime:   runtime,
+		logMgr:    logMgr,
 	}
 	r.runs[id] = run
 	r.mu.Unlock()
@@ -488,7 +492,7 @@ func (r *ComposeRunner) executeRedeploy(run *ComposeRun, workDir string, sshHost
 }
 
 // StartLogs tails compose logs and streams output.
-func (r *ComposeRunner) StartLogs(id string, sshHost string, sshKey string, runtime string, workDir string) *ComposeRun {
+func (r *ComposeRunner) StartLogs(id string, hostID string, sshHost string, sshKey string, runtime string, workDir string) *ComposeRun {
 	r.mu.Lock()
 	if existing, ok := r.runs[id]; ok {
 		if existing.GetStatus() == ComposeRunning {
@@ -498,6 +502,9 @@ func (r *ComposeRunner) StartLogs(id string, sshHost string, sshKey string, runt
 	}
 
 	_, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	// Open log file for this project
+	logMgr, _ := OpenLog(hostID, id)
+
 	run := &ComposeRun{
 		ID:        id,
 		Status:    ComposeRunning,
@@ -507,6 +514,7 @@ func (r *ComposeRunner) StartLogs(id string, sshHost string, sshKey string, runt
 		startTime: time.Now(),
 		sshHost:   sshHost,
 		runtime:   runtime,
+		logMgr:    logMgr,
 	}
 	r.runs[id] = run
 	r.mu.Unlock()

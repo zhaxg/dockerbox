@@ -30,18 +30,19 @@ func InitLogDir() error {
 	return os.MkdirAll(composeLogDir, 0755)
 }
 
-// OpenLog opens (or creates) the log file for a compose project.
-func OpenLog(projectName string) (*ComposeLogManager, error) {
-	if err := InitLogDir(); err != nil {
+// OpenLog opens (or creates) the log file for a compose project on a specific host.
+func OpenLog(hostID, projectName string) (*ComposeLogManager, error) {
+	dir := filepath.Join(composeLogDir, hostID)
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create log dir: %w", err)
 	}
-	path := logPath(projectName)
+	path := logPath(hostID, projectName)
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
 	return &ComposeLogManager{
-		dir:    composeLogDir,
+		dir:    dir,
 		file:   f,
 		writer: bufio.NewWriter(f),
 	}, nil
@@ -73,15 +74,15 @@ func (m *ComposeLogManager) Close() {
 	}
 }
 
-// DeleteLog removes the log file for a compose project.
-func DeleteLog(projectName string) {
-	path := logPath(projectName)
+// DeleteLog removes the log file for a compose project on a specific host.
+func DeleteLog(hostID, projectName string) {
+	path := logPath(hostID, projectName)
 	os.Remove(path)
 }
 
 // ReadLastLines reads the last n lines from the compose log file.
-func ReadLastLines(projectName string, n int) []string {
-	path := logPath(projectName)
+func ReadLastLines(hostID, projectName string, n int) []string {
+	path := logPath(hostID, projectName)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil
@@ -100,9 +101,9 @@ func ReadLastLines(projectName string, n int) []string {
 	return lines[len(lines)-n:]
 }
 
-func logPath(projectName string) string {
+func logPath(hostID, projectName string) string {
 	// Sanitize: replace path separators with underscores
 	safe := strings.ReplaceAll(projectName, "/", "_")
 	safe = strings.ReplaceAll(safe, "\\", "_")
-	return filepath.Join(composeLogDir, "compose-"+safe+".log")
+	return filepath.Join(composeLogDir, hostID, "compose-"+safe+".log")
 }

@@ -80,7 +80,7 @@ func (h *DockerHandler) StreamComposeLogs(w http.ResponseWriter, r *http.Request
 
 	// No active operation — fall back to container logs
 	logID := "logs-" + id
-	run := runner.StartLogs(logID, h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), path)
+	run := runner.StartLogs(logID, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), path)
 
 	fmt.Fprintf(w, "event: connected\ndata: {\"id\":\"%s\"}\n\n", escapeJSON(id))
 	flusher.Flush()

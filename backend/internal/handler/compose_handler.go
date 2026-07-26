@@ -136,7 +136,7 @@ func (h *DockerHandler) ComposeUp(w http.ResponseWriter, r *http.Request) {
 	args, msg := svc.GetComposeUpArgs(r.Context(), id)
 
 	// Log the action
-	if lm, err := service.OpenLog(id); err == nil {
+	if lm, err := service.OpenLog(getHostID(r), id); err == nil {
 		action := "up"
 		if len(args) == 1 && args[0] == "start" {
 			action = "start"
@@ -148,7 +148,7 @@ func (h *DockerHandler) ComposeUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	runner := service.GetComposeRunner()
-	runner.Start(id, svc.GetSSHHost(), svc.GetSSHKey(), svc.Runtime(), args, path)
+	runner.Start(id, getHostID(r), svc.GetSSHHost(), svc.GetSSHKey(), svc.Runtime(), args, path)
 
 	// action: "start" = existing containers, "up" = need pull/create, "recreate" = force recreate
 	action := "up"
@@ -179,14 +179,14 @@ func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
 	svc := h.getService(r)
 
 	// Log the action
-	if lm, err := service.OpenLog(id); err == nil {
+	if lm, err := service.OpenLog(getHostID(r), id); err == nil {
 		lm.WriteLine("=== Compose Down ===")
 		lm.Close()
 	}
 
 	result, err := svc.ComposeDown(r.Context(), path)
 	if err != nil {
-		if lm, err2 := service.OpenLog(id); err2 == nil {
+		if lm, err2 := service.OpenLog(getHostID(r), id); err2 == nil {
 			lm.WriteLine(fmt.Sprintf("Down failed: %v", err))
 			lm.Close()
 		}
@@ -194,7 +194,7 @@ func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if lm, err2 := service.OpenLog(id); err2 == nil {
+	if lm, err2 := service.OpenLog(getHostID(r), id); err2 == nil {
 		lm.WriteLine("Compose stopped successfully")
 		lm.Close()
 	}
@@ -240,13 +240,13 @@ func (h *DockerHandler) ComposeRestart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the action
-	if lm, err := service.OpenLog(id); err == nil {
+	if lm, err := service.OpenLog(getHostID(r), id); err == nil {
 		lm.WriteLine("=== Compose Restart ===")
 		lm.Close()
 	}
 
 	runner := service.GetComposeRunner()
-	runner.Start(id, h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"restart"}, path)
+	runner.Start(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"restart"}, path)
 
 	writeJSON(w, map[string]string{"status": "started", "message": "Compose restart started"}, http.StatusOK)
 }
@@ -289,7 +289,7 @@ func (h *DockerHandler) ComposeRedeploy(w http.ResponseWriter, r *http.Request) 
 	}
 
 	runner := service.GetComposeRunner()
-	runner.StartRedeploy(id, h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), path)
+	runner.StartRedeploy(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), path)
 
 	writeJSON(w, map[string]string{"status": "started", "message": "Redeploy started"}, http.StatusOK)
 }
@@ -309,7 +309,7 @@ func (h *DockerHandler) ComposeRebuild(w http.ResponseWriter, r *http.Request) {
 	}
 
 	runner := service.GetComposeRunner()
-	runner.Start(id, h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"up", "-d", "--build"}, path)
+	runner.Start(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"up", "-d", "--build"}, path)
 
 	writeJSON(w, map[string]string{"status": "started", "message": "Compose rebuild started"}, http.StatusOK)
 }
@@ -329,7 +329,7 @@ func (h *DockerHandler) ComposeLogs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	logs := service.ReadLastLines(id, tail)
+	logs := service.ReadLastLines(getHostID(r), id, tail)
 	writeJSON(w, map[string]interface{}{"lines": logs}, http.StatusOK)
 }
 
@@ -456,13 +456,14 @@ func (h *DockerHandler) DeleteComposeProject(w http.ResponseWriter, r *http.Requ
 		}
 		store := service.GetComposeStore()
 		store.Remove(hostID, id)
+		service.DeleteLog(hostID, id)
 		writeJSON(w, map[string]string{"message": "Project removed"}, http.StatusOK)
 		return
 	}
 
 	// Run docker compose down to stop and remove containers
 	runner := service.GetComposeRunner()
-	runner.Start(id, h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"down", "-v"}, path)
+	runner.Start(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"down", "-v"}, path)
 
 	// Remove from compose store
 	hostID := getHostID(r)
@@ -471,6 +472,9 @@ func (h *DockerHandler) DeleteComposeProject(w http.ResponseWriter, r *http.Requ
 	}
 	store := service.GetComposeStore()
 	store.Remove(hostID, id)
+
+	// Delete compose log file
+	service.DeleteLog(hostID, id)
 
 	writeJSON(w, map[string]string{"message": "Project removed"}, http.StatusOK)
 }
@@ -732,14 +736,14 @@ func (h *DockerHandler) ComposeClean(w http.ResponseWriter, r *http.Request) {
 	svc := h.getService(r)
 
 	// Log the action
-	if lm, err := service.OpenLog(id); err == nil {
+	if lm, err := service.OpenLog(getHostID(r), id); err == nil {
 		lm.WriteLine("=== Compose Clean (down -v) ===")
 		lm.Close()
 	}
 
 	result, err := svc.ComposeClean(r.Context(), path)
 	if err != nil {
-		if lm, err2 := service.OpenLog(id); err2 == nil {
+		if lm, err2 := service.OpenLog(getHostID(r), id); err2 == nil {
 			lm.WriteLine(fmt.Sprintf("Clean failed: %v", err))
 			lm.Close()
 		}
@@ -747,7 +751,7 @@ func (h *DockerHandler) ComposeClean(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if lm, err2 := service.OpenLog(id); err2 == nil {
+	if lm, err2 := service.OpenLog(getHostID(r), id); err2 == nil {
 		lm.WriteLine("Compose project cleaned successfully")
 		lm.Close()
 	}
