@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"fmt"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -134,6 +135,18 @@ func (h *DockerHandler) ComposeUp(w http.ResponseWriter, r *http.Request) {
 	svc := h.getService(r)
 	args, msg := svc.GetComposeUpArgs(r.Context(), id)
 
+	// Log the action
+	if lm, err := service.OpenLog(id); err == nil {
+		action := "up"
+		if len(args) == 1 && args[0] == "start" {
+			action = "start"
+		} else if len(args) >= 3 && args[2] == "--force-recreate" {
+			action = "recreate"
+		}
+		lm.WriteLine(fmt.Sprintf("=== Compose %s ===", action))
+		lm.Close()
+	}
+
 	runner := service.GetComposeRunner()
 	runner.Start(id, svc.GetSSHHost(), svc.GetSSHKey(), svc.Runtime(), args, path)
 
@@ -164,10 +177,26 @@ func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
 
 	// Synchronous stop — avoids runner race with concurrent up
 	svc := h.getService(r)
+
+	// Log the action
+	if lm, err := service.OpenLog(id); err == nil {
+		lm.WriteLine("=== Compose Down ===")
+		lm.Close()
+	}
+
 	result, err := svc.ComposeDown(r.Context(), path)
 	if err != nil {
+		if lm, err2 := service.OpenLog(id); err2 == nil {
+			lm.WriteLine(fmt.Sprintf("Down failed: %v", err))
+			lm.Close()
+		}
 		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
+	}
+
+	if lm, err2 := service.OpenLog(id); err2 == nil {
+		lm.WriteLine("Compose stopped successfully")
+		lm.Close()
 	}
 
 	writeJSON(w, map[string]string{"status": "stopped", "message": "Compose stopped"}, http.StatusOK)
@@ -208,6 +237,12 @@ func (h *DockerHandler) ComposeRestart(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
 		return
+	}
+
+	// Log the action
+	if lm, err := service.OpenLog(id); err == nil {
+		lm.WriteLine("=== Compose Restart ===")
+		lm.Close()
 	}
 
 	runner := service.GetComposeRunner()
@@ -695,10 +730,26 @@ func (h *DockerHandler) ComposeClean(w http.ResponseWriter, r *http.Request) {
 	}
 
 	svc := h.getService(r)
+
+	// Log the action
+	if lm, err := service.OpenLog(id); err == nil {
+		lm.WriteLine("=== Compose Clean (down -v) ===")
+		lm.Close()
+	}
+
 	result, err := svc.ComposeClean(r.Context(), path)
 	if err != nil {
+		if lm, err2 := service.OpenLog(id); err2 == nil {
+			lm.WriteLine(fmt.Sprintf("Clean failed: %v", err))
+			lm.Close()
+		}
 		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
+	}
+
+	if lm, err2 := service.OpenLog(id); err2 == nil {
+		lm.WriteLine("Compose project cleaned successfully")
+		lm.Close()
 	}
 
 	writeJSON(w, map[string]string{"status": "cleaned", "message": "Compose project cleaned"}, http.StatusOK)
