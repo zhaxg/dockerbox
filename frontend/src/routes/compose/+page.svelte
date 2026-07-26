@@ -525,7 +525,6 @@
 	loading={deployLog.loading}
 	streaming={deployLog.loading}
 	onClose={closeDeployLog}
-	onAbort={deployLog.projectId ? () => abortCompose(deployLog.projectId) : undefined}
 />
 
 <!-- Editor Modal (New + Edit) -->

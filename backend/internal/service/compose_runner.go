@@ -36,6 +36,7 @@ type ComposeRun struct {
 	sshHost   string
 	sshKey    string
 	runtime   string
+	logMgr    *ComposeLogManager
 }
 
 // ComposeRunner manages active compose operations.
@@ -97,6 +98,12 @@ func (r *ComposeRunner) Start(id string, sshHost string, sshKey string, runtime 
 		runtime:   runtime,
 		sshKey:    sshKey,
 	}
+	// Open log file for this project
+	logMgr, err := OpenLog(id)
+	if err == nil {
+		run.logMgr = logMgr
+	}
+
 	r.runs[id] = run
 	r.mu.Unlock()
 
@@ -115,6 +122,9 @@ func stripANSI(s string) string {
 func (r *ComposeRunner) execute(run *ComposeRun) {
 	defer close(run.Done)
 	defer func() {
+		if run.logMgr != nil {
+			run.logMgr.Close()
+		}
 		run.mu.Lock()
 		if run.Status == ComposeRunning {
 			if run.cmd.ProcessState != nil && run.cmd.ProcessState.ExitCode() != 0 {
@@ -191,6 +201,9 @@ func (r *ComposeRunner) execute(run *ComposeRun) {
 						// Newline: append as new line
 						if line != "" {
 							run.Output = append(run.Output, line)
+							if run.logMgr != nil {
+								run.logMgr.WriteLine(line)
+							}
 						}
 					} else {
 						// Carriage return: replace last line (progress update)
@@ -199,6 +212,9 @@ func (r *ComposeRunner) execute(run *ComposeRun) {
 								run.Output[len(run.Output)-1] = line
 							} else {
 								run.Output = append(run.Output, line)
+							}
+							if run.logMgr != nil {
+								run.logMgr.WriteLine(line)
 							}
 						}
 					}
@@ -323,6 +339,9 @@ func (r *ComposeRunner) StartRedeploy(id string, sshHost string, sshKey string, 
 func (r *ComposeRunner) executeRedeploy(run *ComposeRun, workDir string, sshHost string, sshKey string) {
 	defer close(run.Done)
 	defer func() {
+		if run.logMgr != nil {
+			run.logMgr.Close()
+		}
 		run.mu.Lock()
 		if run.Status == ComposeRunning {
 			run.Status = ComposeFinished
@@ -504,6 +523,9 @@ func (r *ComposeRunner) executeLogs(run *ComposeRun, workDir string, sshHost str
 		run.mu.Lock()
 		run.Status = ComposeFinished
 		run.mu.Unlock()
+		if run.logMgr != nil {
+			run.logMgr.Close()
+		}
 		time.AfterFunc(5*time.Minute, func() {
 			r.mu.Lock()
 			delete(r.runs, run.ID)

@@ -279,17 +279,11 @@ func (h *DockerHandler) ComposeRebuild(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "started", "message": "Compose rebuild started"}, http.StatusOK)
 }
 
-// ComposeLogs returns compose project logs.
+// ComposeLogs returns compose project logs from the log file.
 func (h *DockerHandler) ComposeLogs(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
 
@@ -300,12 +294,7 @@ func (h *DockerHandler) ComposeLogs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	logs, err := h.getService(r).ComposeLogs(r.Context(), path, tail)
-	if err != nil {
-		writeError(w, "Failed to get compose logs", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
+	logs := service.ReadLastLines(id, tail)
 	writeJSON(w, map[string]interface{}{"lines": logs}, http.StatusOK)
 }
 
