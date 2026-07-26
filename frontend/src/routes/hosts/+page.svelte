@@ -19,7 +19,6 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		FileUp
 	} from 'lucide-svelte';
 	import HostModal from '$lib/components/HostModal.svelte';
-	import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let loading = $state(true);
@@ -337,7 +336,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="{tHostsSearch}"
+					placeholder={$_t('hosts.search')}
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pr-2 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 				/>
 			</div>

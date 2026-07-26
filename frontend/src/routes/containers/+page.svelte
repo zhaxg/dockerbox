@@ -332,10 +332,10 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 	function getStateText(state: string): string {
 		switch (state) {
-			case 'running': return '{tContainersRunning}';
-			case 'exited': return '{tContainersStopped}';
-			case 'paused': return '{tContainersPaused}';
-			case 'created': return '{tContainersCreated}';
+			case 'running': return $_t('containers.running');
+			case 'exited': return $_t('containers.stopped');
+			case 'paused': return $_t('containers.paused');
+			case 'created': return $_t('containers.created');
 			default: return state;
 		}
 	}
@@ -383,7 +383,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		<div class="flex items-center gap-2">
 			<div class="relative">
 				<Search size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-				<input type="text" bind:value={searchQuery} placeholder="{tContainersSearch}"
+				<input type="text" bind:value={searchQuery} placeholder={$_t('containers.search')}
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
 			<Button variant="secondary" size="sm" onclick={cleanupUnused} title={$_t('containers.pruneImages')}><BrushCleaning size={14} /></Button>

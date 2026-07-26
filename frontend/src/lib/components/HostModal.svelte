@@ -98,7 +98,7 @@
 		>
 			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 				<h3 class="text-sm font-semibold text-text-primary">
-					{mode === 'add' ? tAddHost() : tEditHost() + ' - ' + host.name}
+					{mode === 'add' ? $_t('hostModal.addHost') : $_t('hostModal.editHost') + ' - ' + host.name}
 				</h3>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={onClose}
 					><X size={16} /></button
@@ -345,7 +345,7 @@
 						onclick={onSave}
 						disabled={!host.name || !host.endpoint}
 					>
-						{mode === 'add' ? tAdd() : tSave()}
+						{mode === 'add' ? $_t('hostModal.add') : $_t('common.save')}
 					</Button>
 				</div>
 			</div>
