@@ -110,6 +110,8 @@
 	const segments = $derived($pathSegments);
 	const options = $derived($listOptionsStore);
 	const settings = $derived($settingsStore);
+	const tFilesDeleted = $derived(t("files.deleted"));
+	const tFilesDeleteQueued = $derived(t("files.deleteQueued"));
 	const trimmedSearchQuery = $derived(searchQuery.trim());
 	const isSearchActive = $derived(trimmedSearchQuery.length >= 2);
 	const directoryOptions = $derived({ ...options, includeHidden: settings.showHiddenFiles });
@@ -563,14 +565,28 @@
 		if (items.length === 0) return;
 
 		try {
-			for (const item of items) {
-				if (item.isDir) {
-					// Use job for directory deletion
-					jobsStore.upsertJob(await createDeleteJob(item.path));
-				} else {
-					await deleteFile(item.path);
-				}
+			// Separate files and directories
+			const files = items.filter(item => !item.isDir);
+			const dirs = items.filter(item => item.isDir);
+
+			// Delete directories via jobs
+			for (const dir of dirs) {
+				jobsStore.upsertJob(await createDeleteJob(dir.path));
 			}
+
+			// Delete files directly
+			for (const file of files) {
+				await deleteFile(file.path);
+			}
+
+			// Show appropriate toast messages
+			if (files.length > 0) {
+				toastStore.success(`${files.length} item(s) ${tFilesDeleted}`);
+			}
+			if (dirs.length > 0) {
+				toastStore.info(`${dirs.length} item(s) ${tFilesDeleteQueued}`);
+			}
+
 			selectedPaths = new Set();
 			directoryQuery.refetch();
 		} catch (error) {

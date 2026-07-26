@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Spinner, Button } from '$lib/components/ui';
-	import { X, Key, Copy, Check, Terminal, FileUp, Plug } from 'lucide-svelte';
+	import { X, Key, Copy, Check, Terminal, FileUp, Plug, Trash2, Plus } from 'lucide-svelte';
 	import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	const tHostmodalAddhost = $derived(t("hostModal.addHost"));
 	const tHostmodalEdithost = $derived(t("hostModal.editHost"));
@@ -108,6 +108,15 @@
 		host = {
 			...host,
 			mountPoints: { ...mp, [key]: { ...entry, path: (e.target as HTMLInputElement).value } }
+		};
+	}
+
+	function handleMountReadOnlyChange(key: string, e: Event) {
+		const mp = host.mountPoints || {};
+		const entry = mp[key] || { path: '', readOnly: false };
+		host = {
+			...host,
+			mountPoints: { ...mp, [key]: { ...entry, readOnly: !(e.target as HTMLInputElement).checked } }
 		};
 	}
 
@@ -275,76 +284,119 @@
 				<!-- {tHostmodalMountpoints} -->
 				<div>
 					<label class="mb-2 block text-[11px] font-medium text-text-muted">{tHostmodalMountpoints}</label>
-					<div class="mb-2 space-y-1">
-						<div class="flex items-center gap-2 px-1 py-1">
-							<input
-								type="text"
-								value="docker"
-								readonly
-								class="w-16 shrink-0 cursor-default rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-secondary"
-							/>
-							<input
-								type="text"
-								value={host.mountPoints?.docker?.path || ''}
-								onchange={handleDockerPathChange}
-								placeholder="/var/docker"
-								class="min-w-0 flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary focus:border-border-focus focus:outline-none"
-							/>
-							<span class="w-[170px] shrink-0 whitespace-nowrap text-left text-[11px] font-medium text-green-400"
-								>{tHostmodalDockermaindir}</span
-							>
-						</div>
-						{#each Object.entries(host.mountPoints || {}) as [key, mp]}
-							{#if key !== 'docker'}
-								<div class="flex items-center gap-2 px-1 py-1">
-									<input
-										type="text"
-										value={key}
-										readonly
-										class="w-16 shrink-0 cursor-default rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-secondary"
-									/>
-									<input
-										type="text"
-										value={mp.path || ''}
-										onchange={(e) => handleMountPathChange(key, e)}
-										placeholder="/path"
-										class="min-w-0 flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary focus:border-border-focus focus:outline-none"
-									/>
-									<div class="flex w-[170px] shrink-0 items-center justify-start gap-1 whitespace-nowrap">
-										{#if mp.readOnly}<span class="text-[10px] text-text-muted">{tHostmodalReadonly}</span>{/if}
+					<div class="overflow-hidden rounded border border-border-secondary">
+						<table class="w-full text-[11px]">
+							<thead>
+								<tr class="border-b border-border-secondary bg-surface-secondary">
+									<th class="w-20 px-2 py-1.5 text-left font-medium text-text-muted">{tHostmodalName}</th>
+									<th class="px-2 py-1.5 text-left font-medium text-text-muted">Path</th>
+									<th class="w-14 px-2 py-1.5 text-center font-medium text-text-muted">R/W</th>
+									<th class="w-10 px-2 py-1.5 text-center font-medium text-text-muted"></th>
+								</tr>
+							</thead>
+							<tbody>
+								<!-- Docker main directory row (fixed) -->
+								<tr class="border-b border-border-secondary bg-surface-primary">
+									<td class="px-2 py-1.5">
+										<span class="font-mono text-text-secondary">docker</span>
+										<span class="ml-1 text-[9px] text-green-400">*</span>
+									</td>
+									<td class="px-2 py-1.5">
+										<input
+											type="text"
+											value={host.mountPoints?.docker?.path || ''}
+											onchange={handleDockerPathChange}
+											placeholder="/var/docker"
+											class="w-full rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary focus:border-border-focus focus:outline-none"
+										/>
+									</td>
+									<td class="px-2 py-1.5 text-center">
+										<span class="text-[10px] font-medium text-green-400">R/W</span>
+									</td>
+									<td class="px-2 py-1.5 text-center">
+										<span class="text-[10px] text-text-muted">—</span>
+									</td>
+								</tr>
+								<!-- Other mount points -->
+								{#each Object.entries(host.mountPoints || {}) as [key, mp]}
+									{#if key !== 'docker'}
+										<tr class="border-b border-border-secondary bg-surface-primary">
+											<td class="px-2 py-1.5">
+												<span class="font-mono text-text-primary">{key}</span>
+											</td>
+											<td class="px-2 py-1.5">
+												<input
+													type="text"
+													value={mp.path || ''}
+													onchange={(e) => handleMountPathChange(key, e)}
+													placeholder="/path"
+													class="w-full rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary focus:border-border-focus focus:outline-none"
+												/>
+											</td>
+											<td class="px-2 py-1.5 text-center">
+												<label class="inline-flex cursor-pointer items-center gap-1">
+													<input
+														type="checkbox"
+														checked={!mp.readOnly}
+														onchange={(e) => handleMountReadOnlyChange(key, e)}
+														class="rounded accent-green-500"
+													/>
+													<span class="text-[10px] {!mp.readOnly ? 'font-medium text-green-400' : 'text-text-muted'}">
+														{!mp.readOnly ? 'R/W' : 'R/O'}
+													</span>
+												</label>
+											</td>
+											<td class="px-2 py-1.5 text-center">
+												<button
+													type="button"
+													class="inline-flex items-center justify-center text-text-muted transition-colors hover:text-red-400"
+													onclick={() => onRemoveMountPoint(key)}
+												><Trash2 size={12} /></button>
+											</td>
+										</tr>
+									{/if}
+								{/each}
+								<!-- Add new mount point row -->
+								<tr class="bg-surface-primary">
+									<td class="px-2 py-1.5">
+										<input
+											type="text"
+											bind:value={mountKey}
+											placeholder={tHostmodalName}
+											class="w-full rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
+										/>
+									</td>
+									<td class="px-2 py-1.5">
+										<input
+											type="text"
+											bind:value={mountPath}
+											placeholder="/opt/data"
+											class="w-full rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
+										/>
+									</td>
+									<td class="px-2 py-1.5 text-center">
+										<label class="inline-flex cursor-pointer items-center gap-1">
+											<input
+												type="checkbox"
+												checked={!mountReadOnly}
+												onchange={(e) => { mountReadOnly = !(e.target as HTMLInputElement).checked; }}
+												class="rounded accent-green-500"
+											/>
+											<span class="text-[10px] {!mountReadOnly ? 'font-medium text-green-400' : 'text-text-muted'}">
+												{!mountReadOnly ? 'R/W' : 'R/O'}
+											</span>
+										</label>
+									</td>
+									<td class="px-2 py-1.5 text-center">
 										<button
 											type="button"
-											class="text-text-muted hover:text-red-400"
-											onclick={() => onRemoveMountPoint(key)}><X size={12} /></button
-										>
-									</div>
-								</div>
-							{/if}
-						{/each}
-					</div>
-					<div class="flex items-center gap-2 px-1 py-1">
-						<input
-							type="text"
-							bind:value={mountKey}
-							placeholder="{tHostmodalName}"
-							class="w-16 shrink-0 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
-						/>
-						<input
-							type="text"
-							bind:value={mountPath}
-							placeholder="/opt/docker"
-							class="min-w-0 flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
-						/>
-						<div class="flex w-[170px] shrink-0 items-center gap-1 whitespace-nowrap">
-							<label class="flex cursor-pointer items-center gap-1 text-[11px] text-text-muted"
-								><input type="checkbox" bind:checked={mountReadOnly} class="rounded" /> {tHostmodalReadonly}</label
-							>
-							<button
-								type="button"
-								class="rounded bg-surface-tertiary px-2 py-1 text-[11px] text-text-primary hover:bg-surface-secondary"
-								onclick={onAddMountPoint}>{tHostmodalAdd}</button
-							>
-						</div>
+											class="inline-flex h-5 w-5 items-center justify-center rounded text-accent transition-colors hover:bg-accent/20"
+											onclick={onAddMountPoint}
+										><Plus size={14} /></button>
+									</td>
+								</tr>
+							</tbody>
+						</table>
 					</div>
 				</div>
 			</div>

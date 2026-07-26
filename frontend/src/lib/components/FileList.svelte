@@ -300,14 +300,12 @@
 						<td class={tdClass}>
 							<div class="flex min-w-0 items-center gap-2">
 								<span
-									class="flex w-5 shrink-0 items-center justify-center {item.isDir
-										? 'text-folder'
-										: 'text-text-secondary'}"
+									class="flex w-5 shrink-0 items-center justify-center text-text-secondary"
 								>
 									<IconComponent size={16} />
 								</span>
 								<span
-									class="{clippedCellClass} min-w-0 flex-1 {item.isDir ? 'text-folder' : ''}"
+									class="{clippedCellClass} min-w-0 flex-1"
 									title={item.name}
 								>
 									{displayName}

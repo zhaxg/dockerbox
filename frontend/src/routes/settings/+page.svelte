@@ -71,6 +71,7 @@ const tSettingsTitle = $derived(t("settings.title"));
 	import {
 		ChevronLeft,
 		Eye,
+		Globe,
 		Layout,
 		LogOut,
 		MousePointer,
@@ -598,7 +599,7 @@ const tSettingsTitle = $derived(t("settings.title"));
 							<!-- Language -->
 						<div class={settingRowClass}>
 							<div class="flex items-center gap-2 text-[13px] text-text-primary">
-								<span>🌐</span>
+								<Globe size={14} class="text-accent" />
 								<span>{tSettingsLanguage}</span>
 							</div>
 							<div class="flex items-center gap-2">

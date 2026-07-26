@@ -225,9 +225,7 @@
 							/>
 						{:else}
 							<span
-								class="flex h-full w-full items-center justify-center {item.isDir
-									? 'text-folder'
-									: 'text-text-secondary'}"
+								class="flex h-full w-full items-center justify-center text-text-secondary"
 							>
 								<IconComponent size={compactMode ? 24 : 30} strokeWidth={1.7} />
 							</span>
@@ -236,7 +234,7 @@
 
 					<div class="mt-1.5 min-w-0 overflow-hidden">
 						<div class="file-grid-name text-center text-[13px] leading-4 text-text-primary">
-							<span class={item.isDir ? 'text-folder' : ''}>{displayName}</span>
+							<span>{displayName}</span>
 						</div>
 						<div
 							class="mt-0.5 truncate text-center text-[11px] leading-3.5 text-text-muted"

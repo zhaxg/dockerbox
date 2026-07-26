@@ -98,9 +98,9 @@
 				</div>
 
 				<!-- Progress + status text -->
-				<div class="flex w-24 items-center gap-1.5">
-					<ProgressBar value={upload.percentage} size="sm" variant={getProgressVariant(upload.status)} />
-					<span class="shrink-0 w-9 text-right text-[10px] font-medium {getStatusColor(upload.status)}">
+				<div class="flex shrink-0 items-center gap-1.5">
+					<div class="w-16"><ProgressBar value={upload.percentage} size="sm" variant={getProgressVariant(upload.status)} /></div>
+					<span class="shrink-0 whitespace-nowrap text-right text-[10px] font-medium {getStatusColor(upload.status)}">
 						{getStatusText(upload)}
 					</span>
 				</div>
