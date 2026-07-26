@@ -9,6 +9,7 @@
 		type BackgroundImageMode
 	} from '$lib/utils/wallpaper';
 	import WallpaperPickerModal from './WallpaperPickerModal.svelte';
+	import { _t } from '$lib/i18n/index.svelte';
 
 	interface WallpaperSelection {
 		backgroundImage: string;
@@ -60,7 +61,7 @@
 		<div class="min-w-56">
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<ImageIcon size={14} class="text-accent" />
-				<span>Wallpaper</span>
+				<span>{$_t('settings.wallpaper')}</span>
 			</div>
 			{#if !backgroundImageIsValid}
 				<div class="mt-1 text-xs text-danger">
@@ -91,7 +92,7 @@
 		<div>
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<ScanSearch size={14} class="text-accent" />
-				<span>Wallpaper fit</span>
+				<span>{$_t('settings.wallpaperFit')}</span>
 			</div>
 		</div>
 		<div class="w-48">
@@ -109,7 +110,7 @@
 		<div>
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<Sparkles size={14} class="text-accent" />
-				<span>Frosted glass blur</span>
+				<span>{$_t('settings.frostedGlass')}</span>
 			</div>
 		</div>
 		<Toggle

@@ -88,22 +88,22 @@
 	}> = [
 		{
 			id: 'all',
-			label: 'Show All',
+			label: $_t('settings.showAll'),
 			icon: Settings
 		},
 		{
 			id: 'display',
-			label: 'File Display',
+			label: $_t('settings.fileDisplay'),
 			icon: Eye
 		},
 		{
 			id: 'personalization',
-			label: 'Personalization',
+			label: $_t('settings.personalization'),
 			icon: PaintRollerIcon
 		},
 		{
 			id: 'behavior',
-			label: 'Behavior',
+			label: $_t('settings.behavior'),
 			icon: MousePointer
 		},
 		{
@@ -113,7 +113,7 @@
 		},
 		{
 			id: 'account',
-			label: 'Account',
+			label: $_t('settings.account'),
 			icon: User
 		}
 	];
