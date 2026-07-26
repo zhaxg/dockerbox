@@ -2,9 +2,9 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/main ."
-  entrypoint = ["./tmp/main"]
-  full_bin = "BOXBOX_DEV_MODE=true ./tmp/main"
+  cmd = "go build -o ./bin/main ."
+  entrypoint = ["./bin/main"]
+  full_bin = "BOXBOX_DEV_MODE=true ./bin/main"
   include_dir = ["internal"]
   include_ext = ["go"]
   exclude_dir = ["tmp", "vendor", "frontend", "node_modules"]

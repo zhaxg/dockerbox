@@ -55,9 +55,14 @@ Dev server starts on `http://localhost:8080`. Login with credentials from `confi
 ## Build
 
 ```bash
+# Backend binary (output: backend/bin/main)
+cd backend && go build -o ./bin/main .
+
 # Frontend only
 bun run build
 
 # Full docker image
 docker compose build
 ```
+
+> **Note:** The backend binary is compiled to `backend/bin/` and is excluded from version control via `.gitignore`.

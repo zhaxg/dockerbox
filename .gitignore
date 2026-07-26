@@ -46,6 +46,7 @@ node_modules/
 
 # Go
 vendor/
+backend/bin/
 
 # Docker
 .docker/
