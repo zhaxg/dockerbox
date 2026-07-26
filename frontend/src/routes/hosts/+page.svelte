@@ -66,18 +66,19 @@
 	function openAdd() {
 		modal = {
 			open: true, mode: 'add',
-			host: { id: 'host-' + Date.now().toString(36), name: '', driver: 'socket', endpoint: '/var/run/docker.sock', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
-			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: '', isDefault: false
+			host: { id: 'host-' + Date.now().toString(36), name: '', driver: 'socket', endpoint: '/var/run/docker.sock', sshKey: '', tags: [], mountPoints: { docker: { path: '/var/docker', readOnly: false } } },
+			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: 'docker', isDefault: false
 		};
 	}
 
 	function openEdit(host: any) {
 		const mp = host.mountPoints || {};
-		const dockerKey = Object.entries(mp).find(([_, v]: [string, any]) => v.isDocker)?.[0] || Object.keys(mp)[0] || '';
+		// Ensure docker key exists
+		if (!mp.docker) mp.docker = { path: '', readOnly: false };
 		modal = {
 			open: true, mode: 'edit',
 			host: { ...host, id: host.key, mountPoints: { ...mp }, tags: [...(host.tags || [])] },
-			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: dockerKey,
+			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: 'docker',
 			isDefault: hostsConfig.default === host.key
 		};
 	}
@@ -93,10 +94,9 @@
 	}
 
 	function removeMountPoint(key: string) {
-		if (modal.host.mountPoints) {
+		if (modal.host.mountPoints && key !== 'docker') {
 			delete modal.host.mountPoints[key];
 			modal.host.mountPoints = { ...modal.host.mountPoints };
-			if (modal.dockerDirKey === key) modal.dockerDirKey = Object.keys(modal.host.mountPoints)[0] || '';
 		}
 	}
 
@@ -144,8 +144,6 @@
 	}
 
 	async function doSave() {
-		const mp = modal.host.mountPoints || {};
-		for (const k of Object.keys(mp)) mp[k] = { ...mp[k], isDocker: k === modal.dockerDirKey };
 		const saveData = { ...modal.host, isDefault: modal.isDefault };
 		try {
 			if (modal.mode === 'add') await hostsApi.create(saveData);

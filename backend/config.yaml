@@ -2,7 +2,7 @@ allowed_origins: []
 chunk_size_mb: 5
 dev_mode: false
 dockerhosts:
-    default: host086
+    default: host210
     hosts:
         host086:
             driver: ssh
@@ -10,7 +10,6 @@ dockerhosts:
             id: host-nas
             mount_points:
                 docker:
-                    is_docker: true
                     path: /vol1/1000/docker
                     read_only: false
             name: fnos
@@ -22,14 +21,12 @@ dockerhosts:
                 AAAEATfUWYDQZCo04oWsPbsYYec+6WaGNEL0jlPfKov1p/fbpU7qsVxxRPqV3f/fcNfVJs
                 G46c/WbndCkIW0N2x1kmAAAABmJveGJveAECAwQFBgc=
                 -----END OPENSSH PRIVATE KEY-----
-            ssh_pub_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILpU7qsVxxRPqV3f/fcNfVJsG46c/WbndCkIW0N2x1km boxbox
         host210:
             driver: socket
             endpoint: /var/run/docker.sock
             id: host-mrymssal
             mount_points:
                 docker:
-                    is_docker: true
                     path: /opt/docker
                     read_only: false
             name: 192.168.132.210

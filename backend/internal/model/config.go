@@ -26,7 +26,7 @@ type DockerHost struct {
 	Driver      string              `json:"driver" yaml:"driver" mapstructure:"driver"`
 	Endpoint    string              `json:"endpoint" yaml:"endpoint" mapstructure:"endpoint"`
 	SSHKey      string              `json:"sshKey,omitempty" yaml:"ssh_key,omitempty" mapstructure:"ssh_key"`
-	SSHPubKey   string              `json:"sshPubKey,omitempty" yaml:"ssh_pub_key,omitempty" mapstructure:"ssh_pub_key"`
+	SSHPubKey   string              `json:"sshPubKey,omitempty"`
 	Tags        []string            `json:"tags,omitempty" yaml:"tags,omitempty" mapstructure:"tags"`
 	MountPoints map[string]*HostMountPoint `json:"mountPoints" yaml:"mount_points" mapstructure:"mount_points"`
 }
@@ -35,7 +35,6 @@ type DockerHost struct {
 type HostMountPoint struct {
 	Path     string `json:"path" yaml:"path" mapstructure:"path"`
 	ReadOnly bool   `json:"readOnly" yaml:"read_only" mapstructure:"read_only"`
-	IsDocker bool   `json:"isDocker" yaml:"is_docker" mapstructure:"is_docker"`
 }
 
 // ServerConfig contains all server configuration options

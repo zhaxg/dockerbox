@@ -220,12 +220,10 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 				}
 				dockerHandler.SetService(id, svc)
 				
-				// Extract compose paths from host mount points where is_docker is true
+				// Extract compose paths from host mount points: key "docker" is the main directory
 				var hostComposePaths []string
-				for _, mp := range host.MountPoints {
-					if mp.IsDocker {
-						hostComposePaths = append(hostComposePaths, mp.Path)
-					}
+				if dockerMP, ok := host.MountPoints["docker"]; ok && dockerMP != nil {
+					hostComposePaths = append(hostComposePaths, dockerMP.Path)
 				}
 				dockerHandler.SetComposePaths(id, hostComposePaths)
 			}
