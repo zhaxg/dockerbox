@@ -14,7 +14,16 @@
 </p>
 
 
-BoxBox is a self-hosted file manager for homelab and NAS-style servers. It provides a browser UI for mounted Linux paths, large file uploads, previews, search, and background file operations.
+BoxBox is a self-hosted file manager and Docker management platform for homelab and NAS-style servers. It provides a modern browser UI for managing multiple remote hosts, Docker containers, Compose projects, and file operations across mounted Linux paths.
+
+### Why BoxBox?
+
+- 🖥️ **Multi-Host Management** — Manage multiple Docker hosts from a single interface via SSH or socket
+- 🐳 **Docker Control** — Start, stop, restart containers and manage Compose projects
+- 📁 **File Browser** — Browse, upload, download, and preview files with drag-and-drop support
+- 🔒 **Secure** — JWT authentication, role-based access control, read-only mount options
+- 🚀 **Fast** — Go backend with embedded frontend, WebSocket real-time updates
+- 📱 **Responsive** — Works on desktop and mobile browsers
 
 ## Quick Start
 
@@ -38,6 +47,30 @@ docker compose up -d
 
 Open `http://localhost:8080` and sign in as `admin` with the password from `BOXBOX_USERS_admin`. For reverse proxy examples, local source builds, and update workflows, see [docs/docker.md](docs/docker.md).
 
+
+## Screenshots
+
+### Login
+![Login](docs/screenshot/login.png)
+
+### Overview Dashboard
+![Overview](docs/screenshot/overview.png)
+
+### Host Management
+![Hosts](docs/screenshot/hosts.png)
+
+### Container Management
+![Containers](docs/screenshot/containers.png)
+
+### Docker Compose
+![Compose](docs/screenshot/compose.png)
+
+### File Browser
+![Browse](docs/screenshot/browse.png)
+
+### Settings
+![Settings](docs/screenshot/settings.png)
+
 ## Features
 
 - Browse multiple configured mount points from one web UI.
@@ -47,6 +80,20 @@ Open `http://localhost:8080` and sign in as `admin` with the password from `BOXB
 - Track job progress through WebSocket updates.
 - Search directories by file or folder name.
 - Configure read-only mounts, users, rate limits, and allowed origins.
+
+
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| Multi-Host | Connect to multiple Docker hosts via SSH or Unix socket |
+| Containers | Start, stop, restart, view logs, and exec into containers |
+| Compose | Manage Docker Compose projects with one-click deploy |
+| File Upload | Chunked upload for large files with resume support |
+| File Preview | Images, videos, audio, PDFs, code files with syntax highlighting |
+| Search | Full-text search across all mounted directories |
+| Real-time | WebSocket-powered live updates for containers and jobs |
+| Dark Mode | Beautiful dark theme optimized for homelab environments |
 
 ## Repository Layout
 
