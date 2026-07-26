@@ -277,6 +277,9 @@
     "saveFailed": "保存失败",
     "operationComplete": "操作完成",
     "saving": "保存中",
-    "saved": "已保存"
+    "saved": "已保存",
+    "confirmDelete": "确定删除",
+    "item": "个项目",
+    "items": "个项目"
   }
 }

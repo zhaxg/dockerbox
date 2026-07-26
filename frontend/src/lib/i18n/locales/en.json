@@ -277,6 +277,9 @@
     "saveFailed": "Save failed",
     "operationComplete": "Operation complete",
     "saving": "Saving",
-    "saved": "Saved"
+    "saved": "Saved",
+    "confirmDelete": "Delete",
+    "item": "item",
+    "items": "items"
   }
 }

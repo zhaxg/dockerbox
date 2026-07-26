@@ -147,7 +147,9 @@ export async function getDriveStats(): Promise<DriveStatsResponse> {
  * GET /api/v1/files/*path
  */
 export async function getPath(path: string, options?: ListOptions): Promise<FileList | FileInfo> {
+	const hostId = typeof window !== 'undefined' ? localStorage.getItem('currentHostId') : '';
 	const params: Record<string, string | number | boolean | undefined> = {};
+	if (hostId) params.hostId = hostId;
 
 	if (options) {
 		if (options.page !== undefined) params.page = options.page;
@@ -182,8 +184,10 @@ export async function getFileInfo(path: string): Promise<FileInfo> {
  * POST /api/v1/files/*path
  */
 export async function createDirectory(basePath: string, name: string): Promise<FileInfo> {
+	const hostId = typeof window !== 'undefined' ? localStorage.getItem('currentHostId') : '';
 	const body: CreateItemRequest = { name, type: 'directory' };
-	return api.post<FileInfo>(`/files/${encodeRoutePath(basePath)}`, body);
+	const params = hostId ? { hostId } : {};
+	return api.post<FileInfo>(`/files/${encodeRoutePath(basePath)}`, body, params);
 }
 
 /**
@@ -195,8 +199,10 @@ export async function createFile(
 	name: string,
 	content: string = ''
 ): Promise<FileInfo> {
+	const hostId = typeof window !== 'undefined' ? localStorage.getItem('currentHostId') : '';
 	const body: CreateItemRequest = { name, type: 'file', content };
-	return api.post<FileInfo>(`/files/${encodeRoutePath(basePath)}`, body);
+	const params = hostId ? { hostId } : {};
+	return api.post<FileInfo>(`/files/${encodeRoutePath(basePath)}`, body, params);
 }
 
 /**
@@ -204,8 +210,10 @@ export async function createFile(
  * PUT /api/v1/files/*path
  */
 export async function rename(oldPath: string, newPath: string): Promise<FileInfo> {
+	const hostId = typeof window !== 'undefined' ? localStorage.getItem('currentHostId') : '';
 	const body: RenameRequest = { newPath };
-	return api.put<FileInfo>(`/files/${encodeRoutePath(oldPath)}`, body);
+	const params = hostId ? { hostId } : {};
+	return api.put<FileInfo>(`/files/${encodeRoutePath(oldPath)}`, body, params);
 }
 
 /**
@@ -223,7 +231,9 @@ export async function saveFileContent(path: string, content: string): Promise<Fi
  * @param confirm - Set to true to confirm directory deletion
  */
 export async function deleteFile(path: string, confirm: boolean = false): Promise<MessageResponse> {
-	const params = confirm ? { confirm: 'true' } : undefined;
+	const hostId = typeof window !== 'undefined' ? localStorage.getItem('currentHostId') : '';
+	const params = confirm ? { confirm: 'true' } : {};
+	if (hostId) params.hostId = hostId;
 	return api.delete<MessageResponse>(`/files/${encodeRoutePath(path)}`, params);
 }
 

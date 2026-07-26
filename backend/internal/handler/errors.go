@@ -9,6 +9,8 @@ import (
 	"github.com/jR4dh3y/BoxBox/backend/internal/service"
 )
 
+var errHostIdRequired = errors.New("hostId parameter is required when multiple hosts are configured")
+
 // ErrorMapping maps service errors to HTTP responses
 type ErrorMapping struct {
 	Error      error
@@ -34,6 +36,7 @@ var serviceErrorMappings = []ErrorMapping{
 	{validator.ErrInvalidPath, "Invalid path", model.ErrCodeValidationError, http.StatusBadRequest},
 	{validator.ErrOutsideMountPoint, "Mount point not found", model.ErrCodeAccessDenied, http.StatusForbidden},
 	{validator.ErrMountPointNotFound, "Mount point not found", model.ErrCodeAccessDenied, http.StatusForbidden},
+	{errHostIdRequired, "hostId parameter is required when multiple hosts are configured", model.ErrCodeValidationError, http.StatusBadRequest},
 
 	// Job service errors
 	{service.ErrJobNotFound, "Job not found", model.ErrCodeJobNotFound, http.StatusNotFound},

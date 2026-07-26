@@ -54,12 +54,21 @@ func (h *FileHandler) getMountPoints(r *http.Request) []model.MountPoint {
 			return mps
 		}
 	}
+	// Single host: use default
 	if h.defaultHostID != "" {
 		if mps, ok := h.hostMountPoints[h.defaultHostID]; ok {
 			return mps
 		}
 	}
 	return h.fileService.ListMountPoints()
+}
+
+// requireHostId checks if hostId is required and returns error if missing
+func (h *FileHandler) requireHostId(r *http.Request) error {
+	if len(h.hostMountPoints) > 1 && getHostID(r) == "" {
+		return errHostIdRequired
+	}
+	return nil
 }
 
 // getHostAccess returns the HostFileAccess for the current request's host, or nil for local.
@@ -142,6 +151,10 @@ type SaveFileRequest struct {
 // ListRoots returns all configured mount points
 // GET /api/v1/files
 func (h *FileHandler) ListRoots(w http.ResponseWriter, r *http.Request) {
+	if err := h.requireHostId(r); err != nil {
+		HandleServiceError(w, err)
+		return
+	}
 	mounts := h.getMountPoints(r)
 
 	roots := make([]MountPointResponse, len(mounts))
