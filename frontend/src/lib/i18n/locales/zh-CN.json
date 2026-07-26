@@ -44,7 +44,8 @@
     "checking": "检测中",
     "connectFailed": "连接失败",
     "cancel": "取消",
-    "deleteConfirm": "确定要删除这个主机吗？"
+    "deleteConfirm": "确定要删除这个主机吗？",
+    "connectSuccess": "连接成功"
   },
   "containers": {
     "title": "容器",
@@ -76,7 +77,10 @@
     "pruneConfirm": "确定要清理所有未使用的镜像和网络吗？",
     "prune": "清理",
     "pruneFailed": "清理失败",
-    "noResources": "没有需要清理的资源"
+    "noResources": "没有需要清理的资源",
+    "pruneUnused": "清理未使用资源",
+    "pruneImages": "清理未使用的镜像和网络",
+    "noLogs": "无日志"
   },
   "compose": {
     "title": "Compose",
@@ -114,6 +118,7 @@
     "startFailed": "启动失败",
     "deleteProject": "删除项目",
     "deleteConfirm": "确定要删除这个项目吗？",
+    "stopConfirm": "确定要停止这个项目吗？",
     "redeployConfirm": "确定要重新部署这个项目吗？",
     "noLogs": "无日志",
     "scanImport": "扫描导入",
@@ -125,6 +130,7 @@
     "hasStoppedContainers": "已有容器只是停止了",
     "silentStart": "静默启动",
     "new": "新建",
+    "create": "创建",
     "name": "名称",
     "status": "状态",
     "selected": "已选",
@@ -253,6 +259,28 @@
     "properties": "属性",
     "open": "打开"
   },
+  "upload": {
+    "queued": "排队中",
+    "completed": "已完成",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "table": {
+    "name": "名称",
+    "state": "状态",
+    "uptime": "运行时间",
+    "cpu": "CPU",
+    "mem": "内存",
+    "trans": "流量",
+    "ports": "端口",
+    "actions": "操作",
+    "endpoint": "端点",
+    "status": "状态",
+    "tags": "标签",
+    "docker": "Docker",
+    "path": "路径",
+    "services": "服务"
+  },
   "common": {
     "confirm": "确认",
     "cancel": "取消",
@@ -278,6 +306,7 @@
     "operationComplete": "操作完成",
     "saving": "保存中",
     "saved": "已保存",
+    "status": "状态",
     "confirmDelete": "确定删除",
     "item": "个项目",
     "items": "个项目"

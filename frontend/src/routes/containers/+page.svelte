@@ -1,5 +1,35 @@
 <script lang="ts">
 import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+const tContainersRunning = $derived(t("containers.running"));
+const tContainersStopped = $derived(t("containers.stopped"));
+const tContainersPaused = $derived(t("containers.paused"));
+const tContainersCreated = $derived(t("containers.created"));
+const tContainersRestartconfirm = $derived(t("containers.restartConfirm"));
+const tContainersStopconfirm = $derived(t("containers.stopConfirm"));
+const tContainersNoresources = $derived(t("containers.noResources"));
+const tContainersPrunefailed = $derived(t("containers.pruneFailed"));
+const tContainersPruneconfirm = $derived(t("containers.pruneConfirm"));
+const tContainersPruneunused = $derived(t("containers.pruneUnused"));
+const tContainersPruneimages = $derived(t("containers.pruneImages"));
+const tContainersNocontainers = $derived(t("containers.noContainers"));
+const tContainersNomatch = $derived(t("containers.noMatch"));
+const tCommonCancel = $derived(t("common.cancel"));
+const tCommonConfirm = $derived(t("common.confirm"));
+const tContainersLogs = $derived(t("containers.logs"));
+const tContainersRestart = $derived(t("containers.restart"));
+const tContainersSearch = $derived(t("containers.search"));
+const tContainersStart = $derived(t("containers.start"));
+const tContainersStop = $derived(t("containers.stop"));
+const tContainersTerminal = $derived(t("containers.terminal"));
+const tContainersTitle = $derived(t("containers.title"));
+const tTableName = $derived(t("table.name"));
+const tTableState = $derived(t("table.state"));
+const tTableUptime = $derived(t("table.uptime"));
+const tTableCpu = $derived(t("table.cpu"));
+const tTableMem = $derived(t("table.mem"));
+const tTableTrans = $derived(t("table.trans"));
+const tTablePorts = $derived(t("table.ports"));
+const tTableActions = $derived(t("table.actions"));
 	import { onMount, onDestroy } from 'svelte';
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
@@ -102,7 +132,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 
 	function cleanupUnused() {
-		showConfirm({tContainersPruneunused}, {tContainersPruneconfirm}, async () => {
+		showConfirm(tContainersPruneunused, tContainersPruneconfirm, async () => {
 			try {
 				const [imgResult, netResult] = await Promise.all([
 					dockerApi.post<{ deleted: number; spaceMB: number; message: string }>('/docker/images/prune'),
@@ -114,11 +144,11 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 				if (parts.length > 0) {
 					toastStore.success(parts.join('，'));
 				} else {
-					toastStore.info({tContainersNoresources});
+					toastStore.info(tContainersNoresources);
 				}
 				loadContainers();
 			} catch (e) {
-				toastStore.error({tContainersPrunefailed});
+				toastStore.error(tContainersPrunefailed);
 				console.error(e);
 			}
 		});
@@ -187,7 +217,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 
 	function stopContainer(id: string) {
-		showConfirm({tContainersStop}, {tContainersStopconfirm}, async () => {
+		showConfirm(tContainersStop, tContainersStopconfirm, async () => {
 			try {
 				await dockerApi.post(`/docker/containers/${id}/stop`);
 				const idx = containers.findIndex((c) => c.id === id);
@@ -197,7 +227,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 
 	function restartContainer(id: string) {
-		showConfirm({tContainersRestart}, {tContainersRestartconfirm}, async () => {
+		showConfirm(tContainersRestart, tContainersRestartconfirm, async () => {
 			try {
 				await dockerApi.post(`/docker/containers/${id}/restart`);
 				const idx = containers.findIndex((c) => c.id === id);
@@ -332,10 +362,10 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 	function getStateText(state: string): string {
 		switch (state) {
-			case 'running': return {tContainersRunning};
-			case 'exited': return {tContainersStopped};
-			case 'paused': return {tContainersPaused};
-			case 'created': return {tContainersCreated};
+			case 'running': return tContainersRunning;
+			case 'exited': return tContainersStopped;
+			case 'paused': return tContainersPaused;
+			case 'created': return tContainersCreated;
 			default: return state;
 		}
 	}
@@ -376,17 +406,17 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 <div class="flex h-full flex-col bg-surface-primary">
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 		<h1 class="text-base font-semibold text-text-primary">
-			{tContainersTitle}}
+			{tContainersTitle}
 			{#if currentHost}<Badge variant="info">{currentHost.name}</Badge>{/if}
 			<Badge>{filteredContainers.length}</Badge>
 		</h1>
 		<div class="flex items-center gap-2">
 			<div class="relative">
 				<Search size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-				<input type="text" bind:value={searchQuery} placeholder={tContainersSearch}}
+				<input type="text" bind:value={searchQuery} placeholder={tContainersSearch}
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
-			<Button variant="secondary" size="sm" onclick={cleanupUnused} title={tContainersPruneimages}}><BrushCleaning size={14} /></Button>
+			<Button variant="secondary" size="sm" onclick={cleanupUnused} title={tContainersPruneimages}><BrushCleaning size={14} /></Button>
 			<Button variant="secondary" size="sm" onclick={loadContainers}><RefreshCw size={14} /></Button>
 		</div>
 	</div>
@@ -397,7 +427,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		{:else if filteredContainers.length === 0}
 			<div class="flex flex-col items-center gap-2 py-12 text-text-muted">
 				<Container size={36} class="opacity-50" />
-				<span class="text-sm">{searchQuery ? {tContainersNomatch} : {tContainersNocontainers}}</span>
+				<span class="text-sm">{searchQuery ? tContainersNomatch : tContainersNocontainers}</span>
 			</div>
 		{:else}
 			<table class="w-full min-w-[1050px] border-collapse text-[13px] leading-5">
@@ -413,14 +443,14 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 				</colgroup>
 				<thead>
 					<tr>
-						<th class="{thClass}">Name</th>
-						<th class="{thClass}">State</th>
-						<th class="{thClass}">Uptime</th>
-						<th class="{thClass} text-right">CPU</th>
-						<th class="{thClass} text-right">Mem</th>
-						<th class="{thClass}">Trans</th>
-						<th class="{thClass}">Ports</th>
-						<th class="{thClass} text-right">Actions</th>
+						<th class="{thClass}">{tTableName}</th>
+						<th class="{thClass}">{tTableState}</th>
+						<th class="{thClass}">{tTableUptime}</th>
+						<th class="{thClass} text-right">{tTableCpu}</th>
+						<th class="{thClass} text-right">{tTableMem}</th>
+						<th class="{thClass}">{tTableTrans}</th>
+						<th class="{thClass}">{tTablePorts}</th>
+						<th class="{thClass} text-right">{tTableActions}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -469,21 +499,21 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 							<td class="{tdClass}">
 								<div class="flex justify-end gap-1">
 									{#if container.state === 'running'}
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => stopContainer(container.id)} title={tContainersStop}}>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => stopContainer(container.id)} title={tContainersStop}>
 											<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
 										</button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => restartContainer(container.id)} title={tContainersRestart}}>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => restartContainer(container.id)} title={tContainersRestart}>
 											<RefreshCw size={13} />
 										</button>
 									{:else}
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => startContainer(container.id)} title={tContainersStart}}>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => startContainer(container.id)} title={tContainersStart}>
 											<Play size={13} />
 										</button>
 									{/if}
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewLogs(container.id, container.name)} title={tContainersLogs}}>
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewLogs(container.id, container.name)} title={tContainersLogs}>
 										<Eye size={13} />
 									</button>
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openExec(container.id, container.name)} title={tContainersTerminal}}>
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openExec(container.id, container.name)} title={tContainersTerminal}>
 										<Terminal size={13} />
 									</button>
 									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewInspect(container.id, container.name)} title="Inspect">
@@ -506,8 +536,8 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
-				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}}</Button>
-				<Button variant="danger" onclick={() => { confirmDialog.onConfirm(); closeConfirm(); }}>{tCommonConfirm}}</Button>
+				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}</Button>
+				<Button variant="danger" onclick={() => { confirmDialog.onConfirm(); closeConfirm(); }}>{tCommonConfirm}</Button>
 			</div>
 		</div>
 	</div>
@@ -518,7 +548,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
 		<div class="flex h-[70vh] w-[750px] flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary">
 			<div class="flex items-center justify-between px-3 py-2">
-				<h3 class="text-sm font-semibold text-text-primary">{tContainersLogs}} - {logsModal.name}</h3>
+				<h3 class="text-sm font-semibold text-text-primary">{tContainersLogs} - {logsModal.name}</h3>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={() => { closeLogsStream(); logsModal.open = false; }}>
 					<X size={16} />
 				</button>
@@ -560,7 +590,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
 		<div class="flex h-[70vh] w-[750px] flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary">
 			<div class="flex items-center justify-between px-3 py-2">
-				<h3 class="text-sm font-semibold text-text-primary">{tContainersTerminal}} - {execModal.name}</h3>
+				<h3 class="text-sm font-semibold text-text-primary">{tContainersTerminal} - {execModal.name}</h3>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={closeExec}>
 					<X size={16} />
 				</button>

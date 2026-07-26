@@ -23,6 +23,45 @@
 	import { Button, ProgressButton, Select, Toggle } from '$lib/components/ui';
 	import { normalizeBackgroundImageMode } from '$lib/utils/wallpaper';
 	import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+const tSettingsSystemdefault = $derived(t("settings.systemDefault"));
+const tSettingsSortbytype = $derived(t("settings.sortByType"));
+const tSettingsSortbysize = $derived(t("settings.sortBySize"));
+const tSettingsSortbyname = $derived(t("settings.sortByName"));
+const tSettingsSortbydate = $derived(t("settings.sortByDate"));
+const tSettingsListview = $derived(t("settings.listView"));
+const tSettingsGridview = $derived(t("settings.gridView"));
+const tSettingsDescending = $derived(t("settings.descending"));
+const tSettingsAscending = $derived(t("settings.ascending"));
+const tSettingsShowall = $derived(t("settings.showAll"));
+const tSettingsAccentcolor = $derived(t("settings.accentColor"));
+const tSettingsCompactmode = $derived(t("settings.compactMode"));
+const tSettingsConfirmbeforedelete = $derived(t("settings.confirmBeforeDelete"));
+const tSettingsDefaultview = $derived(t("settings.defaultView"));
+const tSettingsFiledisplay = $derived(t("settings.fileDisplay"));
+const tSettingsPreviewonsingleclick = $derived(t("settings.previewOnSingleClick"));
+const tSettingsResetdefaults = $derived(t("settings.resetDefaults"));
+const tSettingsSearchsettings = $derived(t("settings.searchSettings"));
+const tSettingsShowfileextensions = $derived(t("settings.showFileExtensions"));
+const tSettingsShowhiddenfiles = $derived(t("settings.showHiddenFiles"));
+const tSettingsSignedinsession = $derived(t("settings.signedInSession"));
+const tSettingsSortby = $derived(t("settings.sortBy"));
+const tSettingsSortdirection = $derived(t("settings.sortDirection"));
+const tSettingsViewmode = $derived(t("settings.viewMode"));
+const tCommonCancel = $derived(t("common.cancel"));
+const tCommonSave = $derived(t("common.save"));
+const tCommonSaved = $derived(t("common.saved"));
+const tCommonSaving = $derived(t("common.saving"));
+const tSettingsAccount = $derived(t("settings.account"));
+const tSettingsBehavior = $derived(t("settings.behavior"));
+const tSettingsChinese = $derived(t("settings.chinese"));
+const tSettingsDefault = $derived(t("settings.default"));
+const tSettingsEnglish = $derived(t("settings.english"));
+const tSettingsFont = $derived(t("settings.font"));
+const tSettingsLanguage = $derived(t("settings.language"));
+const tSettingsLogout = $derived(t("settings.logout"));
+const tSettingsPersonalization = $derived(t("settings.personalization"));
+const tSettingsPreferences = $derived(t("settings.preferences"));
+const tSettingsTitle = $derived(t("settings.title"));
 		import {
 		deleteLocalWallpaper,
 		isInlineWallpaperDataUrl,
@@ -77,68 +116,68 @@
 	const showApplyProgress = $derived(isApplyingSettings || applyProgress > 0);
 	const saveButtonText = $derived.by(() => {
 		if (applyProgressVariant === 'danger' && applyProgress > 0) return 'Failed';
-		if (applyProgressVariant === 'success' && applyProgress >= 100) return {tCommonSaved};
-		return isApplyingSettings ? {tCommonSaving} : {tCommonSave};
+		if (applyProgressVariant === 'success' && applyProgress >= 100) return tCommonSaved;
+		return isApplyingSettings ? tCommonSaving : tCommonSave;
 	});
 
-	const navItems: Array<{
+	const navItems = $derived<Array<{
 		id: SettingsCategory;
 		label: string;
 		icon: typeof Eye;
-	}> = [
+	}>>([
 		{
 			id: 'all',
-			label: {tSettingsShowall},
+			label: tSettingsShowall,
 			icon: Settings
 		},
 		{
 			id: 'display',
-			label: {tSettingsFiledisplay},
+			label: tSettingsFiledisplay,
 			icon: Eye
 		},
 		{
 			id: 'personalization',
-			label: {tSettingsPersonalization},
+			label: tSettingsPersonalization,
 			icon: PaintRollerIcon
 		},
 		{
 			id: 'behavior',
-			label: {tSettingsBehavior},
+			label: tSettingsBehavior,
 			icon: MousePointer
 		},
 		{
 			id: 'defaults',
-			label: {tSettingsDefaultview},
+			label: tSettingsDefaultview,
 			icon: Layout
 		},
 		{
 			id: 'account',
-			label: {tSettingsAccount},
+			label: tSettingsAccount,
 			icon: User
 		}
-	];
+	]);
 
-	const sortByOptions = [
-		{ value: 'name', label: {tSettingsSortbyname} },
-		{ value: 'size', label: {tSettingsSortbysize} },
-		{ value: 'modTime', label: {tSettingsSortbydate} },
-		{ value: 'type', label: {tSettingsSortbytype} }
-	];
+	const sortByOptions = $derived([
+		{ value: 'name', label: tSettingsSortbyname },
+		{ value: 'size', label: tSettingsSortbysize },
+		{ value: 'modTime', label: tSettingsSortbydate },
+		{ value: 'type', label: tSettingsSortbytype }
+	]);
 
-	const sortDirOptions = [
-		{ value: 'asc', label: {tSettingsAscending} },
-		{ value: 'desc', label: {tSettingsDescending} }
-	];
+	const sortDirOptions = $derived([
+		{ value: 'asc', label: tSettingsAscending },
+		{ value: 'desc', label: tSettingsDescending }
+	]);
 
-	const viewModeOptions = [
-		{ value: 'list', label: {tSettingsListview} },
-		{ value: 'grid', label: {tSettingsGridview} }
-	];
+	const viewModeOptions = $derived([
+		{ value: 'list', label: tSettingsListview },
+		{ value: 'grid', label: tSettingsGridview }
+	]);
 
-	const uiFontOptions = [
-		{ value: '', label: {tSettingsSystemdefault} },
+	const uiFontOptions = $derived([
+		{ value: '', label: tSettingsSystemdefault },
 		...FONT_LIST.map(f => ({ value: f.family, label: f.name })),
-	];
+	]);
 
 	const navButtonClass =
 		'group flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3 py-2 text-left transition-colors duration-100 hover:bg-surface-secondary';
@@ -403,7 +442,7 @@
 		<div class="border-b border-border-secondary px-3 py-3">
 			<div class="flex items-center gap-2 text-[13px] font-medium text-text-primary">
 				<Settings size={16} class="text-accent" />
-				<span>{tSettingsTitle}}</span>
+				<span>{tSettingsTitle}</span>
 			</div>
 		</div>
 
@@ -435,9 +474,9 @@
 			<div
 				class="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-border-primary bg-surface-secondary px-2 py-1"
 			>
-				<span class="text-[13px] whitespace-nowrap text-text-secondary">{tSettingsTitle}}</span>
+				<span class="text-[13px] whitespace-nowrap text-text-secondary">{tSettingsTitle}</span>
 				<span class="text-xs text-text-muted">/</span>
-				<span class="text-[13px] whitespace-nowrap text-text-primary">{tSettingsPreferences}}</span>
+				<span class="text-[13px] whitespace-nowrap text-text-primary">{tSettingsPreferences}</span>
 			</div>
 
 			<div class="w-64 shrink-0 lg:w-96">
@@ -445,7 +484,7 @@
 					value={searchQuery}
 					onInput={handleSearchInput}
 					onClear={handleSearchClear}
-					placeholder={tSettingsSearchsettings}}
+					placeholder={tSettingsSearchsettings}
 					compact
 				/>
 			</div>
@@ -459,13 +498,13 @@
 					disabled={!hasChanges || isApplyingSettings}
 				>
 					<X size={16} />
-					<span class="hidden sm:inline">{tCommonCancel}}</span>
+					<span class="hidden sm:inline">{tCommonCancel}</span>
 				</Button>
 				<ProgressButton
 					variant="primary"
 					size="sm"
 					onclick={handleSave}
-					title={applyProgressStatus || {tCommonSave}}
+					title={applyProgressStatus || tCommonSave}
 					disabled={!canSave}
 					busy={isApplyingSettings}
 					progress={showApplyProgress ? applyProgress : null}
@@ -496,7 +535,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<Eye size={16} class="text-accent" />
-									{tSettingsFiledisplay}}
+									{tSettingsFiledisplay}
 								</h2>
 							</div>
 						</div>
@@ -505,7 +544,7 @@
 							{#if matchesSearch('show hidden files', 'display files and folders that start with a dot')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{tSettingsShowhiddenfiles}}</div>
+										<div class="text-[13px] text-text-primary">{tSettingsShowhiddenfiles}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.showHiddenFiles}
@@ -518,7 +557,7 @@
 							{#if matchesSearch('show file extensions', 'keep extensions visible in file names')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{tSettingsShowfileextensions}}</div>
+										<div class="text-[13px] text-text-primary">{tSettingsShowfileextensions}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.showFileExtensions}
@@ -531,7 +570,7 @@
 							{#if matchesSearch('compact mode', 'reduce row and tile spacing', 'density')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{tSettingsCompactmode}}</div>
+										<div class="text-[13px] text-text-primary">{tSettingsCompactmode}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.compactMode}
@@ -550,7 +589,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<PaintRollerIcon size={16} class="text-accent" />
-									{tSettingsPersonalization}}
+									{tSettingsPersonalization}
 								</h2>
 							</div>
 						</div>
@@ -560,11 +599,11 @@
 						<div class={settingRowClass}>
 							<div class="flex items-center gap-2 text-[13px] text-text-primary">
 								<span>🌐</span>
-								<span>{tSettingsLanguage}}</span>
+								<span>{tSettingsLanguage}</span>
 							</div>
 							<div class="flex items-center gap-2">
-								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'zh-CN' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('zh-CN'); currentLang = 'zh-CN'; }}>{tSettingsChinese}}</button>
-								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'en' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('en'); currentLang = 'en'; }}>{tSettingsEnglish}}</button>
+								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'zh-CN' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('zh-CN'); currentLang = 'zh-CN'; }}>{tSettingsChinese}</button>
+								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'en' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('en'); currentLang = 'en'; }}>{tSettingsEnglish}</button>
 							</div>
 						</div>
 
@@ -573,7 +612,7 @@
 								<div>
 									<div class="flex items-center gap-2 text-[13px] text-text-primary">
 										<Palette size={14} class="text-accent" />
-										<span>{tSettingsAccentcolor}}</span>
+										<span>{tSettingsAccentcolor}</span>
 										</div>
 										{#if !accentColorIsValid}
 											<div class="mt-1 text-xs text-danger">Use a #RRGGBB hex color.</div>
@@ -600,7 +639,7 @@
 												: 'border-danger'}"
 										/>
 										<Button variant="secondary" size="sm" onclick={handleAccentReset}
-											>{tSettingsDefault}}</Button
+											>{tSettingsDefault}</Button
 										>
 									</div>
 								</div>
@@ -637,7 +676,7 @@
 						{#if matchesSearch('ui font', 'western font', 'interface font', 'display font', 'font', 'font')}
 							<div class={settingRowClass}>
 								<div>
-									<div class="flex items-center gap-2 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M13 18L8 6L3 18m8-4H5m16 4v-3m0 0v-3m0 3a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/></svg><span>{tSettingsFont}}</span></div>
+									<div class="flex items-center gap-2 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M13 18L8 6L3 18m8-4H5m16 4v-3m0 0v-3m0 3a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/></svg><span>{tSettingsFont}</span></div>
 								</div>
 								<div class="w-56">
 									<select class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none" onchange={handleFontChange}>
@@ -660,7 +699,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<MousePointer size={16} class="text-accent" />
-									{tSettingsBehavior}}
+									{tSettingsBehavior}
 								</h2>
 							</div>
 						</div>
@@ -669,7 +708,7 @@
 							{#if matchesSearch('confirm before delete', 'confirmation', 'delete')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{tSettingsConfirmbeforedelete}}</div>
+										<div class="text-[13px] text-text-primary">{tSettingsConfirmbeforedelete}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.confirmDelete}
@@ -682,7 +721,7 @@
 							{#if matchesSearch('preview on single click', 'preview', 'single click')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{tSettingsPreviewonsingleclick}}</div>
+										<div class="text-[13px] text-text-primary">{tSettingsPreviewonsingleclick}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.previewOnSingleClick}
@@ -701,7 +740,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<Layout size={16} class="text-accent" />
-									{tSettingsDefaultview}}
+									{tSettingsDefaultview}
 								</h2>
 							</div>
 						</div>
@@ -710,7 +749,7 @@
 							{#if matchesSearch('sort by', 'default sort field', 'name', 'size', 'date modified', 'type')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{tSettingsSortby}}</div>
+										<div class="text-[13px] text-text-primary">{tSettingsSortby}</div>
 									</div>
 									<div class="w-44">
 										<Select options={sortByOptions} bind:value={settings.defaultSortBy} />
@@ -721,7 +760,7 @@
 							{#if matchesSearch('sort direction', 'ascending', 'descending')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{tSettingsSortdirection}}</div>
+										<div class="text-[13px] text-text-primary">{tSettingsSortdirection}</div>
 									</div>
 									<div class="w-44">
 										<Select options={sortDirOptions} bind:value={settings.defaultSortDir} />
@@ -732,7 +771,7 @@
 							{#if matchesSearch('view mode', 'list', 'grid')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{tSettingsViewmode}}</div>
+										<div class="text-[13px] text-text-primary">{tSettingsViewmode}</div>
 									</div>
 									<div class="w-44">
 										<Select options={viewModeOptions} bind:value={settings.defaultViewMode} />
@@ -749,23 +788,23 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<User size={16} class="text-accent" />
-									{tSettingsAccount}}
+									{tSettingsAccount}
 								</h2>
 							</div>
 						</div>
 
 						<div class="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center">
 							<div>
-								<div class="text-[13px] text-text-primary">{tSettingsSignedinsession}}</div>
+								<div class="text-[13px] text-text-primary">{tSettingsSignedinsession}</div>
 							</div>
 							<div class="flex flex-wrap gap-2">
 								<Button variant="secondary" size="sm" onclick={handleReset}>
 									<RotateCcw size={14} />
-									{tSettingsResetdefaults}}
+									{tSettingsResetdefaults}
 								</Button>
 								<Button variant="danger" size="sm" onclick={handleLogout}>
 									<LogOut size={14} />
-									{tSettingsLogout}}
+									{tSettingsLogout}
 								</Button>
 							</div>
 						</div>

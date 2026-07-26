@@ -33,6 +33,18 @@
 		hostsConfig.hosts?.[localStorage.getItem("currentHostId") || hostsConfig.default]
 	);
 
+	const tComposeLoadfailed = $derived(t('compose.loadFailed'));
+	const tComposeEmptyname = $derived(t('compose.emptyName'));
+	const tComposeCreatefailed = $derived(t('compose.createFailed'));
+	const tComposeSavefailed = $derived(t('compose.saveFailed'));
+	const tComposeNameexists = $derived(t('compose.nameExists'));
+	const tComposeNew = $derived(t('compose.new'));
+	const tComposeProject = $derived(t('compose.project'));
+	const tComposeModified = $derived(t('compose.modified'));
+	const tComposeSaving = $derived(t('compose.saving'));
+	const tComposeCreate = $derived(t('compose.create'));
+	const tComposeSave = $derived(t('compose.save'));
+
 	onMount(async () => {
 		try {
 			hostsConfig = await hostsApi.list();
@@ -54,7 +66,7 @@
 			const data = await dockerApi.get<{ content: string }>(`/docker/compose/${projectId}/file`);
 			composeContent = data?.content || '';
 		} catch (e) {
-			error = e instanceof Error ? e.message : {tComposeLoadfailed};
+			error = e instanceof Error ? e.message : tComposeLoadfailed;
 		} finally {
 			loading = false;
 		}
@@ -125,7 +137,7 @@
 	async function handleSave() {
 		if (isNew) {
 			// Create new project
-			if (!projectName.trim()) { error = {tComposeEmptyname}; return; }
+			if (!projectName.trim()) { error = tComposeEmptyname; return; }
 			saving = true; error = '';
 			try {
 				await dockerApi.post('/docker/compose', {
@@ -135,7 +147,7 @@
 				});
 				goto(resolve('/compose'));
 			} catch (e) {
-				error = e instanceof Error ? e.message : {tComposeCreatefailed};
+				error = e instanceof Error ? e.message : tComposeCreatefailed;
 			} finally {
 				saving = false;
 			}
@@ -146,7 +158,7 @@
 				await dockerApi.put(`/docker/compose/${projectId}/file`, { content: composeContent });
 				dirty = false;
 			} catch (e) {
-				error = e instanceof Error ? e.message : {tComposeSavefailed};
+				error = e instanceof Error ? e.message : tComposeSavefailed;
 			} finally {
 				saving = false;
 			}
@@ -158,7 +170,7 @@
 		try {
 			const result = await dockerApi.get<{ exists: boolean }>(`/docker/compose/check-name?name=${encodeURIComponent(name.trim())}`);
 			if (result.exists) {
-				error = {tComposeNameexists};
+				error = tComposeNameexists;
 			}
 		} catch (e) { /* ignore */ }
 	}
@@ -172,10 +184,10 @@
 				<ArrowLeft size={18} />
 			</button>
 			<h1 class="text-base font-semibold text-text-primary">
-				{isNew ? {tComposeNew} + ' Compose ' + {tComposeProject} : projectId}
+				{isNew ? tComposeNew + ' Compose ' + tComposeProject : projectId}
 			</h1>
 			{#if dirty}
-				<span class="text-[11px] text-orange-400">● {tComposeModified}}</span>
+				<span class="text-[11px] text-orange-400">● {tComposeModified}</span>
 			{/if}
 		</div>
 		<div class="flex items-center gap-2">
@@ -189,7 +201,7 @@
 				{#if saving}
 					<Spinner size={14} class="mr-1" /> {tComposeSaving}...
 				{:else}
-					<Save size={14} class="mr-1" /> {isNew ? {tComposeCreate} : {tComposeSave}}
+					<Save size={14} class="mr-1" /> {isNew ? tComposeCreate : tComposeSave}
 				{/if}
 			</Button>
 		</div>

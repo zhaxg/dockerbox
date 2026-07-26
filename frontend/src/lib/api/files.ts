@@ -131,7 +131,10 @@ function encodeRoutePath(path: string): string {
  * GET /api/v1/files
  */
 export async function listRoots(): Promise<RootsResponse> {
-	return api.get<RootsResponse>('/files');
+	const hostId = typeof window !== 'undefined' ? localStorage.getItem('currentHostId') : '';
+	const params: Record<string, string> = {};
+	if (hostId) params.hostId = hostId;
+	return api.get<RootsResponse>('/files', params);
 }
 
 /**

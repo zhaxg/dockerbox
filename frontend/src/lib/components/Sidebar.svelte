@@ -128,7 +128,7 @@
 		<button type="button" class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-secondary hover:bg-surface-secondary transition-colors"
 			onclick={() => hostDropdownOpen = !hostDropdownOpen}>
 			<Server size={14} class="shrink-0 text-green-500" />
-			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[currentHostId]?.name || {tSidebarSelecthost}}</span>
+			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[currentHostId]?.name || tSidebarSelectHost}</span>
 			<ChevronDown size={12} class="shrink-0 transition-transform {hostDropdownOpen ? '' : '-rotate-90'}" />
 		</button>
 		{#if hostDropdownOpen}

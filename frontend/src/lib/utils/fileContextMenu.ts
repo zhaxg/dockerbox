@@ -5,7 +5,6 @@
 
 import type { ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
 import type { FileInfo } from '$lib/api/files';
-import { get } from 'svelte/store';
 import { t, getLocale } from '$lib/i18n/index.svelte';
 import {
 	Copy,
@@ -78,8 +77,8 @@ export function getFileContextMenuItems(options: FileContextMenuOptions): Contex
 	const isFavorite = singleFolder ? favoritePaths.has(singleFolder.path) : false;
 	const createItems: ContextMenuItem[] = includeCreateActions
 		? [
-				{ id: 'new-file', label: get(_t)('files.newFile'), icon: FilePlus, disabled: !canCreate },
-				{ id: 'new-folder', label: get(_t)('files.newFolder'), icon: FolderPlus, disabled: !canCreate },
+				{ id: 'new-file', label: t('files.newFile'), icon: FilePlus, disabled: !canCreate },
+				{ id: 'new-folder', label: t('files.newFolder'), icon: FolderPlus, disabled: !canCreate },
 				{ id: 'separator-create', label: '', separator: true }
 			]
 		: [];
@@ -87,35 +86,35 @@ export function getFileContextMenuItems(options: FileContextMenuOptions): Contex
 	if (!hasSelection) {
 		return [
 			...createItems,
-			{ id: 'paste', label: get(_t)('files.paste'), icon: ClipboardPaste, shortcut: 'Ctrl+V', disabled: !canPaste },
+			{ id: 'paste', label: t('files.paste'), icon: ClipboardPaste, shortcut: 'Ctrl+V', disabled: !canPaste },
 			{ id: 'separator-refresh', label: '', separator: true },
-			{ id: 'refresh', label: get(_t)('files.refresh'), icon: RefreshCw, shortcut: 'F5' }
+			{ id: 'refresh', label: t('files.refresh'), icon: RefreshCw, shortcut: 'F5' }
 		];
 	}
 
 	return [
 		...(singleFile && canOpenAsText(items[0])
-			? [{ id: 'open-with-notepad', label: get(_t)('files.preview'), icon: FileText }]
+			? [{ id: 'open-with-notepad', label: t('files.preview'), icon: FileText }]
 			: []),
-		{ id: 'copy', label: get(_t)('files.copy'), icon: Copy, shortcut: 'Ctrl+C' },
-		{ id: 'cut', label: get(_t)('files.cut'), icon: Scissors, shortcut: 'Ctrl+X' },
-		{ id: 'paste', label: get(_t)('files.paste'), icon: ClipboardPaste, shortcut: 'Ctrl+V', disabled: !canPaste },
+		{ id: 'copy', label: t('files.copy'), icon: Copy, shortcut: 'Ctrl+C' },
+		{ id: 'cut', label: t('files.cut'), icon: Scissors, shortcut: 'Ctrl+X' },
+		{ id: 'paste', label: t('files.paste'), icon: ClipboardPaste, shortcut: 'Ctrl+V', disabled: !canPaste },
 		...(singleFolder
 			? [
 					{
 						id: isFavorite ? 'unpin' : 'pin',
-						label: isFavorite ? get(_t)('files.unpin') : get(_t)('files.pin'),
+						label: isFavorite ? t('files.unpin') : t('files.pin'),
 						icon: isFavorite ? PinOff : Pin
 					}
 				]
 			: []),
 		{ id: 'separator-1', label: '', separator: true },
-		{ id: 'rename', label: get(_t)('files.rename'), icon: Pencil, shortcut: 'F2', disabled: hasMultiple },
-		{ id: 'delete', label: get(_t)('files.delete'), icon: Trash2, shortcut: 'Del' },
+		{ id: 'rename', label: t('files.rename'), icon: Pencil, shortcut: 'F2', disabled: hasMultiple },
+		{ id: 'delete', label: t('files.delete'), icon: Trash2, shortcut: 'Del' },
 		{ id: 'separator-2', label: '', separator: true },
-		{ id: 'download', label: get(_t)('files.download'), icon: Download, disabled: hasFolder },
-		{ id: 'properties', label: get(_t)('files.properties'), icon: Info, disabled: hasMultiple },
+		{ id: 'download', label: t('files.download'), icon: Download, disabled: hasFolder },
+		{ id: 'properties', label: t('files.properties'), icon: Info, disabled: hasMultiple },
 		{ id: 'separator-refresh', label: '', separator: true },
-		{ id: 'refresh', label: get(_t)('files.refresh'), icon: RefreshCw, shortcut: 'F5' }
+		{ id: 'refresh', label: t('files.refresh'), icon: RefreshCw, shortcut: 'F5' }
 	];
 }

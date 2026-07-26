@@ -16,6 +16,7 @@ type JobHandler struct {
 	jobService      service.JobService
 	hostAccess      map[string]service.HostFileAccess
 	hostMountPoints map[string]map[string]string // hostID -> mountName -> hostPath
+	defaultHostID   string
 }
 
 // NewJobHandler creates a new job handler
@@ -37,8 +38,23 @@ func (h *JobHandler) SetHostMountPoints(hostID string, mounts map[string]string)
 	h.hostMountPoints[hostID] = mounts
 }
 
+// SetDefaultHost sets the default host ID for fallback.
+func (h *JobHandler) SetDefaultHost(hostID string) {
+	h.defaultHostID = hostID
+}
+
+func (h *JobHandler) getHostID(r *http.Request) string {
+	if id := getHostID(r); id != "" {
+		return id
+	}
+	if h.defaultHostID != "" {
+		return h.defaultHostID
+	}
+	return ""
+}
+
 func (h *JobHandler) getHostAccess(r *http.Request) service.HostFileAccess {
-	hostID := getHostID(r)
+	hostID := h.getHostID(r)
 	if hostID != "" {
 		if access, ok := h.hostAccess[hostID]; ok {
 			return access
@@ -48,7 +64,7 @@ func (h *JobHandler) getHostAccess(r *http.Request) service.HostFileAccess {
 }
 
 func (h *JobHandler) resolvePath(r *http.Request, boxPath string) string {
-	hostID := getHostID(r)
+	hostID := h.getHostID(r)
 	decoded, _ := url.PathUnescape(boxPath)
 	parts := strings.SplitN(decoded, "/", 2)
 	mountName := parts[0]
@@ -65,10 +81,6 @@ func (h *JobHandler) resolvePath(r *http.Request, boxPath string) string {
 		}
 	}
 	return "/" + decoded
-}
-
-func (h *JobHandler) getHostID(r *http.Request) string {
-	return getHostID(r)
 }
 
 // RegisterRoutes registers job routes on the given router

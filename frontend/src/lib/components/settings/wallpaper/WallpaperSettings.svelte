@@ -10,6 +10,16 @@
 	} from '$lib/utils/wallpaper';
 	import WallpaperPickerModal from './WallpaperPickerModal.svelte';
 	import { t, getLocale } from '$lib/i18n/index.svelte';
+const tSettingsTile = $derived(t("settings.tile"));
+const tSettingsStretch = $derived(t("settings.stretch"));
+const tSettingsFitonscreen = $derived(t("settings.fitOnScreen"));
+const tSettingsCroptofit = $derived(t("settings.cropToFit"));
+const tSettingsCenter = $derived(t("settings.center"));
+const tSettingsClear = $derived(t("settings.clear"));
+const tSettingsFrostedglass = $derived(t("settings.frostedGlass"));
+const tSettingsWallpaperfit = $derived(t("settings.wallpaperFit"));
+const tSettingsChoosewallpaper = $derived(t("settings.chooseWallpaper"));
+const tSettingsWallpaper = $derived(t("settings.wallpaper"));
 
 	interface WallpaperSelection {
 		backgroundImage: string;
@@ -46,11 +56,11 @@
 	const translatedOptions = $derived(
 		WALLPAPER_DISPLAY_OPTIONS.map(opt => ({
 			...opt,
-			label: opt.value === 'cover' ? {tSettingsCroptofit}
-				: opt.value === 'contain' ? {tSettingsFitonscreen}
-				: opt.value === 'stretch' ? {tSettingsStretch}
-				: opt.value === 'center' ? {tSettingsCenter}
-				: opt.value === 'tile' ? {tSettingsTile}
+			label: opt.value === 'cover' ? tSettingsCroptofit
+				: opt.value === 'contain' ? tSettingsFitonscreen
+				: opt.value === 'stretch' ? tSettingsStretch
+				: opt.value === 'center' ? tSettingsCenter
+				: opt.value === 'tile' ? tSettingsTile
 				: opt.label
 		}))
 	);
@@ -72,7 +82,7 @@
 		<div class="min-w-56">
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<ImageIcon size={14} class="text-accent" />
-				<span>{tSettingsWallpaper}}</span>
+				<span>{tSettingsWallpaper}</span>
 			</div>
 			{#if !backgroundImageIsValid}
 				<div class="mt-1 text-xs text-danger">
@@ -84,7 +94,7 @@
 		<div class="flex min-w-64 flex-1 justify-end gap-2">
 			<Button variant="secondary" size="sm" onclick={() => (wallpaperDialogOpen = true)}>
 				<ImageIcon size={14} />
-				{tSettingsChoosewallpaper}}
+				{tSettingsChoosewallpaper}
 			</Button>
 			<Button
 				variant="secondary"
@@ -92,7 +102,7 @@
 				onclick={handleBackgroundClear}
 				disabled={!hasBackgroundImage}
 			>
-				{tSettingsClear}}
+				{tSettingsClear}
 			</Button>
 		</div>
 	</div>
@@ -103,7 +113,7 @@
 		<div>
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<ScanSearch size={14} class="text-accent" />
-				<span>{tSettingsWallpaperfit}}</span>
+				<span>{tSettingsWallpaperfit}</span>
 			</div>
 		</div>
 		<div class="w-48">
@@ -121,7 +131,7 @@
 		<div>
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<Sparkles size={14} class="text-accent" />
-				<span>{tSettingsFrostedglass}}</span>
+				<span>{tSettingsFrostedglass}</span>
 			</div>
 		</div>
 		<Toggle

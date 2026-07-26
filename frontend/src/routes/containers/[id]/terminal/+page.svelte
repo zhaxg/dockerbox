@@ -9,6 +9,14 @@
 
 	const containerId = $derived(page.params.id);
 
+	const tContainersConnectedtoterminal = $derived(t('containers.connectedToTerminal'));
+	const tContainersConnectionlost = $derived(t('containers.connectionLost'));
+	const tContainersConnectionerror = $derived(t('containers.connectionError'));
+	const tContainersBack = $derived(t('containers.back'));
+	const tContainersTerminal = $derived(t('containers.terminal'));
+	const tContainersConnected = $derived(t('containers.connected'));
+	const tContainersDisconnected = $derived(t('containers.disconnected'));
+
 	let terminalEl = $state<HTMLDivElement | null>(null);
 	let ws = $state<WebSocket | null>(null);
 	let outputBuffer = $state('');
@@ -30,7 +38,7 @@
 
 		ws.onopen = () => {
 			connected = true;
-			outputBuffer = {tContainersConnectedtoterminal} + '...\r\n';
+			outputBuffer = tContainersConnectedtoterminal + '...\r\n';
 			ws?.send(JSON.stringify({ type: 'auth', token }));
 		};
 
@@ -57,12 +65,12 @@
 
 		ws.onclose = () => {
 			connected = false;
-			outputBuffer += '\r\n' + {tContainersConnectionlost};
+			outputBuffer += '\r\n' + tContainersConnectionlost;
 		};
 
 		ws.onerror = () => {
 			connected = false;
-			outputBuffer += '\r\n' + {tContainersConnectionerror};
+			outputBuffer += '\r\n' + tContainersConnectionerror;
 		};
 	}
 
@@ -127,14 +135,14 @@
 	<div class="mb-4 flex items-center gap-4">
 		<Button variant="secondary" onclick={() => goto(resolve(`/containers/${containerId}`))}>
 			<ArrowLeft size={16} class="mr-2" />
-			{tContainersBack}}
+			{tContainersBack}
 		</Button>
 		<h1 class="text-2xl font-semibold text-text-primary">
 			<Terminal size={20} class="mr-2" />
-			{tContainersTerminal}} - {containerId}
+			{tContainersTerminal} - {containerId}
 		</h1>
 		<span class="text-sm text-text-secondary">
-			{connected ? {tContainersConnected} : {tContainersDisconnected}}
+			{connected ? tContainersConnected : tContainersDisconnected}
 		</span>
 	</div>
 

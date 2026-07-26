@@ -8,6 +8,10 @@
 	import { formatFileSize, formatPercentage } from '$lib/utils/format';
 	import { X, Check, AlertCircle } from 'lucide-svelte';
 	import { ProgressBar } from '$lib/components/ui';
+	const tUploadQueued = $derived(t("upload.queued"));
+	const tUploadCompleted = $derived(t("upload.completed"));
+	const tUploadFailed = $derived(t("upload.failed"));
+	const tUploadCancelled = $derived(t("upload.cancelled"));
 
 	interface Props {
 		uploads: UploadProgressType[];
@@ -46,11 +50,11 @@
 
 	function getStatusText(upload: UploadProgressType): string {
 		switch (upload.status) {
-			case 'pending': return {tUploadQueued};
+			case 'pending': return tUploadQueued;
 			case 'uploading': return formatPercentage(upload.percentage, 0, false);
-			case 'complete': return {tUploadCompleted};
-			case 'error': return upload.error || {tUploadFailed};
-			case 'cancelled': return {tUploadCancelled};
+			case 'complete': return tUploadCompleted;
+			case 'error': return upload.error || tUploadFailed;
+			case 'cancelled': return tUploadCancelled;
 			default: return '';
 		}
 	}

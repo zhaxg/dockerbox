@@ -44,7 +44,8 @@
     "checking": "Checking...",
     "connectFailed": "Connection failed",
     "cancel": "Cancel",
-    "deleteConfirm": "Delete this host?"
+    "deleteConfirm": "Delete this host?",
+    "connectSuccess": "Connection successful"
   },
   "containers": {
     "title": "Containers",
@@ -76,7 +77,10 @@
     "pruneConfirm": "Prune all unused images and networks?",
     "prune": "Prune",
     "pruneFailed": "Prune failed",
-    "noResources": "No resources to prune"
+    "noResources": "No resources to prune",
+    "pruneUnused": "Prune unused resources",
+    "pruneImages": "Prune unused images and networks",
+    "noLogs": "No logs"
   },
   "compose": {
     "title": "Compose",
@@ -114,6 +118,7 @@
     "startFailed": "Start failed",
     "deleteProject": "Delete project",
     "deleteConfirm": "Delete this project?",
+    "stopConfirm": "Stop this project?",
     "redeployConfirm": "Redeploy this project?",
     "noLogs": "No logs",
     "scanImport": "Scan & Import",
@@ -125,6 +130,7 @@
     "hasStoppedContainers": "Some containers are stopped",
     "silentStart": "Silent start",
     "new": "New",
+    "create": "Create",
     "name": "Name",
     "status": "Status",
     "selected": "Selected",
@@ -253,6 +259,28 @@
     "properties": "Properties",
     "open": "Open"
   },
+  "upload": {
+    "queued": "Queued",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "table": {
+    "name": "Name",
+    "state": "State",
+    "uptime": "Uptime",
+    "cpu": "CPU",
+    "mem": "Mem",
+    "trans": "Trans",
+    "ports": "Ports",
+    "actions": "Actions",
+    "endpoint": "Endpoint",
+    "status": "Status",
+    "tags": "Tags",
+    "docker": "Docker",
+    "path": "Path",
+    "services": "Services"
+  },
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel",
@@ -278,6 +306,7 @@
     "operationComplete": "Operation complete",
     "saving": "Saving",
     "saved": "Saved",
+    "status": "Status",
     "confirmDelete": "Delete",
     "item": "item",
     "items": "items"

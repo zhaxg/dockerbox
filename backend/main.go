@@ -237,6 +237,7 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 		// Register per-host mount points and Docker services for file handler
 		if cfg.DockerHosts != nil {
 			fileHandler.SetDefaultHost(cfg.DockerHosts.Default)
+		jobHandler.SetDefaultHost(cfg.DockerHosts.Default)
 			for id, host := range cfg.DockerHosts.Hosts {
 				var mps []model.MountPoint
 				for name, mp := range host.MountPoints {

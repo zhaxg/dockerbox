@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { t, getLocale } from '$lib/i18n/index.svelte';
 	import { X } from 'lucide-svelte';
+	const tComposeAbort = $derived(t("compose.abort"));
 
 	let { open = false, name = '', content = '', loading = false, streaming = false, onClose, onAbort }: {
 		open: boolean;
@@ -35,7 +36,7 @@
 			</div>
 			{#if loading && onAbort}
 				<div class="flex justify-end border-t border-border-secondary px-4 py-3">
-					<button type="button" class="inline-flex items-center gap-1 rounded bg-red-500/15 px-3 py-1 text-xs text-red-400 hover:bg-red-500/25 transition-colors" onclick={onAbort}>{tComposeAbort}}</button>
+					<button type="button" class="inline-flex items-center gap-1 rounded bg-red-500/15 px-3 py-1 text-xs text-red-400 hover:bg-red-500/25 transition-colors" onclick={onAbort}>{tComposeAbort}</button>
 				</div>
 			{/if}
 		</div>
