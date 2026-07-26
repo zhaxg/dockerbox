@@ -1,6 +1,7 @@
 import type { FileInfo } from '$lib/api/files';
 import { getPreviewType } from '$lib/utils/fileTypes';
 
+
 export type BackgroundImageMode = 'cover' | 'contain' | 'stretch' | 'center' | 'tile';
 
 export const DEFAULT_BACKGROUND_IMAGE_MODE: BackgroundImageMode = 'cover';

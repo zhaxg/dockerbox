@@ -43,6 +43,17 @@
 	const backgroundImageIsValid = $derived(isValidBackgroundImage(backgroundImage));
 	const hasBackgroundImage = $derived(normalizeBackgroundImage(backgroundImage) !== null);
 	const normalizedMode = $derived(normalizeBackgroundImageMode(backgroundImageMode));
+	const translatedOptions = $derived(
+		WALLPAPER_DISPLAY_OPTIONS.map(opt => ({
+			...opt,
+			label: opt.value === 'cover' ? $_t('settings.cropToFit')
+				: opt.value === 'contain' ? $_t('settings.fitOnScreen')
+				: opt.value === 'stretch' ? $_t('settings.stretch')
+				: opt.value === 'center' ? $_t('settings.center')
+				: opt.value === 'tile' ? $_t('settings.tile')
+				: opt.label
+		}))
+	);
 
 	function handleBackgroundClear() {
 		backgroundImage = null;
@@ -97,7 +108,7 @@
 		</div>
 		<div class="w-48">
 			<Select
-				options={WALLPAPER_DISPLAY_OPTIONS}
+				options={translatedOptions}
 				bind:value={backgroundImageMode}
 				disabled={!hasBackgroundImage}
 			/>
