@@ -91,7 +91,7 @@ const defaultSettings: UserSettings = {
 	frostedGlass: false,
 	previewOnSingleClick: false,
 	compactMode: false,
-	uiFont: '',
+	uiFont: '"Space Grotesk", sans-serif',
 	driveNameOverrides: {},
 	favoriteFolders: []
 };
