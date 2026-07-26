@@ -386,7 +386,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 
 	function getStatusColor(s: string) { return s === 'running' ? 'bg-green-500' : s === 'stopped' ? 'bg-red-500' : s === 'partial' ? 'bg-yellow-500' : 'bg-gray-500'; }
-	function getStatusText(s: string) { return s === 'running' ? '{tComposeRunning}' : s === 'stopped' ? '{tComposeStopped}' : s === 'partial' ? $_t('compose.partialRunning') : s; }
+	function getStatusText(s: string) { return s === 'running' ? $_t('compose.running') : s === 'stopped' ? $_t('compose.stopped') : s === 'partial' ? $_t('compose.partialRunning') : s; }
 
 	const thClass = 'px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-text-muted border-b border-border-secondary select-none whitespace-nowrap';
 	const tdClass = 'px-3 py-2 text-[13px] text-text-primary border-b border-border-secondary/50';
