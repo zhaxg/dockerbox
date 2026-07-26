@@ -23,11 +23,11 @@
 		isDefault: boolean;
 	}>({
 		open: false, mode: 'add',
-		host: { id: '', name: '', driver: 'socket', endpoint: '/var/run/docker.sock', sshKey: '', sshPubKey: '', tags: [], mountPoints: {} },
+		host: { id: '', name: '', driver: 'socket', endpoint: '/var/run/docker.sock', sshKey: '', sshPubKey: '', tags: [], mountPoints: {}, key: '' },
 		mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: '', isDefault: false
 	});
 
-	const hostList = $derived(Object.values(hostsConfig.hosts || {}));
+	const hostList = $derived(Object.entries(hostsConfig.hosts || {}).map(([key, host]) => ({key, ...host})));
 	const filteredHostList = $derived(
 		searchQuery.trim()
 			? hostList.filter((h) => h.name.toLowerCase().includes(searchQuery.toLowerCase()) || h.endpoint.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -71,14 +71,14 @@
 		};
 	}
 
-	function openEdit(host: DockerHost) {
+	function openEdit(host: any) {
 		const mp = host.mountPoints || {};
 		const dockerKey = Object.entries(mp).find(([_, v]: [string, any]) => v.isDocker)?.[0] || Object.keys(mp)[0] || '';
 		modal = {
 			open: true, mode: 'edit',
-			host: { ...host, mountPoints: { ...mp }, tags: [...(host.tags || [])] },
+			host: { ...host, id: host.key, mountPoints: { ...mp }, tags: [...(host.tags || [])] },
 			mountKey: '', mountPath: '', mountReadOnly: false, dockerDirKey: dockerKey,
-			isDefault: hostsConfig.default === host.id
+			isDefault: hostsConfig.default === host.key
 		};
 	}
 
@@ -221,12 +221,12 @@
 					<th class="{thClass} text-right">Actions</th>
 				</tr></thead>
 				<tbody>
-					{#each filteredHostList as host (host.id)}
+					{#each filteredHostList as host (host.key)}
 						<tr class="transition-colors hover:bg-surface-secondary">
 							<td class="{tdClass}">
 								<div class="flex items-center gap-2">
-									{#if hostStats[host.id]}
-										<span class="h-2 w-2 rounded-full shrink-0 {hostStats[host.id].status === 'online' ? 'bg-green-500' : 'bg-red-500'}"></span>
+									{#if hostStats[host.key]}
+										<span class="h-2 w-2 rounded-full shrink-0 {hostStats[host.key].status === 'online' ? 'bg-green-500' : 'bg-red-500'}"></span>
 									{:else}<span class="h-2 w-2 rounded-full bg-gray-500 shrink-0"></span>{/if}
 									<span class="font-medium">{host.name}</span>
 									<span class="text-[11px] {getDriverColor(host.driver)}">{getDriverLabel(host.driver)}</span>
@@ -234,9 +234,9 @@
 							</td>
 							<td class="{tdClass} font-mono text-[12px] text-text-secondary">{host.endpoint}</td>
 							<td class="{tdClass}">
-								{#if hostStats[host.id]}
-									<span class="text-[11px] {hostStats[host.id].status === 'online' ? 'text-green-400' : 'text-red-400'}">
-										{hostStats[host.id].status === 'online' ? '在线' : '离线'}
+								{#if hostStats[host.key]}
+									<span class="text-[11px] {hostStats[host.key].status === 'online' ? 'text-green-400' : 'text-red-400'}">
+										{hostStats[host.key].status === 'online' ? '在线' : '离线'}
 									</span>
 								{:else}<span class="text-[11px] text-text-muted">检测中...</span>{/if}
 							</td>
@@ -248,16 +248,16 @@
 								</div>
 							</td>
 							<td class="{tdClass} text-text-secondary text-[12px]">
-								{#if hostStats[host.id]}{hostStats[host.id].running}/{hostStats[host.id].total}{:else}-{/if}
+								{#if hostStats[host.key]}{hostStats[host.key].running}/{hostStats[host.key].total}{:else}-{/if}
 							</td>
 							<td class="{tdClass}">
 								<div class="flex justify-end items-center gap-1">
-									{#if hostsConfig.default === host.id}
+									{#if hostsConfig.default === host.key}
 										<Check size={14} class="text-green-400 shrink-0" />
 									{/if}
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => testHost(host.id)} title="测试连接" disabled={testLoading}><Plug size={13} /></button>
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => testHost(host.key)} title="测试连接" disabled={testLoading}><Plug size={13} /></button>
 									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openEdit(host)} title="编辑"><Pencil size={13} /></button>
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteHost(host.id, host.name)} title="删除"><Trash2 size={13} /></button>
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteHost(host.key, host.name)} title="删除"><Trash2 size={13} /></button>
 								</div>
 							</td>
 						</tr>

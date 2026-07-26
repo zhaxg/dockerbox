@@ -404,8 +404,8 @@
 				<input type="text" bind:value={searchQuery} placeholder="搜索..." class="h-7 w-40 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
 			<Button variant="secondary" size="sm" onclick={openNew} title="新建"><Plus size={14} /></Button>
+			<Button variant="secondary" size="sm" onclick={scanAvailable} title="扫描导入"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M13 20h9V6H11L9 3.5H2v8.25"/><path d="m6.042 21.502l3.46-3.5l-3.46-3.5m2.258 3.5H.998"/></g></svg></Button>
 			<Button variant="secondary" size="sm" onclick={loadProjects} title="刷新"><RefreshCw size={14} /></Button>
-			<Button variant="secondary" size="sm" onclick={scanAvailable} title="扫描导入"><Download size={14} /></Button>
 		</div>
 	</div>
 	<div class="flex-1 overflow-auto">
