@@ -208,7 +208,23 @@
     "resetDefaults": "Reset Defaults",
     "backToFiles": "Back to files",
     "preferences": "Preferences",
-    "searchSettings": "Search settings..."
+    "searchSettings": "Search settings...",
+    "default": "Default",
+    "clear": "Clear",
+    "chooseWallpaper": "Choose Wallpaper",
+    "sortByName": "Name",
+    "sortBySize": "Size",
+    "sortByDate": "Date modified",
+    "sortByType": "Type",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "listView": "List",
+    "gridView": "Grid",
+    "cropToFit": "Crop to fill",
+    "fitOnScreen": "Fit on screen",
+    "stretch": "Stretch",
+    "center": "Center",
+    "tile": "Tile"
   },
   "files": {
     "title": "Files",
@@ -259,6 +275,8 @@
     "port": "Port",
     "default": "Default",
     "saveFailed": "Save failed",
-    "operationComplete": "Operation complete"
+    "operationComplete": "Operation complete",
+    "saving": "Saving",
+    "saved": "Saved"
   }
 }

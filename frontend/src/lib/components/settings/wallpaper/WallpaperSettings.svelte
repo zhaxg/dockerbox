@@ -73,7 +73,7 @@
 		<div class="flex min-w-64 flex-1 justify-end gap-2">
 			<Button variant="secondary" size="sm" onclick={() => (wallpaperDialogOpen = true)}>
 				<ImageIcon size={14} />
-				Choose Wallpaper
+				{$_t('settings.chooseWallpaper')}
 			</Button>
 			<Button
 				variant="secondary"
@@ -81,7 +81,7 @@
 				onclick={handleBackgroundClear}
 				disabled={!hasBackgroundImage}
 			>
-				Clear
+				{$_t('settings.clear')}
 			</Button>
 		</div>
 	</div>

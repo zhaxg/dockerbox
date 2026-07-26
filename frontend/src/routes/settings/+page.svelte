@@ -77,8 +77,8 @@
 	const showApplyProgress = $derived(isApplyingSettings || applyProgress > 0);
 	const saveButtonText = $derived.by(() => {
 		if (applyProgressVariant === 'danger' && applyProgress > 0) return 'Failed';
-		if (applyProgressVariant === 'success' && applyProgress >= 100) return 'Saved';
-		return isApplyingSettings ? 'Saving' : 'Save';
+		if (applyProgressVariant === 'success' && applyProgress >= 100) return $_t('common.saved');
+		return isApplyingSettings ? $_t('common.saving') : $_t('common.save');
 	});
 
 	const navItems: Array<{
@@ -108,7 +108,7 @@
 		},
 		{
 			id: 'defaults',
-			label: 'Default View',
+			label: $_t('settings.defaultView'),
 			icon: Layout
 		},
 		{
@@ -119,20 +119,20 @@
 	];
 
 	const sortByOptions = [
-		{ value: 'name', label: 'Name' },
-		{ value: 'size', label: 'Size' },
-		{ value: 'modTime', label: 'Date modified' },
-		{ value: 'type', label: 'Type' }
+		{ value: 'name', label: $_t('settings.sortByName') },
+		{ value: 'size', label: $_t('settings.sortBySize') },
+		{ value: 'modTime', label: $_t('settings.sortByDate') },
+		{ value: 'type', label: $_t('settings.sortByType') }
 	];
 
 	const sortDirOptions = [
-		{ value: 'asc', label: 'Ascending' },
-		{ value: 'desc', label: 'Descending' }
+		{ value: 'asc', label: $_t('settings.ascending') },
+		{ value: 'desc', label: $_t('settings.descending') }
 	];
 
 	const viewModeOptions = [
-		{ value: 'list', label: 'List' },
-		{ value: 'grid', label: 'Grid' }
+		{ value: 'list', label: $_t('settings.listView') },
+		{ value: 'grid', label: $_t('settings.gridView') }
 	];
 
 	const uiFontOptions = [
@@ -437,7 +437,7 @@
 			>
 				<span class="text-[13px] whitespace-nowrap text-text-secondary">Settings</span>
 				<span class="text-xs text-text-muted">/</span>
-				<span class="text-[13px] whitespace-nowrap text-text-primary">Preferences</span>
+				<span class="text-[13px] whitespace-nowrap text-text-primary">{$_t('settings.preferences')}</span>
 			</div>
 
 			<div class="w-64 shrink-0 lg:w-96">
@@ -459,13 +459,13 @@
 					disabled={!hasChanges || isApplyingSettings}
 				>
 					<X size={16} />
-					<span class="hidden sm:inline">Cancel</span>
+					<span class="hidden sm:inline">{$_t('common.cancel')}</span>
 				</Button>
 				<ProgressButton
 					variant="primary"
 					size="sm"
 					onclick={handleSave}
-					title={applyProgressStatus || 'Save changes'}
+					title={applyProgressStatus || $_t('common.save')}
 					disabled={!canSave}
 					busy={isApplyingSettings}
 					progress={showApplyProgress ? applyProgress : null}
@@ -600,7 +600,7 @@
 												: 'border-danger'}"
 										/>
 										<Button variant="secondary" size="sm" onclick={handleAccentReset}
-											>Default</Button
+											>{$_t('settings.default')}</Button
 										>
 									</div>
 								</div>
@@ -761,11 +761,11 @@
 							<div class="flex flex-wrap gap-2">
 								<Button variant="secondary" size="sm" onclick={handleReset}>
 									<RotateCcw size={14} />
-									Reset Defaults
+									{$_t('settings.resetDefaults')}
 								</Button>
 								<Button variant="danger" size="sm" onclick={handleLogout}>
 									<LogOut size={14} />
-									Logout
+									{$_t('settings.logout')}
 								</Button>
 							</div>
 						</div>

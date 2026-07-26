@@ -208,7 +208,23 @@
     "resetDefaults": "恢复默认",
     "backToFiles": "返回文件",
     "preferences": "偏好设置",
-    "searchSettings": "搜索设置..."
+    "searchSettings": "搜索设置...",
+    "default": "默认",
+    "clear": "清除",
+    "chooseWallpaper": "选择壁纸",
+    "sortByName": "名称",
+    "sortBySize": "大小",
+    "sortByDate": "修改日期",
+    "sortByType": "类型",
+    "ascending": "升序",
+    "descending": "降序",
+    "listView": "列表",
+    "gridView": "网格",
+    "cropToFit": "裁剪填充",
+    "fitOnScreen": "适应屏幕",
+    "stretch": "拉伸",
+    "center": "居中",
+    "tile": "平铺"
   },
   "files": {
     "title": "文件",
@@ -259,6 +275,8 @@
     "port": "端口",
     "default": "默认",
     "saveFailed": "保存失败",
-    "operationComplete": "操作完成"
+    "operationComplete": "操作完成",
+    "saving": "保存中",
+    "saved": "已保存"
   }
 }
