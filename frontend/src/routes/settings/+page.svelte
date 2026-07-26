@@ -496,7 +496,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<Eye size={16} class="text-accent" />
-									File Display
+									{$_t('settings.fileDisplay')}
 								</h2>
 							</div>
 						</div>
@@ -550,7 +550,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<PaintRollerIcon size={16} class="text-accent" />
-									Personalization
+									{$_t('settings.personalization')}
 								</h2>
 							</div>
 						</div>
@@ -660,7 +660,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<MousePointer size={16} class="text-accent" />
-									Behavior
+									{$_t('settings.behavior')}
 								</h2>
 							</div>
 						</div>
@@ -701,7 +701,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<Layout size={16} class="text-accent" />
-									Default Directory View
+									{$_t('settings.defaultView')}
 								</h2>
 							</div>
 						</div>
@@ -749,7 +749,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<User size={16} class="text-accent" />
-									Account
+									{$_t('settings.account')}
 								</h2>
 							</div>
 						</div>
