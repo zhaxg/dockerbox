@@ -373,16 +373,23 @@
 				</div>
 				<div>
 					<label class="mb-2 block text-[11px] text-text-muted font-medium">挂载目录</label>
-					<div class="space-y-1.5 mb-2">
-						{#each Object.entries(modal.host.mountPoints || {}) as [key, mp]}
-							<div class="flex items-center gap-2 rounded border border-border-secondary bg-surface-secondary px-3 py-1.5">
-								<input type="radio" name="dockerDir" value={key} checked={modal.dockerDirKey === key} onchange={() => modal.dockerDirKey = key} class="accent-green-500" />
-								<span class="text-[12px] font-medium text-text-primary min-w-[80px]">{key}</span>
-								<span class="flex-1 text-[11px] text-text-secondary font-mono truncate">{mp.path}</span>
-								{#if mp.readOnly}<span class="text-[10px] text-text-muted">只读</span>{/if}
-								{#if modal.dockerDirKey === key}<span class="text-[10px] text-green-400">Docker主目录</span>{/if}
-								<button type="button" class="text-text-muted hover:text-red-400" onclick={() => removeMountPoint(key)}><X size={12} /></button>
+						<div class="space-y-1 mb-2">
+							<!-- Docker 主目录（固定首行，不可删除） -->
+							<div class="flex items-center gap-2 px-1 py-1">
+								<span class="text-[12px] font-medium text-text-secondary min-w-[64px]">docker</span>
+								<input type="text" value={modal.host.mountPoints?.docker?.path || ''} onchange={(e) => { if (!modal.host.mountPoints) modal.host.mountPoints = {}; modal.host.mountPoints.docker = { path: (e.target as HTMLInputElement).value, readOnly: false }; }} placeholder="/var/docker" class="flex-1 rounded border border-border-secondary bg-surface-primary px-2 py-1 text-[11px] text-text-primary font-mono focus:border-border-focus focus:outline-none" />
+								<span class="text-[11px] text-green-400 font-medium shrink-0">Docker主目录</span>
 							</div>
+							<!-- 其他挂载目录 -->
+							{#each Object.entries(modal.host.mountPoints || {}) as [key, mp]}
+								{#if key !== 'docker'}
+									<div class="flex items-center gap-2 px-1 py-1">
+										<span class="text-[12px] font-medium text-text-secondary min-w-[64px]">{key}</span>
+										<span class="flex-1 text-[11px] text-text-primary font-mono truncate">{mp.path}</span>
+										{#if mp.readOnly}<span class="text-[10px] text-text-muted shrink-0">只读</span>{/if}
+										<button type="button" class="text-text-muted hover:text-red-400 shrink-0" onclick={() => removeMountPoint(key)}><X size={12} /></button>
+								</div>
+							{/if}
 						{/each}
 					</div>
 					<div class="flex items-center gap-2">
