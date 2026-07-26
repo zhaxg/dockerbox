@@ -2,10 +2,10 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/main ./cmd/server"
+  cmd = "go build -o ./tmp/main ."
   entrypoint = ["./tmp/main"]
   full_bin = "BOXBOX_DEV_MODE=true ./tmp/main"
-  include_dir = ["internal", "cmd"]
+  include_dir = ["internal"]
   include_ext = ["go"]
   exclude_dir = ["tmp", "vendor", "frontend", "node_modules"]
   delay = 5000
