@@ -196,6 +196,9 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 			cfg.DockerHosts = hosts
 			return config.Save(cfg)
 		},
+		func(hostID string, mps []model.MountPoint) {
+			fileHandler.SetMountPoints(hostID, mps)
+		},
 	)
 	if dockerService != nil {
 		dockerHandler = handler.NewDockerHandler(dockerService, nil)

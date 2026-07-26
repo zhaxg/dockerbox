@@ -20,13 +20,14 @@ import (
 
 // HostHandler manages Docker host CRUD and connection testing.
 type HostHandler struct {
-	getConfig func() *model.ServerConfig
-	saveHosts func(hosts *model.DockerHostsConfig) error
+	getConfig             func() *model.ServerConfig
+	saveHosts             func(hosts *model.DockerHostsConfig) error
+	onMountPointsUpdate   func(hostID string, mps []model.MountPoint)
 }
 
 // NewHostHandler creates a new host handler.
-func NewHostHandler(getConfig func() *model.ServerConfig, saveHosts func(hosts *model.DockerHostsConfig) error) *HostHandler {
-	return &HostHandler{getConfig: getConfig, saveHosts: saveHosts}
+func NewHostHandler(getConfig func() *model.ServerConfig, saveHosts func(hosts *model.DockerHostsConfig) error, onMountPointsUpdate func(hostID string, mps []model.MountPoint)) *HostHandler {
+	return &HostHandler{getConfig: getConfig, saveHosts: saveHosts, onMountPointsUpdate: onMountPointsUpdate}
 }
 
 // RegisterRoutes registers host routes.
@@ -153,7 +154,7 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 	if updates.SSHKey != "" {
 		existing.SSHKey = updates.SSHKey
 	}
-	if updates.SSHPubKey != "" {
+	if updates.SSHPubKey != nil && *updates.SSHPubKey != "" {
 		existing.SSHPubKey = updates.SSHPubKey
 	}
 	existing.Tags = updates.Tags
@@ -173,6 +174,19 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ensureSSHKey(id, existing.SSHKey, existing.Endpoint)
+
+	// Update file handler mount points
+	if h.onMountPointsUpdate != nil && updates.MountPoints != nil {
+		var mps []model.MountPoint
+		for name, mp := range existing.MountPoints {
+			mps = append(mps, model.MountPoint{
+				Name:     name,
+				Path:     mp.Path,
+				ReadOnly: mp.ReadOnly,
+			})
+		}
+		h.onMountPointsUpdate(id, mps)
+	}
 
 	writeJSON(w, existing, http.StatusOK)
 }

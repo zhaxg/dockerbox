@@ -169,8 +169,8 @@
 		const key = modal.mountKey.trim(),
 			path = modal.mountPath.trim();
 		if (!key || !path) return;
-		if (!modal.host.mountPoints) modal.host.mountPoints = {};
-		modal.host.mountPoints[key] = { path, readOnly: modal.mountReadOnly };
+		const mp = modal.host.mountPoints || {};
+		modal.host = { ...modal.host, mountPoints: { ...mp, [key]: { path, readOnly: modal.mountReadOnly } } };
 		modal.mountKey = '';
 		modal.mountPath = '';
 		modal.mountReadOnly = false;
@@ -237,25 +237,31 @@
 		return `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${modal.host.sshPubKey || ''}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
 	}
 
-	async function doSave() {
+	async function doSave(): Promise<string | null> {
 		// Validate docker directory path
 		const dockerMP = modal.host.mountPoints?.docker;
 		if (!dockerMP || !dockerMP.path?.trim()) {
 			showToast('Docker主目录路径不能为空', 'err');
-			return;
+			return null;
 		}
 		const saveData = { ...modal.host, isDefault: modal.isDefault };
 		try {
-			if (modal.mode === 'add') await hostsApi.create(saveData);
-			else await hostsApi.update(modal.host.id, saveData);
+			if (modal.mode === 'add') {
+				const result = await hostsApi.create<{id: string, host: any}>(saveData);
+				if (result?.id) modal.host.id = result.id;
+			} else {
+				await hostsApi.update(modal.host.id, saveData);
+			}
 			hostsConfig.default = modal.isDefault
 				? modal.host.id
 				: hostsConfig.default === modal.host.id
 					? ''
 					: hostsConfig.default;
 			await loadHosts();
+			return modal.host.id;
 		} catch (e) {
 			console.error(e);
+			return null;
 		}
 	}
 
@@ -264,10 +270,11 @@
 	}
 
 	async function saveAndTest() {
-		await doSave();
+		const savedId = await doSave();
+		if (!savedId) return;
 		testLoading = true;
 		try {
-			const result = await hostsApi.test(modal.host.id);
+			const result = await hostsApi.test(savedId);
 			showToast(
 				result.status === 'ok' ? '连接成功: ' + result.message : '连接失败: ' + result.message,
 				result.status === 'ok' ? 'ok' : 'err'
@@ -488,4 +495,8 @@
 	onCopyText={copyText}
 	onGetCopyCmd={getCopyCmd}
 	onAddMountPoint={addMountPoint}
+	onRemoveMountPoint={removeMountPoint}
+	bind:mountKey={modal.mountKey}
+	bind:mountPath={modal.mountPath}
+	bind:mountReadOnly={modal.mountReadOnly}
 />

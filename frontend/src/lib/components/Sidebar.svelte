@@ -24,6 +24,7 @@
 	let mountPoints = $state<MountPoint[]>([]);
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let hostDropdownOpen = $state(false);
+	let currentHostId = $state('');
 
 	// Navigation items
 	const navItems = [
@@ -53,6 +54,7 @@
 			if (!localStorage.getItem('currentHostId') && hostsConfig.default) {
 				localStorage.setItem('currentHostId', hostsConfig.default);
 			}
+			currentHostId = localStorage.getItem('currentHostId') || hostsConfig.default;
 			updateMountPoints();
 		} catch (e) {
 			console.error('Failed to load data:', e);
@@ -77,6 +79,7 @@
 		hostsConfig.default = id;
 		hostDropdownOpen = false;
 		localStorage.setItem('currentHostId', id);
+		currentHostId = id;
 		updateMountPoints();
 		window.dispatchEvent(new Event('host-changed'));
 		settingsStore.refreshFavorites();
@@ -109,15 +112,15 @@
 		<button type="button" class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-secondary hover:bg-surface-secondary transition-colors"
 			onclick={() => hostDropdownOpen = !hostDropdownOpen}>
 			<Server size={14} class="shrink-0 text-green-500" />
-			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[hostsConfig.default]?.name || '选择主机'}</span>
+			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[currentHostId]?.name || '选择主机'}</span>
 			<ChevronDown size={12} class="shrink-0 transition-transform {hostDropdownOpen ? '' : '-rotate-90'}" />
 		</button>
 		{#if hostDropdownOpen}
 			<div class="mt-1 space-y-0.5">
 				{#each Object.entries(hostsConfig.hosts || {}) as [id, host]}
-					<button type="button" class="flex w-full items-center gap-2 rounded px-2 py-1 text-[12px] hover:bg-surface-secondary transition-colors {hostsConfig.default === id ? 'text-green-400' : 'text-text-secondary'}"
+					<button type="button" class="flex w-full items-center gap-2 rounded px-2 py-1 text-[12px] hover:bg-surface-secondary transition-colors {currentHostId === id ? 'text-green-400' : 'text-text-secondary'}"
 						onclick={() => switchHost(id)}>
-						<span class="h-1.5 w-1.5 rounded-full {hostsConfig.default === id ? 'bg-green-500' : 'bg-gray-500'}"></span>
+						<span class="h-1.5 w-1.5 rounded-full {currentHostId === id ? 'bg-green-500' : 'bg-gray-500'}"></span>
 						<span class="flex-1 text-left truncate">{host.name}</span>
 					</button>
 				{/each}

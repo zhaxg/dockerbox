@@ -25,7 +25,7 @@ type DockerHost struct {
 	Driver      string              `json:"driver" yaml:"driver" mapstructure:"driver"`
 	Endpoint    string              `json:"endpoint" yaml:"endpoint" mapstructure:"endpoint"`
 	SSHKey      string              `json:"sshKey,omitempty" yaml:"ssh_key,omitempty" mapstructure:"ssh_key"`
-	SSHPubKey   string              `json:"sshPubKey,omitempty"`
+	SSHPubKey   *string             `json:"sshPubKey,omitempty" yaml:"sshpubkey,omitempty" mapstructure:"sshpubkey"`
 	Tags        []string            `json:"tags,omitempty" yaml:"tags,omitempty" mapstructure:"tags"`
 	MountPoints map[string]*HostMountPoint `json:"mountPoints" yaml:"mount_points" mapstructure:"mount_points"`
 }

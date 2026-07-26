@@ -92,9 +92,20 @@ func Save(cfg *model.ServerConfig) error {
 		return fmt.Errorf("failed to marshal dockerhosts: %w", err)
 	}
 
-	var hostsMap interface{}
+	var hostsMap map[string]interface{}
 	if err := yaml.Unmarshal(hostsData, &hostsMap); err != nil {
 		return fmt.Errorf("failed to unmarshal dockerhosts: %w", err)
+	}
+
+	// Remove empty sshpubkey fields from hosts
+	if hosts, ok := hostsMap["hosts"].(map[string]interface{}); ok {
+		for _, host := range hosts {
+			if hostMap, ok := host.(map[string]interface{}); ok {
+				if val, exists := hostMap["sshpubkey"]; exists && (val == "" || val == nil) {
+					delete(hostMap, "sshpubkey")
+				}
+			}
+		}
 	}
 
 	doc["dockerhosts"] = hostsMap

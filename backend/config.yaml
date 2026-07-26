@@ -1,27 +1,17 @@
-
-port: 8081
-host: 0.0.0.0
-dev_mode: false
-jwt_secret: boxbox-dev-secret-k3y-2026
 allowed_origins: []
-max_upload_mb: 10240
-rate_limit_rps: 10
 chunk_size_mb: 5
-
-users:
-    admin: admin123
-
+dev_mode: false
 dockerhosts:
     default: host210
     hosts:
         host086:
+            display_name: fnos
             driver: ssh
             endpoint: zhaxg@192.168.132.86:2322
             mount_points:
                 docker:
                     path: /vol1/1000/docker
                     read_only: false
-            display_name: fnos
             ssh_key: |-
                 -----BEGIN OPENSSH PRIVATE KEY-----
                 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
@@ -31,10 +21,23 @@ dockerhosts:
                 G46c/WbndCkIW0N2x1kmAAAABmJveGJveAECAwQFBgc=
                 -----END OPENSSH PRIVATE KEY-----
         host210:
+            display_name: 192.168.132.210
             driver: socket
             endpoint: /var/run/docker.sock
             mount_points:
                 docker:
                     path: /opt/docker
                     read_only: false
-            display_name: 192.168.132.210
+                opt:
+                    path: /opt
+                    read_only: false
+                tmp:
+                    path: /tmp
+                    read_only: false
+host: 0.0.0.0
+jwt_secret: boxbox-dev-secret-k3y-2026
+max_upload_mb: 10240
+port: 8081
+rate_limit_rps: 10
+users:
+    admin: admin123
