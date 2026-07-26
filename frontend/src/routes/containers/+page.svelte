@@ -447,13 +447,24 @@ const tTableActions = $derived(t("table.actions"));
 		if (!rx && !tx) return '-';
 		return `↓${formatBytes(rx)} ↑${formatBytes(tx)}`;
 	}
-	let hostIp = $state('localhost');
-	onMount(async () => {
-		try {
-			const data = await dockerApi.get<{ ip: string }>('/docker/containers/host-ip');
-			hostIp = data.ip || 'localhost';
-		} catch {}
-	});
+
+	// Derive the host address for port links based on connection type
+	function getHostAddress(): string {
+		const host = currentHost;
+		if (!host) return 'localhost';
+		if (host.driver === 'ssh' && host.endpoint) {
+			// endpoint format: "user@host:port" or "user@host"
+			const atIdx = host.endpoint.indexOf('@');
+			const hostPart = atIdx !== -1 ? host.endpoint.slice(atIdx + 1) : host.endpoint;
+			// strip port if present
+			const colonIdx = hostPart.lastIndexOf(':');
+			return colonIdx !== -1 ? hostPart.slice(0, colonIdx) : hostPart;
+		}
+		// socket or tcp — use the browser's hostname (matches how user accessed the app)
+		return typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+	}
+
+	let derivedHostAddress = $derived(getHostAddress());
 
 	const thClass = 'px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-text-muted border-b border-border-secondary select-none whitespace-nowrap';
 	const tdClass = 'px-3 py-2 text-[13px] text-text-primary border-b border-border-secondary/50';
@@ -465,7 +476,7 @@ const tTableActions = $derived(t("table.actions"));
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 		<h1 class="text-base font-semibold text-text-primary">
 			{tContainersTitle}
-			{#if currentHost}<Badge variant="info">{currentHost.name}</Badge>{/if}
+			{#if currentHost}<Badge>{currentHost.name}</Badge>{/if}
 			<Badge>{filteredContainers.length}</Badge>
 		</h1>
 		<div class="flex items-center gap-2">
@@ -541,7 +552,7 @@ const tTableActions = $derived(t("table.actions"));
 								{#if [...new Map((container.ports || []).filter((p) => p.hostPort && p.hostPort !== '0').map((p) => [p.hostPort, p])).values()].length > 0}
 									<div class="flex flex-wrap gap-1">
 										{#each [...new Map((container.ports || []).filter((p) => p.hostPort && p.hostPort !== '0').map((p) => [p.hostPort, p])).values()].slice(0, 5) as port}
-											<a href="http://{hostIp}:{port.hostPort}" target="_blank" rel="noopener noreferrer"
+											<a href="http://{derivedHostAddress}:{port.hostPort}" target="_blank" rel="noopener noreferrer"
 												class="inline-flex items-center gap-0.5 rounded bg-blue-500/10 px-1.5 py-0.5 text-[11px] text-blue-400 hover:bg-blue-500/20"
 												title="{port.hostPort}:{port.containerPort}/{port.protocol}">
 												{port.hostPort}

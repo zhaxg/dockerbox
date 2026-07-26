@@ -163,6 +163,7 @@ const tTableActions = $derived(t("table.actions"));
 		window.removeEventListener('host-changed', onHostChanged);
 		window.removeEventListener('mousemove', onDragMove);
 		window.removeEventListener('mouseup', onDragEnd);
+		stopThemeWatch();
 		if (statusInterval) clearInterval(statusInterval);
 	});
 
@@ -423,6 +424,7 @@ const tTableActions = $derived(t("table.actions"));
 
 	function closeEditor() {
 		if (monacoEditor) { monacoEditor.dispose(); monacoEditor = null; }
+		stopThemeWatch();
 		editorModal.open = false;
 	}
 
@@ -439,15 +441,22 @@ const tTableActions = $derived(t("table.actions"));
 		if (!editorContainer || !monacoApi) return;
 		if (monacoEditor) { monacoEditor.dispose(); monacoEditor = null; }
 
+		const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
 		monacoApi.editor.defineTheme('boxbox-dark', {
 			base: 'vs-dark', inherit: true, rules: [],
 			colors: { 'editor.background': '#1e1e1e', 'editor.foreground': '#d4d4d4', 'editorLineNumber.foreground': '#5a5a5a', 'editorLineNumber.activeForeground': '#c6c6c6', 'editor.selectionBackground': '#264f78', 'editor.lineHighlightBackground': '#2a2a2a' }
 		});
 
+		monacoApi.editor.defineTheme('boxbox-light', {
+			base: 'vs', inherit: true, rules: [],
+			colors: { 'editor.background': '#ffffff', 'editor.foreground': '#1a1a1a', 'editorLineNumber.foreground': '#999999', 'editorLineNumber.activeForeground': '#333333', 'editor.selectionBackground': '#bfdbfe', 'editor.lineHighlightBackground': '#f5f5f5' }
+		});
+
 		monacoEditor = monacoApi.editor.create(editorContainer, {
 			value: editorModal.composeContent,
 			language: 'yaml',
-			theme: 'boxbox-dark',
+			theme: isLight ? 'boxbox-light' : 'boxbox-dark',
 			minimap: { enabled: false },
 			fontSize: 13,
 			lineNumbers: 'on',
@@ -461,6 +470,25 @@ const tTableActions = $derived(t("table.actions"));
 			editorModal.composeContent = monacoEditor?.getValue() || '';
 			editorModal.dirty = true;
 		});
+
+		startThemeWatch();
+	}
+
+	// React to theme changes while editor is open
+	let themeObserver: MutationObserver | null = null;
+
+	function startThemeWatch() {
+		if (themeObserver) themeObserver.disconnect();
+		themeObserver = new MutationObserver(() => {
+			if (!monacoEditor || !monacoApi) return;
+			const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+			monacoApi.editor.setTheme(isLight ? 'boxbox-light' : 'boxbox-dark');
+		});
+		themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+	}
+
+	function stopThemeWatch() {
+		if (themeObserver) { themeObserver.disconnect(); themeObserver = null; }
 	}
 
 	async function saveEditor() {
@@ -492,7 +520,7 @@ const tTableActions = $derived(t("table.actions"));
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 		<h1 class="text-base font-semibold text-text-primary">
 			Compose
-			{#if currentHost}<Badge variant="info">{currentHost.name}</Badge>{/if}
+			{#if currentHost}<Badge>{currentHost.name}</Badge>{/if}
 			<Badge>{filteredProjects.length}</Badge>
 		</h1>
 		<div class="flex items-center gap-2">
@@ -638,29 +666,36 @@ const tTableActions = $derived(t("table.actions"));
 {#if editorModal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<div class="flex flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary {editorDrag.maximized ? 'fixed inset-3' : 'h-[85vh] w-[900px]'}" style={modalStyle(editorDrag)}>
-			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, editorDrag)}>
-				<div class="flex items-center gap-3">
-					<h3 class="text-sm font-semibold text-text-primary">{editorModal.mode === 'new' ? tComposeNew + ' Compose ' + tComposeProject : editorModal.projectName}</h3>
-					{#if editorModal.dirty}<span class="text-[11px] text-orange-400">● {tComposeModified}</span>{/if}
-					{#if editorModal.error}<span class="text-xs text-red-400">{editorModal.error}</span>{/if}
-				</div>
-				<div class="flex items-center gap-2">
-					{#if editorModal.mode === 'new'}
-						<span class="flex h-7 items-center rounded border border-border-secondary bg-surface-tertiary px-2 text-xs text-text-muted"><span class="whitespace-nowrap">{(currentHost?.mountPoints?.docker?.path || "/opt/docker")}/</span><input type="text" bind:value={editorModal.projectName} placeholder="{name}" class="w-36 border-none bg-transparent px-0 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-0" onblur={() => checkProjectName(editorModal.projectName)} oninput={() => { editorModal.error = ''; }} /></span>
-					{/if}
-					<Button variant="secondary" size="sm" onclick={closeEditor}>{tCommonCancel}</Button>
-					<Button variant="primary" size="sm" onclick={saveEditor} disabled={editorModal.saving || (editorModal.mode === 'edit' && !editorModal.dirty)}>
-						{#if editorModal.saving}<Spinner size={14} class="mr-1" /> {tComposeSaving}...{:else}<Save size={14} class="mr-1" /> {editorModal.mode === 'new' ? tFilesCreate : tCommonSave}{/if}
-					</Button>
+			<!-- Header: title + drag + maximize + close -->
+			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-2.5 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, editorDrag)}>
+				<h3 class="text-sm font-semibold text-text-primary">{editorModal.mode === 'new' ? tComposeNew + ' Compose ' + tComposeProject : editorModal.projectName}</h3>
+				<div class="flex items-center gap-1">
 					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(editorDrag)}>
 						{#if editorDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
 					</button>
 					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={closeEditor}><X size={16} /></button>
 				</div>
 			</div>
+			<!-- Editor area -->
 			<div class="flex-1 overflow-hidden">
 				{#if editorModal.loading}<div class="flex items-center justify-center py-12"><Spinner size="lg" /></div>
 				{:else}<div bind:this={editorContainer} class="h-full w-full"></div>{/if}
+			</div>
+			<!-- Bottom toolbar: path + status + buttons -->
+			<div class="flex items-center justify-between gap-3 border-t border-border-secondary px-4 py-2">
+				<div class="flex min-w-0 flex-1 items-center gap-3">
+					{#if editorModal.mode === 'new'}
+						<span class="flex h-7 shrink-0 items-center rounded border border-border-secondary bg-surface-tertiary px-2 text-xs text-text-muted"><span class="whitespace-nowrap">{(currentHost?.mountPoints?.docker?.path || "/opt/docker")}/</span><input type="text" bind:value={editorModal.projectName} placeholder="{name}" class="w-36 border-none bg-transparent px-0 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-0" onblur={() => checkProjectName(editorModal.projectName)} oninput={() => { editorModal.error = ''; }} /></span>
+					{/if}
+					{#if editorModal.dirty}<span class="shrink-0 text-[11px] text-orange-400">● {tComposeModified}</span>{/if}
+					{#if editorModal.error}<span class="shrink-0 text-xs text-red-400">{editorModal.error}</span>{/if}
+				</div>
+				<div class="flex shrink-0 items-center gap-2">
+					<Button variant="secondary" size="sm" onclick={closeEditor}>{tCommonCancel}</Button>
+					<Button variant="primary" size="sm" onclick={saveEditor} disabled={editorModal.saving || (editorModal.mode === 'edit' && !editorModal.dirty)}>
+						{#if editorModal.saving}<Spinner size={14} class="mr-1" /> {tComposeSaving}...{:else}<Save size={14} class="mr-1" /> {editorModal.mode === 'new' ? tFilesCreate : tCommonSave}{/if}
+					</Button>
+				</div>
 			</div>
 		</div>
 	</div>

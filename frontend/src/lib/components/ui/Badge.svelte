@@ -13,7 +13,7 @@
 		success: 'bg-success/20 text-success',
 		warning: 'bg-warning/20 text-warning',
 		danger: 'bg-danger/20 text-danger',
-		info: 'bg-accent/20 text-accent'
+		info: 'bg-accent/20 text-text-primary'
 	};
 </script>
 

@@ -28,6 +28,7 @@
 	let dirty = $state(false);
 	let saveError = $state<string | null>(null);
 	let saveMessage = $state<string | null>(null);
+	let themeObserver: MutationObserver | null = $state(null);
 
 	const language = $derived(getMonacoLanguage(filename));
 	const canSave = $derived(Boolean(editor) && dirty && !loading && !saving && !error);
@@ -36,31 +37,43 @@
 		return value instanceof Error ? value.message : 'Failed to save file.';
 	}
 
-	function defineTheme(monacoApi: typeof Monaco) {
+	function isLightTheme(): boolean {
+		return document.documentElement.getAttribute('data-theme') === 'light';
+	}
+
+	function defineThemes(monacoApi: typeof Monaco) {
 		monacoApi.editor.defineTheme('boxbox-dark', {
-			base: 'vs-dark',
-			inherit: true,
-			rules: [],
-			colors: {
-				'editor.background': '#1e1e1e',
-				'editor.foreground': '#d4d4d4',
-				'editorLineNumber.foreground': '#5a5a5a',
-				'editorLineNumber.activeForeground': '#c6c6c6',
-				'editor.selectionBackground': '#264f78',
-				'editor.lineHighlightBackground': '#2a2a2a'
-			}
+			base: 'vs-dark', inherit: true, rules: [],
+			colors: { 'editor.background': '#1e1e1e', 'editor.foreground': '#d4d4d4', 'editorLineNumber.foreground': '#5a5a5a', 'editorLineNumber.activeForeground': '#c6c6c6', 'editor.selectionBackground': '#264f78', 'editor.lineHighlightBackground': '#2a2a2a' }
 		});
+		monacoApi.editor.defineTheme('boxbox-light', {
+			base: 'vs', inherit: true, rules: [],
+			colors: { 'editor.background': '#ffffff', 'editor.foreground': '#1a1a1a', 'editorLineNumber.foreground': '#999999', 'editorLineNumber.activeForeground': '#333333', 'editor.selectionBackground': '#bfdbfe', 'editor.lineHighlightBackground': '#f5f5f5' }
+		});
+	}
+
+	function startThemeWatch() {
+		if (themeObserver) themeObserver.disconnect();
+		themeObserver = new MutationObserver(() => {
+			if (!monaco || !editor) return;
+			monaco.editor.setTheme(isLightTheme() ? 'boxbox-light' : 'boxbox-dark');
+		});
+		themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+	}
+
+	function stopThemeWatch() {
+		if (themeObserver) { themeObserver.disconnect(); themeObserver = null; }
 	}
 
 	function createEditor() {
 		if (!monaco || !containerElement || editor) return;
 		const monacoApi = monaco;
 
-		defineTheme(monacoApi);
+		defineThemes(monacoApi);
 		const createdEditor = monacoApi.editor.create(containerElement, {
 			value: content ?? '',
 			language: language,
-			theme: 'boxbox-dark',
+			theme: isLightTheme() ? 'boxbox-light' : 'boxbox-dark',
 			readOnly: false,
 			minimap: { enabled: true },
 			scrollBeyondLastLine: false,
@@ -86,6 +99,8 @@
 		createdEditor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS, () => {
 			void handleSave();
 		});
+
+		startThemeWatch();
 	}
 
 	async function handleSave() {
@@ -134,6 +149,7 @@
 	});
 
 	onDestroy(() => {
+		stopThemeWatch();
 		if (changeDisposable) {
 			changeDisposable.dispose();
 		}
