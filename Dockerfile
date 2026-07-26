@@ -48,7 +48,7 @@ COPY --from=frontend-builder /app/build ./internal/static/dist/
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s" \
     -o /server \
-    ./cmd/server
+    .
 
 # -----------------------------------------------------------------------------
 # Stage 3: Minimal Production Runtime
