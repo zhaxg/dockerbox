@@ -1,6 +1,16 @@
-allowed_origins: []
-chunk_size_mb: 5
+
+port: 8081
+host: 0.0.0.0
 dev_mode: false
+jwt_secret: boxbox-dev-secret-k3y-2026
+allowed_origins: []
+max_upload_mb: 10240
+rate_limit_rps: 10
+chunk_size_mb: 5
+
+users:
+    admin: admin123
+
 dockerhosts:
     default: host210
     hosts:
@@ -28,10 +38,3 @@ dockerhosts:
                     path: /opt/docker
                     read_only: false
             display_name: 192.168.132.210
-host: 0.0.0.0
-jwt_secret: boxbox-dev-secret-k3y-2026
-max_upload_mb: 10240
-port: 8081
-rate_limit_rps: 10
-users:
-    admin: admin123
