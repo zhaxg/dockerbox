@@ -144,6 +144,12 @@
 	}
 
 	async function doSave() {
+		// Validate docker directory path
+		const dockerMP = modal.host.mountPoints?.docker;
+		if (!dockerMP || !dockerMP.path?.trim()) {
+			showToast('Docker主目录路径不能为空', 'err');
+			return;
+		}
 		const saveData = { ...modal.host, isDefault: modal.isDefault };
 		try {
 			if (modal.mode === 'add') await hostsApi.create(saveData);

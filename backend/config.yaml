@@ -7,12 +7,11 @@ dockerhosts:
         host086:
             driver: ssh
             endpoint: zhaxg@192.168.132.86:2322
-            id: host-nas
             mount_points:
                 docker:
                     path: /vol1/1000/docker
                     read_only: false
-            name: fnos
+            display_name: fnos
             ssh_key: |-
                 -----BEGIN OPENSSH PRIVATE KEY-----
                 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
@@ -24,12 +23,11 @@ dockerhosts:
         host210:
             driver: socket
             endpoint: /var/run/docker.sock
-            id: host-mrymssal
             mount_points:
                 docker:
                     path: /opt/docker
                     read_only: false
-            name: 192.168.132.210
+            display_name: 192.168.132.210
 host: 0.0.0.0
 jwt_secret: boxbox-dev-secret-k3y-2026
 max_upload_mb: 10240

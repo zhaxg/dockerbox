@@ -21,8 +21,7 @@ type DockerHostsConfig struct {
 
 // DockerHost represents a remote or local Docker host connection.
 type DockerHost struct {
-	ID          string              `json:"id" yaml:"id" mapstructure:"id"`
-	Name        string              `json:"name" yaml:"name" mapstructure:"name"`
+	DisplayName string              `json:"name" yaml:"display_name" mapstructure:"display_name"`
 	Driver      string              `json:"driver" yaml:"driver" mapstructure:"driver"`
 	Endpoint    string              `json:"endpoint" yaml:"endpoint" mapstructure:"endpoint"`
 	SSHKey      string              `json:"sshKey,omitempty" yaml:"ssh_key,omitempty" mapstructure:"ssh_key"`

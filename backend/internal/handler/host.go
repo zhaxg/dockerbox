@@ -80,12 +80,7 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Auto-generate ID if not provided
-	if host.ID == "" {
-		host.ID = generateHostID()
-	}
-
-	if host.Name == "" || host.Driver == "" || host.Endpoint == "" {
+	if host.DisplayName == "" || host.Driver == "" || host.Endpoint == "" {
 		writeError(w, "name, driver, endpoint are required", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
@@ -98,7 +93,8 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 	if cfg.DockerHosts == nil {
 		cfg.DockerHosts = &model.DockerHostsConfig{Hosts: make(map[string]*model.DockerHost)}
 	}
-	if _, exists := cfg.DockerHosts.Hosts[host.ID]; exists {
+	hostID := generateHostID()
+	if _, exists := cfg.DockerHosts.Hosts[hostID]; exists {
 		writeError(w, "Host ID already exists", model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
@@ -107,7 +103,7 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 		host.MountPoints = make(map[string]*model.HostMountPoint)
 	}
 
-	cfg.DockerHosts.Hosts[host.ID] = &host
+	cfg.DockerHosts.Hosts[hostID] = &host
 	h.ensureDefault(cfg.DockerHosts)
 
 	if err := h.saveHosts(cfg.DockerHosts); err != nil {
@@ -115,9 +111,10 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Failed to save: "+err.Error(), model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
-	ensureSSHKey(host.ID, host.SSHKey, host.Endpoint)
+	ensureSSHKey(hostID, host.SSHKey, host.Endpoint)
 
-	writeJSON(w, host, http.StatusCreated)
+	// Return with ID set for frontend
+	writeJSON(w, map[string]interface{}{"id": hostID, "host": host}, http.StatusCreated)
 }
 
 // UpdateHost updates an existing Docker host.
@@ -144,8 +141,8 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if updates.Name != "" {
-		existing.Name = updates.Name
+	if updates.DisplayName != "" {
+		existing.DisplayName = updates.DisplayName
 	}
 	if updates.Driver != "" {
 		existing.Driver = updates.Driver
@@ -175,7 +172,7 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Failed to save", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
-	ensureSSHKey(existing.ID, existing.SSHKey, existing.Endpoint)
+	ensureSSHKey(id, existing.SSHKey, existing.Endpoint)
 
 	writeJSON(w, existing, http.StatusOK)
 }
