@@ -22,7 +22,8 @@
 	import WallpaperSettings from '$lib/components/settings/wallpaper/WallpaperSettings.svelte';
 	import { Button, ProgressButton, Select, Toggle } from '$lib/components/ui';
 	import { normalizeBackgroundImageMode } from '$lib/utils/wallpaper';
-	import {
+	import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+		import {
 		deleteLocalWallpaper,
 		isInlineWallpaperDataUrl,
 		isLocalWallpaperReference,
@@ -48,6 +49,8 @@
 	type ApplyProgressVariant = 'default' | 'success' | 'danger';
 
 	let settings = $state<UserSettings>({ ...$settingsStore });
+	
+	
 
 	function handleFontChange(e: Event) {
 		settings.uiFont = (e.target as HTMLSelectElement).value;
@@ -384,6 +387,9 @@
 			showDefaultsSection ||
 			showAccountSection
 	);
+
+	// i18n
+	let currentLang = $state(getLocale());
 </script>
 
 <svelte:head>
@@ -550,12 +556,24 @@
 						</div>
 
 						<div>
-							{#if matchesSearch('accent color', 'custom color', 'theme', 'folder color', 'selection color')}
-								<div class={settingRowClass}>
-									<div>
-										<div class="flex items-center gap-2 text-[13px] text-text-primary">
-											<Palette size={14} class="text-accent" />
-											<span>Accent color</span>
+							<!-- Language -->
+						<div class={settingRowClass}>
+							<div class="flex items-center gap-2 text-[13px] text-text-primary">
+								<span>🌐</span>
+								<span>{$_t('settings.language')}</span>
+							</div>
+							<div class="flex items-center gap-2">
+								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'zh-CN' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('zh-CN'); currentLang = 'zh-CN'; }}>中文</button>
+								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'en' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('en'); currentLang = 'en'; }}>English</button>
+							</div>
+						</div>
+
+						{#if matchesSearch('accent color', 'custom color', 'theme', 'folder color', 'selection color')}
+							<div class={settingRowClass}>
+								<div>
+									<div class="flex items-center gap-2 text-[13px] text-text-primary">
+										<Palette size={14} class="text-accent" />
+										<span>Accent color</span>
 										</div>
 										{#if !accentColorIsValid}
 											<div class="mt-1 text-xs text-danger">Use a #RRGGBB hex color.</div>

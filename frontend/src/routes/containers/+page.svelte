@@ -1,4 +1,5 @@
 <script lang="ts">
+import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
@@ -331,10 +332,10 @@
 	}
 	function getStateText(state: string): string {
 		switch (state) {
-			case 'running': return '运行中';
-			case 'exited': return '已停止';
-			case 'paused': return '已暂停';
-			case 'created': return '已创建';
+			case 'running': return '{tContainersRunning}';
+			case 'exited': return '{tContainersStopped}';
+			case 'paused': return '{tContainersPaused}';
+			case 'created': return '{tContainersCreated}';
 			default: return state;
 		}
 	}
@@ -368,6 +369,8 @@
 
 	const thClass = 'px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-text-muted border-b border-border-secondary select-none whitespace-nowrap';
 	const tdClass = 'px-3 py-2 text-[13px] text-text-primary border-b border-border-secondary/50';
+
+	// i18n
 </script>
 
 <div class="flex h-full flex-col bg-surface-primary">
@@ -380,7 +383,7 @@
 		<div class="flex items-center gap-2">
 			<div class="relative">
 				<Search size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-				<input type="text" bind:value={searchQuery} placeholder="搜索容器..."
+				<input type="text" bind:value={searchQuery} placeholder="{tContainersSearch}"
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
 			<Button variant="secondary" size="sm" onclick={cleanupUnused} title="清理未使用的镜像和网络"><BrushCleaning size={14} /></Button>

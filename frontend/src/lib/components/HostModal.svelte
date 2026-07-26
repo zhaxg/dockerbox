@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Spinner, Button } from '$lib/components/ui';
 	import { X, Key, Copy, Check, Terminal, FileUp, Plug } from 'lucide-svelte';
-
+	import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+	
 	let {
 		open = false,
 		mode = 'add',
@@ -86,6 +87,8 @@
 			mountPoints: { ...mp, [key]: { ...entry, path: (e.target as HTMLInputElement).value } }
 		};
 	}
+
+	// i18n
 </script>
 
 {#if open}
@@ -95,18 +98,18 @@
 		>
 			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 				<h3 class="text-sm font-semibold text-text-primary">
-					{mode === 'add' ? '添加主机' : '编辑主机 - ' + host.name}
+					{mode === 'add' ? tAddHost() : tEditHost() + ' - ' + host.name}
 				</h3>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={onClose}
 					><X size={16} /></button
 				>
 			</div>
 			<div class="flex-1 space-y-4 overflow-auto p-4">
-				<!-- 名称 + 默认 -->
+				<!-- {$_t('hostModal.name')} + 默认 -->
 				<div class="flex items-end gap-3">
 					<div class="flex-1">
 						<label class="mb-1 block text-[11px] text-text-muted"
-							>显示名称 <span class="text-red-400">*</span></label
+							>{$_t('hostModal.displayName')} <span class="text-red-400">*</span></label
 						>
 						<input
 							type="text"
@@ -118,13 +121,13 @@
 					<label
 						class="flex cursor-pointer items-center gap-1.5 pb-1.5 text-[11px] whitespace-nowrap text-text-muted"
 					>
-						<input type="checkbox" bind:checked={isDefault} class="rounded accent-green-500" /> 默认主机
+						<input type="checkbox" bind:checked={isDefault} class="rounded accent-green-500" /> {$_t('hostModal.defaultHost')}
 					</label>
 				</div>
-				<!-- 连接方式 + 端点 -->
+				<!-- {$_t('hostModal.connectionType')} + 端点 -->
 				<div class="grid grid-cols-3 gap-3">
 					<div>
-						<label class="mb-1 block text-[11px] text-text-muted">连接方式</label>
+						<label class="mb-1 block text-[11px] text-text-muted">{$_t('hostModal.connectionType')}</label>
 						<select
 							bind:value={host.driver}
 							onchange={handleSocketDefault}
@@ -237,7 +240,7 @@
 				{/if}
 				<!-- 标签 -->
 				<div>
-					<label class="mb-1 block text-[11px] text-text-muted">标签（逗号分隔）</label>
+					<label class="mb-1 block text-[11px] text-text-muted">{$_t('hostModal.tags')}</label>
 					<input
 						type="text"
 						value={(host.tags || []).join(', ')}
@@ -246,9 +249,9 @@
 						class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 					/>
 				</div>
-				<!-- 挂载目录 -->
+				<!-- {$_t('hostModal.mountPoints')} -->
 				<div>
-					<label class="mb-2 block text-[11px] font-medium text-text-muted">挂载目录</label>
+					<label class="mb-2 block text-[11px] font-medium text-text-muted">{$_t('hostModal.mountPoints')}</label>
 					<div class="mb-2 space-y-1">
 						<div class="flex items-center gap-2 px-1 py-1">
 							<input
@@ -265,7 +268,7 @@
 								class="min-w-0 flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary focus:border-border-focus focus:outline-none"
 							/>
 							<span class="w-[104px] shrink-0 text-left text-[11px] font-medium text-green-400"
-								>Docker主目录</span
+								>{$_t('hostModal.dockerMainDir')}</span
 							>
 						</div>
 						{#each Object.entries(host.mountPoints || {}) as [key, mp]}
@@ -285,7 +288,7 @@
 										class="min-w-0 flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary focus:border-border-focus focus:outline-none"
 									/>
 									<div class="flex w-[104px] shrink-0 items-center justify-start gap-1">
-										{#if mp.readOnly}<span class="text-[10px] text-text-muted">只读</span>{/if}
+										{#if mp.readOnly}<span class="text-[10px] text-text-muted">{$_t('hostModal.readOnly')}</span>{/if}
 										<button
 											type="button"
 											class="text-text-muted hover:text-red-400"
@@ -300,7 +303,7 @@
 						<input
 							type="text"
 							bind:value={mountKey}
-							placeholder="名称"
+							placeholder="{$_t('hostModal.name')}"
 							class="w-28 shrink-0 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 						/>
 						<input
@@ -311,12 +314,12 @@
 						/>
 						<div class="flex w-[104px] shrink-0 items-center gap-1">
 							<label class="flex cursor-pointer items-center gap-1 text-[11px] text-text-muted"
-								><input type="checkbox" bind:checked={mountReadOnly} class="rounded" /> 只读</label
+								><input type="checkbox" bind:checked={mountReadOnly} class="rounded" /> {$_t('hostModal.readOnly')}</label
 							>
 							<button
 								type="button"
 								class="rounded bg-surface-tertiary px-2 py-1 text-[11px] text-text-primary hover:bg-surface-secondary"
-								onclick={onAddMountPoint}>添加</button
+								onclick={onAddMountPoint}>{$_t('hostModal.add')}</button
 							>
 						</div>
 					</div>
@@ -335,14 +338,14 @@
 						/>{/if}测试连接
 				</Button>
 				<div class="flex items-center gap-2 px-1 py-1">
-					<Button variant="secondary" size="sm" onclick={onClose}>取消</Button>
+					<Button variant="secondary" size="sm" onclick={onClose}>{$_t('common.cancel')}</Button>
 					<Button
 						variant="primary"
 						size="sm"
 						onclick={onSave}
 						disabled={!host.name || !host.endpoint}
 					>
-						{mode === 'add' ? '添加' : '保存'}
+						{mode === 'add' ? tAdd() : tSave()}
 					</Button>
 				</div>
 			</div>

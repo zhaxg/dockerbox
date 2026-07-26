@@ -20,28 +20,32 @@
 	import { type MountPoint } from '$lib/api/files';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { onMount } from 'svelte';
-
+	import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+	
 	let mountPoints = $state<MountPoint[]>([]);
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let hostDropdownOpen = $state(false);
 	let currentHostId = $state('');
 
 	// Navigation items
+	// i18n translations - $derived for reactivity
+
+	// navItems use $_t store for i18n - called in template as {$_t(item.name)}
 	const navItems = [
-		{ name: '概览', path: '/overview', icon: LayoutDashboard },
-		{ name: '主机', path: '/hosts', icon: Server },
-		{ name: '容器', path: '/containers', icon: Container },
-		{ name: 'Compose', path: '/compose', icon: Package },
+		{ name: 'nav.overview', path: '/overview', icon: LayoutDashboard },
+		{ name: 'nav.hosts', path: '/hosts', icon: Server },
+		{ name: 'nav.containers', path: '/containers', icon: Container },
+		{ name: 'nav.compose', path: '/compose', icon: Package },
 		{
-			name: '文件',
+			name: 'nav.files',
 			path: '/browse',
 			icon: FolderOpen,
 			children: [
-				{ name: '收藏目录', path: '/browse/favorites', icon: Star, isFavorites: true },
-				{ name: '根目录', path: '/browse', icon: Server }
+				{ name: 'sidebar.favorites', path: '/browse/favorites', icon: Star, isFavorites: true },
+				{ name: 'sidebar.root', path: '/browse', icon: Server }
 			]
 		},
-		{ name: '设置', path: '/settings', icon: Settings }
+		{ name: 'nav.settings', path: '/settings', icon: Settings }
 	];
 
 	let filesExpanded = $state(true);
@@ -96,6 +100,7 @@
 	function handleNavigate(path: string) {
 		goto(resolve(path));
 	}
+
 </script>
 
 <aside
@@ -112,7 +117,7 @@
 		<button type="button" class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-secondary hover:bg-surface-secondary transition-colors"
 			onclick={() => hostDropdownOpen = !hostDropdownOpen}>
 			<Server size={14} class="shrink-0 text-green-500" />
-			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[currentHostId]?.name || '选择主机'}</span>
+			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[currentHostId]?.name || tSidebarSelectHost()}</span>
 			<ChevronDown size={12} class="shrink-0 transition-transform {hostDropdownOpen ? '' : '-rotate-90'}" />
 		</button>
 		{#if hostDropdownOpen}
@@ -143,7 +148,7 @@
 					}}
 				>
 					<item.icon size={18} class="shrink-0 opacity-80" />
-					<span class="flex-1 text-left">{item.name}</span>
+					<span class="flex-1 text-left">{$_t(item.name)}</span>
 					<ChevronDown
 						size={14}
 						class="shrink-0 transition-transform duration-150 {filesExpanded ? '' : '-rotate-90'}"
@@ -154,7 +159,7 @@
 				<div class="ml-4">
 				<!-- Favorites section -->
 				{#if item.children[0].isFavorites}
-				<div class="nav-section-title">收藏目录</div>
+				<div class="nav-section-title">{$_t('sidebar.favorites')}</div>
 				{#each $settingsStore.favoriteFolders as fav}
 				<button
 				type="button"
@@ -167,7 +172,7 @@
 				{/each}
 
 						<!-- Mount points -->
-				 <div class="nav-section-title">挂载目录</div>
+				 <div class="nav-section-title">{$_t('sidebar.mounts')}</div>
 				 {#each mountPoints as mp}
 				 <button
 				 type="button"
@@ -188,7 +193,7 @@
 							onclick={() => handleNavigate(child.path)}
 						>
 							<child.icon size={14} class="shrink-0 opacity-80" />
-							<span class="flex-1 text-left">{child.name}</span>
+							<span class="flex-1 text-left">{$_t(child.name)}</span>
 						</button>
 					{/each}
 				</div>
@@ -201,7 +206,7 @@
 					onclick={() => handleNavigate(item.path)}
 				>
 					<item.icon size={18} class="shrink-0 opacity-80" />
-					<span class="flex-1 text-left">{item.name}</span>
+					<span class="flex-1 text-left">{$_t(item.name)}</span>
 				</button>
 			{/if}
 		{/each}

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import LogModal from '$lib/components/LogModal.svelte';
@@ -385,10 +386,12 @@
 	}
 
 	function getStatusColor(s: string) { return s === 'running' ? 'bg-green-500' : s === 'stopped' ? 'bg-red-500' : s === 'partial' ? 'bg-yellow-500' : 'bg-gray-500'; }
-	function getStatusText(s: string) { return s === 'running' ? '运行中' : s === 'stopped' ? '已停止' : s === 'partial' ? '部分运行' : s; }
+	function getStatusText(s: string) { return s === 'running' ? '{tComposeRunning}' : s === 'stopped' ? '{tComposeStopped}' : s === 'partial' ? '部分运行' : s; }
 
 	const thClass = 'px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-text-muted border-b border-border-secondary select-none whitespace-nowrap';
 	const tdClass = 'px-3 py-2 text-[13px] text-text-primary border-b border-border-secondary/50';
+
+	// i18n
 </script>
 
 <div class="flex h-full flex-col bg-surface-primary">
@@ -434,13 +437,13 @@
 							<td class="{tdClass}">
 								<div class="flex justify-end gap-1">
 									{#if project.status === 'running'}
-										<!-- 运行中: 停止 重启 日志 删除 -->
+										<!-- {tComposeRunning}: 停止 重启 日志 删除 -->
 										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => composeDown(project.id, project.name)} title="停止"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></button>
 										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => composeRestart(project.id, project.name)} title="重启"><RotateCcw size={13} /></button>
 										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewDeployLog(project.id, project.name)} title="日志"><Eye size={13} /></button>
 										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteProject(project.id, project.name)} title="删除"><Trash2 size={13} /></button>
 									{:else if project.status === 'stopped'}
-										<!-- 已停止: 启动 清理 日志 删除 -->
+										<!-- {tComposeStopped}: 启动 清理 日志 删除 -->
 										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => composeUp(project.id, project.name)} title="启动"><Play size={13} /></button>
 										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-orange-400 transition-colors hover:bg-orange-500/10" onclick={() => composeClean(project.id, project.name)} title="清理"><BrushCleaning size={13} /></button>
 										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewDeployLog(project.id, project.name)} title="日志"><Eye size={13} /></button>

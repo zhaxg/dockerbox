@@ -1,5 +1,6 @@
 <script lang="ts">
 	import './layout.css';
+	import '$lib/i18n/index.svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import { authStore, isAuthenticated } from '$lib/stores/auth';
 	import { onDestroy, onMount } from 'svelte';

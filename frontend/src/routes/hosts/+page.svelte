@@ -1,4 +1,5 @@
 <script lang="ts">
+import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	import { onMount } from 'svelte';
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import { hostsApi, type DockerHost, type DockerHostsConfig } from '$lib/api/hosts';
@@ -18,7 +19,8 @@
 		FileUp
 	} from 'lucide-svelte';
 	import HostModal from '$lib/components/HostModal.svelte';
-
+	import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+	
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
 	let loading = $state(true);
 	let searchQuery = $state('');
@@ -322,6 +324,8 @@
 	const thClass =
 		'px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-text-muted border-b border-border-secondary select-none whitespace-nowrap';
 	const tdClass = 'px-3 py-2 text-[13px] text-text-primary border-b border-border-secondary/50';
+
+	// i18n
 </script>
 
 <div class="flex h-full flex-col bg-surface-primary">
@@ -333,7 +337,7 @@
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="搜索主机..."
+					placeholder="{tHostsSearch}"
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pr-2 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 				/>
 			</div>
