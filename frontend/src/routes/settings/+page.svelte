@@ -403,7 +403,7 @@
 		<div class="border-b border-border-secondary px-3 py-3">
 			<div class="flex items-center gap-2 text-[13px] font-medium text-text-primary">
 				<Settings size={16} class="text-accent" />
-				<span>Settings</span>
+				<span>{$_t('settings.title')}</span>
 			</div>
 		</div>
 
@@ -435,7 +435,7 @@
 			<div
 				class="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-border-primary bg-surface-secondary px-2 py-1"
 			>
-				<span class="text-[13px] whitespace-nowrap text-text-secondary">Settings</span>
+				<span class="text-[13px] whitespace-nowrap text-text-secondary">{$_t('settings.title')}</span>
 				<span class="text-xs text-text-muted">/</span>
 				<span class="text-[13px] whitespace-nowrap text-text-primary">{$_t('settings.preferences')}</span>
 			</div>
@@ -445,7 +445,7 @@
 					value={searchQuery}
 					onInput={handleSearchInput}
 					onClear={handleSearchClear}
-					placeholder="Search settings..."
+					placeholder={$_t('settings.searchSettings')}
 					compact
 				/>
 			</div>
