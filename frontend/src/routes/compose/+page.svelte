@@ -404,11 +404,11 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		<div class="flex items-center gap-2">
 			<div class="relative">
 				<Search size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-				<input type="text" bind:value={searchQuery} placeholder={{tComposeSearch} + '...'} class="h-7 w-40 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
+				<input type="text" bind:value={searchQuery} placeholder={tComposeSearch} + '...'} class="h-7 w-40 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
-			<Button variant="secondary" size="sm" onclick={openNew} title={{tComposeNew}}><Plus size={14} /></Button>
-			<Button variant="secondary" size="sm" onclick={scanAvailable} title={{tComposeScanimport}}><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M13 20h9V6H11L9 3.5H2v8.25"/><path d="m6.042 21.502l3.46-3.5l-3.46-3.5m2.258 3.5H.998"/></g></svg></Button>
-			<Button variant="secondary" size="sm" onclick={loadProjects} title={{tFilesRefresh}}><RefreshCw size={14} /></Button>
+			<Button variant="secondary" size="sm" onclick={openNew} title={tComposeNew}}><Plus size={14} /></Button>
+			<Button variant="secondary" size="sm" onclick={scanAvailable} title={tComposeScanimport}}><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="2"><path d="M13 20h9V6H11L9 3.5H2v8.25"/><path d="m6.042 21.502l3.46-3.5l-3.46-3.5m2.258 3.5H.998"/></g></svg></Button>
+			<Button variant="secondary" size="sm" onclick={loadProjects} title={tFilesRefresh}}><RefreshCw size={14} /></Button>
 		</div>
 	</div>
 	<div class="flex-1 overflow-auto">
@@ -438,21 +438,21 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 								<div class="flex justify-end gap-1">
 									{#if project.status === 'running'}
 										<!-- {tComposeRunning}: {tComposeStop} {tComposeRestart} {tComposeLogs} {tCommonDelete} -->
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => composeDown(project.id, project.name)} title={{tComposeStop}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => composeRestart(project.id, project.name)} title={{tContainersRestart}}><RotateCcw size={13} /></button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewDeployLog(project.id, project.name)} title={{tComposeLogs}}><Eye size={13} /></button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteProject(project.id, project.name)} title={{tCommonDelete}}><Trash2 size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => composeDown(project.id, project.name)} title={tComposeStop}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => composeRestart(project.id, project.name)} title={tContainersRestart}}><RotateCcw size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewDeployLog(project.id, project.name)} title={tComposeLogs}}><Eye size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteProject(project.id, project.name)} title={tCommonDelete}}><Trash2 size={13} /></button>
 									{:else if project.status === 'stopped'}
 										<!-- {tComposeStopped}: {tComposeStart} {tComposeCleanup} {tComposeLogs} {tCommonDelete} -->
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => composeUp(project.id, project.name)} title={{tContainersStart}}><Play size={13} /></button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-orange-400 transition-colors hover:bg-orange-500/10" onclick={() => composeClean(project.id, project.name)} title={{tComposeCleanup}}><BrushCleaning size={13} /></button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewDeployLog(project.id, project.name)} title={{tComposeLogs}}><Eye size={13} /></button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteProject(project.id, project.name)} title={{tCommonDelete}}><Trash2 size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => composeUp(project.id, project.name)} title={tContainersStart}}><Play size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-orange-400 transition-colors hover:bg-orange-500/10" onclick={() => composeClean(project.id, project.name)} title={tComposeCleanup}}><BrushCleaning size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewDeployLog(project.id, project.name)} title={tComposeLogs}}><Eye size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => deleteProject(project.id, project.name)} title={tCommonDelete}}><Trash2 size={13} /></button>
 									{:else}
 										<!-- Not built/Error: start cleanup logs -->
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => composeUp(project.id, project.name)} title={{tContainersStart}}><Play size={13} /></button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-orange-400 transition-colors hover:bg-orange-500/10" onclick={() => composeClean(project.id, project.name)} title={{tComposeCleanup}}><BrushCleaning size={13} /></button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewDeployLog(project.id, project.name)} title={{tComposeLogs}}><Eye size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => composeUp(project.id, project.name)} title={tContainersStart}}><Play size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-orange-400 transition-colors hover:bg-orange-500/10" onclick={() => composeClean(project.id, project.name)} title={tComposeCleanup}}><BrushCleaning size={13} /></button>
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewDeployLog(project.id, project.name)} title={tComposeLogs}}><Eye size={13} /></button>
 									{/if}
 								</div>
 							</td>
@@ -476,7 +476,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 				{#if importModal.loading}
 					<div class="flex items-center justify-center py-8"><Spinner /></div>
 				{:else if importModal.projects.length === 0}
-					<p class="text-sm text-text-secondary text-center py-8">{{tComposeNoimportable}}</p>
+					<p class="text-sm text-text-secondary text-center py-8">{tComposeNoimportable}}</p>
 				{:else}
 					<div class="mb-3 flex items-center gap-2">
 						<button type="button" class="text-xs text-accent hover:underline" onclick={selectAllImport}>
@@ -498,7 +498,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 				{/if}
 			</div>
 			<div class="flex justify-end gap-2 border-t border-border-secondary px-4 py-3">
-				<Button variant="secondary" size="sm" onclick={() => { importModal.open = false; }}>{{tCommonCancel}}</Button>
+				<Button variant="secondary" size="sm" onclick={() => { importModal.open = false; }}>{tCommonCancel}}</Button>
 				<Button variant="primary" size="sm" onclick={doImport} disabled={importModal.selected.size === 0 || importModal.importing}>
 					{#if importModal.importing}<Spinner size={14} class="mr-1" /> {tComposeImporting}...{:else}{tComposeImportselected}{/if}
 				</Button>
@@ -514,8 +514,8 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
-				<Button variant="secondary" onclick={closeConfirm}>{{tCommonCancel}}</Button>
-				<Button variant="danger" onclick={() => { confirmDialog.onConfirm(); closeConfirm(); }}>{{tCommonConfirm}}</Button>
+				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}}</Button>
+				<Button variant="danger" onclick={() => { confirmDialog.onConfirm(); closeConfirm(); }}>{tCommonConfirm}}</Button>
 			</div>
 		</div>
 	</div>
@@ -523,7 +523,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 
 <LogModal
 	open={deployLog.open}
-	name={{tComposeDeploylogs} + ' - ' + deployLog.name}
+	name={tComposeDeploylogs} + ' - ' + deployLog.name}
 	content={deployLog.content}
 	loading={deployLog.loading}
 	streaming={deployLog.loading}
@@ -537,14 +537,14 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 				<div class="flex items-center gap-3">
 					<h3 class="text-sm font-semibold text-text-primary">{editorModal.mode === 'new' ? {tComposeNew} + ' Compose ' + {tComposeProject} : editorModal.projectName}</h3>
-					{#if editorModal.dirty}<span class="text-[11px] text-orange-400">● {{tComposeModified}}</span>{/if}
+					{#if editorModal.dirty}<span class="text-[11px] text-orange-400">● {tComposeModified}}</span>{/if}
 					{#if editorModal.error}<span class="text-xs text-red-400">{editorModal.error}</span>{/if}
 				</div>
 				<div class="flex items-center gap-2">
 					{#if editorModal.mode === 'new'}
 						<span class="flex h-7 items-center rounded border border-border-secondary bg-surface-tertiary px-2 text-xs text-text-muted"><span class="whitespace-nowrap">{(currentHost?.mountPoints?.docker?.path || "/opt/docker")}/</span><input type="text" bind:value={editorModal.projectName} placeholder="{name}" class="w-36 border-none bg-transparent px-0 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-0" onblur={() => checkProjectName(editorModal.projectName)} oninput={() => { editorModal.error = ''; }} /></span>
 					{/if}
-					<Button variant="secondary" size="sm" onclick={closeEditor}>{{tCommonCancel}}</Button>
+					<Button variant="secondary" size="sm" onclick={closeEditor}>{tCommonCancel}}</Button>
 					<Button variant="primary" size="sm" onclick={saveEditor} disabled={editorModal.saving || (editorModal.mode === 'edit' && !editorModal.dirty)}>
 						{#if editorModal.saving}<Spinner size={14} class="mr-1" /> {tComposeSaving}...{:else}<Save size={14} class="mr-1" /> {editorModal.mode === 'new' ? {tFilesCreate} : {tCommonSave}}{/if}
 					</Button>

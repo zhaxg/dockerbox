@@ -72,7 +72,7 @@
 		<div class="min-w-56">
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<ImageIcon size={14} class="text-accent" />
-				<span>{{tSettingsWallpaper}}</span>
+				<span>{tSettingsWallpaper}}</span>
 			</div>
 			{#if !backgroundImageIsValid}
 				<div class="mt-1 text-xs text-danger">
@@ -84,7 +84,7 @@
 		<div class="flex min-w-64 flex-1 justify-end gap-2">
 			<Button variant="secondary" size="sm" onclick={() => (wallpaperDialogOpen = true)}>
 				<ImageIcon size={14} />
-				{{tSettingsChoosewallpaper}}
+				{tSettingsChoosewallpaper}}
 			</Button>
 			<Button
 				variant="secondary"
@@ -92,7 +92,7 @@
 				onclick={handleBackgroundClear}
 				disabled={!hasBackgroundImage}
 			>
-				{{tSettingsClear}}
+				{tSettingsClear}}
 			</Button>
 		</div>
 	</div>
@@ -103,7 +103,7 @@
 		<div>
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<ScanSearch size={14} class="text-accent" />
-				<span>{{tSettingsWallpaperfit}}</span>
+				<span>{tSettingsWallpaperfit}}</span>
 			</div>
 		</div>
 		<div class="w-48">
@@ -121,7 +121,7 @@
 		<div>
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<Sparkles size={14} class="text-accent" />
-				<span>{{tSettingsFrostedglass}}</span>
+				<span>{tSettingsFrostedglass}}</span>
 			</div>
 		</div>
 		<Toggle

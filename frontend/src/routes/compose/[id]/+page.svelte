@@ -153,14 +153,14 @@
 				{isNew ? {tComposeNew} + ' Compose ' + {tComposeProject} : projectId}
 			</h1>
 			{#if dirty}
-				<span class="text-[11px] text-orange-400">● {{tComposeModified}}</span>
+				<span class="text-[11px] text-orange-400">● {tComposeModified}}</span>
 			{/if}
 		</div>
 		<div class="flex items-center gap-2">
 			{#if isNew}
-				<input type="text" bind:value={projectName} placeholder={{tComposeProjectname}}
+				<input type="text" bind:value={projectName} placeholder={tComposeProjectname}}
 					class="h-7 w-40 rounded border border-border-secondary bg-surface-secondary px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
-				<input type="text" bind:value={projectPath} placeholder={{tComposeStoragepath}}
+				<input type="text" bind:value={projectPath} placeholder={tComposeStoragepath}}
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			{/if}
 			{#if error}

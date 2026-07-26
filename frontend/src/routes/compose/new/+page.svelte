@@ -175,7 +175,7 @@
 				{isNew ? {tComposeNew} + ' Compose ' + {tComposeProject} : projectId}
 			</h1>
 			{#if dirty}
-				<span class="text-[11px] text-orange-400">● {{tComposeModified}}</span>
+				<span class="text-[11px] text-orange-400">● {tComposeModified}}</span>
 			{/if}
 		</div>
 		<div class="flex items-center gap-2">

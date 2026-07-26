@@ -127,11 +127,11 @@
 	<div class="mb-4 flex items-center gap-4">
 		<Button variant="secondary" onclick={() => goto(resolve(`/containers/${containerId}`))}>
 			<ArrowLeft size={16} class="mr-2" />
-			{{tContainersBack}}
+			{tContainersBack}}
 		</Button>
 		<h1 class="text-2xl font-semibold text-text-primary">
 			<Terminal size={20} class="mr-2" />
-			{{tContainersTerminal}} - {containerId}
+			{tContainersTerminal}} - {containerId}
 		</h1>
 		<span class="text-sm text-text-secondary">
 			{connected ? {tContainersConnected} : {tContainersDisconnected}}

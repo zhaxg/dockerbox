@@ -7,6 +7,20 @@
 	import { Cpu, MemoryStick, Globe, Gauge, Container, Package, HardDrive, Activity } from 'lucide-svelte';
 	import * as echarts from 'echarts';
 
+	// i18n translations - $derived for reactivity
+	const tOverviewTitle = $derived(t('overview.title'));
+	const tCpu = $derived(t('overview.cpu'));
+	const tMemory = $derived(t('overview.memory'));
+	const tNetwork = $derived(t('overview.network'));
+	const tLoad = $derived(t('overview.load'));
+	const tContainers = $derived(t('overview.containers'));
+	const tImages = $derived(t('overview.images'));
+	const tStopped = $derived(t('overview.stopped'));
+	const tRunning = $derived(t('overview.running'));
+	const tCompose = $derived(t('overview.compose'));
+	const tProjects = $derived(t('overview.projects'));
+	const tPaused = $derived(t('overview.paused'));
+
 	let stats = $state({
 		containers: { total: 0, running: 0, stopped: 0, paused: 0 },
 		compose: { total: 0, running: 0 },
@@ -234,7 +248,7 @@
 
 <div class="flex h-full flex-col bg-surface-primary overflow-hidden">
 	<div class="flex-1 overflow-auto p-4">
-		<h1 class="mb-4 text-base font-semibold text-text-primary">{{tOverviewTitle}}</h1>
+		<h1 class="mb-4 text-base font-semibold text-text-primary">{tOverviewTitle}</h1>
 
 		{#if loading}
 			<div class="flex items-center justify-center py-12"><Spinner size="lg" /></div>
@@ -247,12 +261,12 @@
 						<span class="text-xs text-text-muted">CPU</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{hostStats.cpu.usage}%</div>
-					<div class="text-[11px] text-text-muted">{hostStats.cpu.cores} {{tOverviewCores}}</div>
+					<div class="text-[11px] text-text-muted">{hostStats.cpu.cores} {tOverviewCores}}</div>
 				</div>
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<MemoryStick size={16} class="text-green-400" />
-						<span class="text-xs text-text-muted">{{tOverviewMemory}}</span>
+						<span class="text-xs text-text-muted">{tOverviewMemory}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{hostStats.memory.percent}%</div>
 					<div class="text-[11px] text-text-muted">{formatSize(hostStats.memory.used)} / {formatSize(hostStats.memory.total)}</div>
@@ -260,7 +274,7 @@
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<Globe size={16} class="text-orange-400" />
-						<span class="text-xs text-text-muted">{{tOverviewNetwork}}</span>
+						<span class="text-xs text-text-muted">{tOverviewNetwork}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">↓{formatSize(hostStats.network.rx)}</div>
 					<div class="text-[11px] text-text-muted">↑{formatSize(hostStats.network.tx)}</div>
@@ -268,7 +282,7 @@
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<Gauge size={16} class="text-purple-400" />
-						<span class="text-xs text-text-muted">{{tOverviewLoad}}</span>
+						<span class="text-xs text-text-muted">{tOverviewLoad}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{hostStats.load.avg1}</div>
 					<div class="text-[11px] text-text-muted">5m {hostStats.load.avg5.toFixed(1)} · 15m {hostStats.load.avg15.toFixed(1)}</div>
@@ -280,10 +294,10 @@
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<Container size={16} class="text-blue-400" />
-						<span class="text-xs text-text-muted">{{tOverviewContainers}}</span>
+						<span class="text-xs text-text-muted">{tOverviewContainers}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{stats.containers.running}<span class="text-sm font-normal text-text-muted">/{stats.containers.total}</span></div>
-					<div class="text-[11px] text-text-muted">{{tOverviewRunning}}</div>
+					<div class="text-[11px] text-text-muted">{tOverviewRunning}}</div>
 				</div>
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
@@ -291,12 +305,12 @@
 						<span class="text-xs text-text-muted">Compose</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{stats.compose.total}</div>
-					<div class="text-[11px] text-text-muted">{{tOverviewProjects}}</div>
+					<div class="text-[11px] text-text-muted">{tOverviewProjects}}</div>
 				</div>
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<HardDrive size={16} class="text-orange-400" />
-						<span class="text-xs text-text-muted">{{tOverviewImages}}</span>
+						<span class="text-xs text-text-muted">{tOverviewImages}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{stats.images?.total || 0}</div>
 					<div class="text-[11px] text-text-muted">{formatSize(stats.images?.size || 0)}</div>
@@ -304,10 +318,10 @@
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<Activity size={16} class="text-red-400" />
-						<span class="text-xs text-text-muted">{{tOverviewStopped}}</span>
+						<span class="text-xs text-text-muted">{tOverviewStopped}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{stats.containers.stopped}</div>
-					<div class="text-[11px] text-text-muted">{stats.containers.paused} {{tOverviewPaused}}</div>
+					<div class="text-[11px] text-text-muted">{stats.containers.paused} {tOverviewPaused}}</div>
 				</div>
 			</div>
 

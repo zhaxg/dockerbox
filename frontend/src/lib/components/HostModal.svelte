@@ -109,25 +109,25 @@
 				<div class="flex items-end gap-3">
 					<div class="flex-1">
 						<label class="mb-1 block text-[11px] text-text-muted"
-							>{{tHostmodalDisplayname}} <span class="text-red-400">*</span></label
+							>{tHostmodalDisplayname}} <span class="text-red-400">*</span></label
 						>
 						<input
 							type="text"
 							bind:value={host.name}
-							placeholder={{tHostmodalDisplayname}}
+							placeholder={tHostmodalDisplayname}}
 							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 						/>
 					</div>
 					<label
 						class="flex cursor-pointer items-center gap-1.5 pb-1.5 text-[11px] whitespace-nowrap text-text-muted"
 					>
-						<input type="checkbox" bind:checked={isDefault} class="rounded accent-green-500" /> {{tHostmodalDefaulthost}}
+						<input type="checkbox" bind:checked={isDefault} class="rounded accent-green-500" /> {tHostmodalDefaulthost}}
 					</label>
 				</div>
 				<!-- i18n: connection + endpoint -->
 				<div class="grid grid-cols-3 gap-3">
 					<div>
-						<label class="mb-1 block text-[11px] text-text-muted">{{tHostmodalConnectiontype}}</label>
+						<label class="mb-1 block text-[11px] text-text-muted">{tHostmodalConnectiontype}}</label>
 						<select
 							bind:value={host.driver}
 							onchange={handleSocketDefault}
@@ -154,7 +154,7 @@
 					<div class="space-y-3 rounded border border-border-secondary bg-surface-secondary p-3">
 						<div class="flex items-center justify-between">
 							<span class="flex items-center gap-1 text-[11px] font-medium text-text-muted"
-								><Key size={12} /> ED25519 {{tHostmodalKeypair}}</span
+								><Key size={12} /> ED25519 {tHostmodalKeypair}}</span
 							>
 							<div class="flex items-center gap-1.5">
 								<input
@@ -165,7 +165,7 @@
 									onchange={onKeyFileUpload}
 								/>
 								<Button variant="secondary" size="sm" onclick={() => keyFileInput?.click()}
-									><FileUp size={12} class="mr-1" />{{tHostmodalUploadkey}}</Button
+									><FileUp size={12} class="mr-1" />{tHostmodalUploadkey}}</Button
 								>
 								<Button
 									variant="secondary"
@@ -177,20 +177,20 @@
 							</div>
 						</div>
 						<div>
-							<label class="mb-1 block text-[10px] text-text-muted">{{tHostmodalPrivatekey}}</label>
+							<label class="mb-1 block text-[10px] text-text-muted">{tHostmodalPrivatekey}}</label>
 							<textarea
 								bind:value={host.sshKey}
 								rows={3}
-								placeholder={{tHostmodalClickgenerate}}
+								placeholder={tHostmodalClickgenerate}}
 								class="w-full resize-none rounded border border-border-secondary bg-black/30 px-2 py-1 font-mono text-[11px] text-green-400 placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 							></textarea>
 						</div>
 						<div>
-							<label class="mb-1 block text-[10px] text-text-muted">{{tHostmodalPublickey}}</label>
+							<label class="mb-1 block text-[10px] text-text-muted">{tHostmodalPublickey}}</label>
 							<input
 								type="text"
 								bind:value={host.sshPubKey}
-								placeholder={{tHostmodalClickgenerate}}
+								placeholder={tHostmodalClickgenerate}}
 								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 font-mono text-[11px] text-green-400 placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 							/>
 						</div>
@@ -203,7 +203,7 @@
 							>
 								{#if copied['priv']}<Check size={10} class="text-green-400" />{tHostmodalCopied}{:else}<Copy
 										size={10}
-									/>{{tHostmodalPrivatekey}}{/if}
+									/>{tHostmodalPrivatekey}}{/if}
 							</button>
 							<button
 								type="button"
@@ -213,7 +213,7 @@
 							>
 								{#if copied['pub']}<Check size={10} class="text-green-400" />{tHostmodalCopied}{:else}<Copy
 										size={10}
-									/>{{tHostmodalPublickey}}{/if}
+									/>{tHostmodalPublickey}}{/if}
 							</button>
 							<button
 								type="button"
@@ -221,9 +221,9 @@
 								onclick={() => onCopyText(onGetCopyCmd(), 'cmd')}
 								disabled={!host.sshPubKey || !host.endpoint}
 							>
-								{#if copied['cmd']}<Check size={10} class="text-green-400" />{{tHostmodalCopied}}{:else}<Terminal
+								{#if copied['cmd']}<Check size={10} class="text-green-400" />{tHostmodalCopied}}{:else}<Terminal
 										size={10}
-									/>{{tHostmodalKeycommand}}{/if}
+									/>{tHostmodalKeycommand}}{/if}
 							</button>
 							<button
 								type="button"
@@ -233,14 +233,14 @@
 								{#if copied['podman']}<Check
 										size={10}
 										class="text-green-400"
-									/>{{tHostmodalCopied}}{:else}<Terminal size={10} />Podman {{tCommonCommand}}{/if}
+									/>{tHostmodalCopied}}{:else}<Terminal size={10} />Podman {tCommonCommand}}{/if}
 							</button>
 						</div>
 					</div>
 				{/if}
 				<!-- Tags -->
 				<div>
-					<label class="mb-1 block text-[11px] text-text-muted">{{tHostmodalTags}}</label>
+					<label class="mb-1 block text-[11px] text-text-muted">{tHostmodalTags}}</label>
 					<input
 						type="text"
 						value={(host.tags || []).join(', ')}
@@ -249,9 +249,9 @@
 						class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 					/>
 				</div>
-				<!-- {{tHostmodalMountpoints}} -->
+				<!-- {tHostmodalMountpoints}} -->
 				<div>
-					<label class="mb-2 block text-[11px] font-medium text-text-muted">{{tHostmodalMountpoints}}</label>
+					<label class="mb-2 block text-[11px] font-medium text-text-muted">{tHostmodalMountpoints}}</label>
 					<div class="mb-2 space-y-1">
 						<div class="flex items-center gap-2 px-1 py-1">
 							<input
@@ -268,7 +268,7 @@
 								class="min-w-0 flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary focus:border-border-focus focus:outline-none"
 							/>
 							<span class="w-[104px] shrink-0 text-left text-[11px] font-medium text-green-400"
-								>{{tHostmodalDockermaindir}}</span
+								>{tHostmodalDockermaindir}}</span
 							>
 						</div>
 						{#each Object.entries(host.mountPoints || {}) as [key, mp]}
@@ -288,7 +288,7 @@
 										class="min-w-0 flex-1 rounded border border-border-secondary bg-surface-secondary px-2 py-1 font-mono text-[11px] text-text-primary focus:border-border-focus focus:outline-none"
 									/>
 									<div class="flex w-[104px] shrink-0 items-center justify-start gap-1">
-										{#if mp.readOnly}<span class="text-[10px] text-text-muted">{{tHostmodalReadonly}}</span>{/if}
+										{#if mp.readOnly}<span class="text-[10px] text-text-muted">{tHostmodalReadonly}}</span>{/if}
 										<button
 											type="button"
 											class="text-text-muted hover:text-red-400"
@@ -303,7 +303,7 @@
 						<input
 							type="text"
 							bind:value={mountKey}
-							placeholder="{{tHostmodalName}}"
+							placeholder="{tHostmodalName}}"
 							class="w-28 shrink-0 rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-[11px] text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 						/>
 						<input
@@ -314,12 +314,12 @@
 						/>
 						<div class="flex w-[104px] shrink-0 items-center gap-1">
 							<label class="flex cursor-pointer items-center gap-1 text-[11px] text-text-muted"
-								><input type="checkbox" bind:checked={mountReadOnly} class="rounded" /> {{tHostmodalReadonly}}</label
+								><input type="checkbox" bind:checked={mountReadOnly} class="rounded" /> {tHostmodalReadonly}}</label
 							>
 							<button
 								type="button"
 								class="rounded bg-surface-tertiary px-2 py-1 text-[11px] text-text-primary hover:bg-surface-secondary"
-								onclick={onAddMountPoint}>{{tHostmodalAdd}}</button
+								onclick={onAddMountPoint}>{tHostmodalAdd}}</button
 							>
 						</div>
 					</div>
@@ -335,10 +335,10 @@
 					{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug
 							size={12}
 							class="mr-1"
-						/>{/if}{{tHostmodalTestconnection}}
+						/>{/if}{tHostmodalTestconnection}}
 				</Button>
 				<div class="flex items-center gap-2 px-1 py-1">
-					<Button variant="secondary" size="sm" onclick={onClose}>{{tCommonCancel}}</Button>
+					<Button variant="secondary" size="sm" onclick={onClose}>{tCommonCancel}}</Button>
 					<Button
 						variant="primary"
 						size="sm"

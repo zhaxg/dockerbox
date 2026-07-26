@@ -845,7 +845,7 @@
 		/>
 	</div>
 	{#snippet footer()}
-		<Button variant="secondary" onclick={closeCreateDialog}>{{tCommonCancel}}</Button>
+		<Button variant="secondary" onclick={closeCreateDialog}>{tCommonCancel}}</Button>
 		<Button variant="primary" onclick={handleCreateConfirm}>
 			Create {createDialog.type === 'file' ? 'File' : 'Folder'}
 		</Button>
@@ -881,13 +881,13 @@
 <!-- Delete Confirmation Dialog -->
 <Modal
 	open={deleteDialog.open}
-	title={{tCommonDelete}}
+	title={tCommonDelete}}
 	persistent
 	onclose={() => (deleteDialog = { open: false, items: [] })}
 >
 	<div class="flex flex-col gap-3 text-sm text-text-secondary">
 		<p>
-			{{tCommonConfirmdelete}} {deleteDialog.items.length} {deleteDialog.items.length === 1 ? {tCommonItem} : {tCommonItems}}?
+			{tCommonConfirmdelete}} {deleteDialog.items.length} {deleteDialog.items.length === 1 ? {tCommonItem} : {tCommonItems}}?
 		</p>
 		{#if deleteDialog.items.length > 0}
 			<ul class="max-h-40 list-none overflow-auto rounded border border-border-secondary p-0">
@@ -903,7 +903,7 @@
 		<Button variant="secondary" onclick={() => (deleteDialog = { open: false, items: [] })}>
 			Cancel
 		</Button>
-		<Button variant="danger" onclick={handleDeleteConfirm}>{{tCommonDelete}}</Button>
+		<Button variant="danger" onclick={handleDeleteConfirm}>{tCommonDelete}}</Button>
 	{/snippet}
 </Modal>
 

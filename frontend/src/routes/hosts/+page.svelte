@@ -329,21 +329,21 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 
 <div class="flex h-full flex-col bg-surface-primary">
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
-		<h1 class="text-base font-semibold text-text-primary">{{tHostsTitle}} <Badge>{hostList.length}</Badge></h1>
+		<h1 class="text-base font-semibold text-text-primary">{tHostsTitle}} <Badge>{hostList.length}</Badge></h1>
 		<div class="flex items-center gap-2">
 			<div class="relative">
 				<Search size={14} class="absolute top-1/2 left-2.5 -translate-y-1/2 text-text-muted" />
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder={{tHostsSearch}}
+					placeholder={tHostsSearch}}
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pr-2 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 				/>
 			</div>
-			<Button variant="secondary" size="sm" onclick={openAdd} title={{tHostsAddhost}}
+			<Button variant="secondary" size="sm" onclick={openAdd} title={tHostsAddhost}}
 				><Plus size={14} /></Button
 			>
-			<Button variant="secondary" size="sm" onclick={loadHosts} title={{tHostsRefresh}}
+			<Button variant="secondary" size="sm" onclick={loadHosts} title={tHostsRefresh}}
 				><RefreshCw size={14} /></Button
 			>
 		</div>
@@ -355,7 +355,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 			<div class="flex flex-col items-center gap-2 py-12 text-text-muted">
 				<span class="text-sm">{searchQuery ? {tHostsNomatch} : {tHostsNohosts}}</span>
 				<Button variant="primary" size="sm" onclick={openAdd}
-					><Plus size={14} class="mr-1" /> {{tHostsAddhost}}</Button
+					><Plus size={14} class="mr-1" /> {tHostsAddhost}}</Button
 				>
 			</div>
 		{:else}
@@ -398,7 +398,7 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 									>
 										{hostStats[host.key].status === 'online' ? {tHostsOnline} : {tHostsOffline}}
 									</span>
-								{:else}<span class="text-[11px] text-text-muted">{{tHostsChecking}}</span>{/if}
+								{:else}<span class="text-[11px] text-text-muted">{tHostsChecking}}</span>{/if}
 							</td>
 							<td class={tdClass}>
 								<div class="flex flex-wrap gap-1">
@@ -423,20 +423,20 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 										type="button"
 										class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary"
 										onclick={() => testHost(host.key)}
-										title={{tHostsTestconnection}}
+										title={tHostsTestconnection}}
 										disabled={testLoading}><Plug size={13} /></button
 									>
 									<button
 										type="button"
 										class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary"
 										onclick={() => openEdit(host)}
-										title={{tCommonEdit}}><Pencil size={13} /></button
+										title={tCommonEdit}}><Pencil size={13} /></button
 									>
 									<button
 										type="button"
 										class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10"
 										onclick={() => deleteHost(host.key, host.name)}
-										title={{tCommonDelete}}><Trash2 size={13} /></button
+										title={tCommonDelete}}><Trash2 size={13} /></button
 									>
 								</div>
 							</td>
@@ -469,13 +469,13 @@ import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
-				<Button variant="secondary" onclick={closeConfirm}>{{tCommonCancel}}</Button>
+				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}}</Button>
 				<Button
 					variant="danger"
 					onclick={() => {
 						confirmDialog.onConfirm();
 						closeConfirm();
-					}}>{{tContainersConfirm}}</Button
+					}}>{tContainersConfirm}}</Button
 				>
 			</div>
 		</div>

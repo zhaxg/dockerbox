@@ -5,11 +5,15 @@ const messages: Record<string, any> = { 'zh-CN': zhCN, en };
 
 let _locale = $state<string>('zh-CN');
 
-// Initialize from localStorage
+// Initialize from localStorage - default to Chinese unless user explicitly chose English
 if (typeof window !== 'undefined') {
 	const saved = localStorage.getItem('locale');
-	const nav = navigator.language;
-	_locale = saved || (nav.startsWith('en') ? 'en' : 'zh-CN');
+	if (saved) {
+		_locale = saved;
+	} else {
+		// Default to Chinese, only use English if explicitly chosen
+		_locale = 'zh-CN';
+	}
 }
 
 export function getLocale(): string {
