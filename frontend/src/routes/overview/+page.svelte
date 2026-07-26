@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+	import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	import { Spinner } from '$lib/components/ui';
 	import { api } from '$lib/api/client';
 	import { dockerApi } from '$lib/api/docker';
@@ -98,7 +98,7 @@
 
 	function getMultiLineChartOption() {
 		return {
-			title: { text: $_t('overview.networkTraffic') || 'Network Traffic', textStyle: { color: '#aaa', fontSize: 12 }, left: 10, top: 5 },
+			title: { text: {tOverviewNetworktraffic} || 'Network Traffic', textStyle: { color: '#aaa', fontSize: 12 }, left: 10, top: 5 },
 			tooltip: { trigger: 'axis', backgroundColor: '#1e1e1e', borderColor: '#333', textStyle: { color: '#ccc', fontSize: 11 } },
 			legend: { data: ['↓ RX', '↑ TX'], textStyle: { color: '#888', fontSize: 10 }, right: 10, top: 5 },
 			grid: { left: 55, right: 15, top: 35, bottom: 25 },
@@ -113,7 +113,7 @@
 
 	function initCharts() {
 		if (cpuChartEl) { cpuChart = echarts.init(cpuChartEl); cpuChart.setOption(getChartOption('CPU', '#3b82f6', 100, '{value}%')); }
-		if (memChartEl) { memChart = echarts.init(memChartEl); memChart.setOption(getChartOption($_t('overview.memory'), '#22c55e', 100, '{value}%')); }
+		if (memChartEl) { memChart = echarts.init(memChartEl); memChart.setOption(getChartOption({tOverviewMemory}, '#22c55e', 100, '{value}%')); }
 		if (netChartEl) { netChart = echarts.init(netChartEl); netChart.setOption(getMultiLineChartOption()); }
 		// Fill charts with history
 		updateCharts();
@@ -234,7 +234,7 @@
 
 <div class="flex h-full flex-col bg-surface-primary overflow-hidden">
 	<div class="flex-1 overflow-auto p-4">
-		<h1 class="mb-4 text-base font-semibold text-text-primary">{$_t('overview.title')}</h1>
+		<h1 class="mb-4 text-base font-semibold text-text-primary">{{tOverviewTitle}}</h1>
 
 		{#if loading}
 			<div class="flex items-center justify-center py-12"><Spinner size="lg" /></div>
@@ -247,12 +247,12 @@
 						<span class="text-xs text-text-muted">CPU</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{hostStats.cpu.usage}%</div>
-					<div class="text-[11px] text-text-muted">{hostStats.cpu.cores} {$_t('overview.cores')}</div>
+					<div class="text-[11px] text-text-muted">{hostStats.cpu.cores} {{tOverviewCores}}</div>
 				</div>
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<MemoryStick size={16} class="text-green-400" />
-						<span class="text-xs text-text-muted">{$_t('overview.memory')}</span>
+						<span class="text-xs text-text-muted">{{tOverviewMemory}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{hostStats.memory.percent}%</div>
 					<div class="text-[11px] text-text-muted">{formatSize(hostStats.memory.used)} / {formatSize(hostStats.memory.total)}</div>
@@ -260,7 +260,7 @@
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<Globe size={16} class="text-orange-400" />
-						<span class="text-xs text-text-muted">{$_t('overview.network')}</span>
+						<span class="text-xs text-text-muted">{{tOverviewNetwork}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">↓{formatSize(hostStats.network.rx)}</div>
 					<div class="text-[11px] text-text-muted">↑{formatSize(hostStats.network.tx)}</div>
@@ -268,7 +268,7 @@
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<Gauge size={16} class="text-purple-400" />
-						<span class="text-xs text-text-muted">{$_t('overview.load')}</span>
+						<span class="text-xs text-text-muted">{{tOverviewLoad}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{hostStats.load.avg1}</div>
 					<div class="text-[11px] text-text-muted">5m {hostStats.load.avg5.toFixed(1)} · 15m {hostStats.load.avg15.toFixed(1)}</div>
@@ -280,10 +280,10 @@
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<Container size={16} class="text-blue-400" />
-						<span class="text-xs text-text-muted">{$_t('overview.containers')}</span>
+						<span class="text-xs text-text-muted">{{tOverviewContainers}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{stats.containers.running}<span class="text-sm font-normal text-text-muted">/{stats.containers.total}</span></div>
-					<div class="text-[11px] text-text-muted">{$_t('overview.running')}</div>
+					<div class="text-[11px] text-text-muted">{{tOverviewRunning}}</div>
 				</div>
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
@@ -291,12 +291,12 @@
 						<span class="text-xs text-text-muted">Compose</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{stats.compose.total}</div>
-					<div class="text-[11px] text-text-muted">{$_t('overview.projects')}</div>
+					<div class="text-[11px] text-text-muted">{{tOverviewProjects}}</div>
 				</div>
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<HardDrive size={16} class="text-orange-400" />
-						<span class="text-xs text-text-muted">{$_t('overview.images')}</span>
+						<span class="text-xs text-text-muted">{{tOverviewImages}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{stats.images?.total || 0}</div>
 					<div class="text-[11px] text-text-muted">{formatSize(stats.images?.size || 0)}</div>
@@ -304,10 +304,10 @@
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">
 						<Activity size={16} class="text-red-400" />
-						<span class="text-xs text-text-muted">{$_t('overview.stopped')}</span>
+						<span class="text-xs text-text-muted">{{tOverviewStopped}}</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{stats.containers.stopped}</div>
-					<div class="text-[11px] text-text-muted">{stats.containers.paused} {$_t('overview.paused')}</div>
+					<div class="text-[11px] text-text-muted">{stats.containers.paused} {{tOverviewPaused}}</div>
 				</div>
 			</div>
 

@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { _t } from '$lib/i18n/index.svelte';
+	import { t, getLocale } from '$lib/i18n/index.svelte';
 	import FileList from '$lib/components/FileList.svelte';
 	import FileGrid from '$lib/components/FileGrid.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
@@ -845,7 +845,7 @@
 		/>
 	</div>
 	{#snippet footer()}
-		<Button variant="secondary" onclick={closeCreateDialog}>{$_t('common.cancel')}</Button>
+		<Button variant="secondary" onclick={closeCreateDialog}>{{tCommonCancel}}</Button>
 		<Button variant="primary" onclick={handleCreateConfirm}>
 			Create {createDialog.type === 'file' ? 'File' : 'Folder'}
 		</Button>
@@ -881,13 +881,13 @@
 <!-- Delete Confirmation Dialog -->
 <Modal
 	open={deleteDialog.open}
-	title={$_t('common.delete')}
+	title={{tCommonDelete}}
 	persistent
 	onclose={() => (deleteDialog = { open: false, items: [] })}
 >
 	<div class="flex flex-col gap-3 text-sm text-text-secondary">
 		<p>
-			{$_t('common.confirmDelete')} {deleteDialog.items.length} {deleteDialog.items.length === 1 ? $_t('common.item') : $_t('common.items')}?
+			{{tCommonConfirmdelete}} {deleteDialog.items.length} {deleteDialog.items.length === 1 ? {tCommonItem} : {tCommonItems}}?
 		</p>
 		{#if deleteDialog.items.length > 0}
 			<ul class="max-h-40 list-none overflow-auto rounded border border-border-secondary p-0">
@@ -903,7 +903,7 @@
 		<Button variant="secondary" onclick={() => (deleteDialog = { open: false, items: [] })}>
 			Cancel
 		</Button>
-		<Button variant="danger" onclick={handleDeleteConfirm}>{$_t('common.delete')}</Button>
+		<Button variant="danger" onclick={handleDeleteConfirm}>{{tCommonDelete}}</Button>
 	{/snippet}
 </Modal>
 

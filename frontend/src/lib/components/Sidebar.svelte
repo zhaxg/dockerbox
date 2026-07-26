@@ -20,7 +20,7 @@
 	import { type MountPoint } from '$lib/api/files';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { onMount } from 'svelte';
-	import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+	import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	
 	let mountPoints = $state<MountPoint[]>([]);
 	let hostsConfig = $state<DockerHostsConfig>({ default: '', hosts: {} });
@@ -30,7 +30,18 @@
 	// Navigation items
 	// i18n translations - $derived for reactivity
 
-	// navItems use $_t store for i18n - called in template as {$_t(item.name)}
+	// navItems use $_t store for i18n - called in template as {t(item.name)}
+	// i18n translations - $derived for reactivity
+	const tNavOverview = $derived(t('nav.overview'));
+	const tNavHosts = $derived(t('nav.hosts'));
+	const tNavContainers = $derived(t('nav.containers'));
+	const tNavCompose = $derived(t('nav.compose'));
+	const tNavFiles = $derived(t('nav.files'));
+	const tNavSettings = $derived(t('nav.settings'));
+	const tSidebarFavorites = $derived(t('sidebar.favorites'));
+	const tSidebarMounts = $derived(t('sidebar.mounts'));
+	const tSidebarRoot = $derived(t('sidebar.root'));
+	const tSidebarSelectHost = $derived(t('sidebar.selectHost'));
 	const navItems = [
 		{ name: 'nav.overview', path: '/overview', icon: LayoutDashboard },
 		{ name: 'nav.hosts', path: '/hosts', icon: Server },
@@ -117,7 +128,7 @@
 		<button type="button" class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[12px] text-text-secondary hover:bg-surface-secondary transition-colors"
 			onclick={() => hostDropdownOpen = !hostDropdownOpen}>
 			<Server size={14} class="shrink-0 text-green-500" />
-			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[currentHostId]?.name || $_t('sidebar.selectHost')}</span>
+			<span class="flex-1 text-left truncate text-text-primary font-medium">{hostsConfig.hosts[currentHostId]?.name || {tSidebarSelecthost}}</span>
 			<ChevronDown size={12} class="shrink-0 transition-transform {hostDropdownOpen ? '' : '-rotate-90'}" />
 		</button>
 		{#if hostDropdownOpen}
@@ -148,7 +159,7 @@
 					}}
 				>
 					<item.icon size={18} class="shrink-0 opacity-80" />
-					<span class="flex-1 text-left">{$_t(item.name)}</span>
+					<span class="flex-1 text-left">{t(item.name)}</span>
 					<ChevronDown
 						size={14}
 						class="shrink-0 transition-transform duration-150 {filesExpanded ? '' : '-rotate-90'}"
@@ -159,7 +170,7 @@
 				<div class="ml-4">
 				<!-- Favorites section -->
 				{#if item.children[0].isFavorites}
-				<div class="nav-section-title">{$_t('sidebar.favorites')}</div>
+				<div class="nav-section-title">{tSidebarFavorites}</div>
 				{#each $settingsStore.favoriteFolders as fav}
 				<button
 				type="button"
@@ -172,7 +183,7 @@
 				{/each}
 
 						<!-- Mount points -->
-				 <div class="nav-section-title">{$_t('sidebar.mounts')}</div>
+				 <div class="nav-section-title">{tSidebarMounts}</div>
 				 {#each mountPoints as mp}
 				 <button
 				 type="button"
@@ -193,7 +204,7 @@
 							onclick={() => handleNavigate(child.path)}
 						>
 							<child.icon size={14} class="shrink-0 opacity-80" />
-							<span class="flex-1 text-left">{$_t(child.name)}</span>
+							<span class="flex-1 text-left">{t(child.name)}</span>
 						</button>
 					{/each}
 				</div>
@@ -206,7 +217,7 @@
 					onclick={() => handleNavigate(item.path)}
 				>
 					<item.icon size={18} class="shrink-0 opacity-80" />
-					<span class="flex-1 text-left">{$_t(item.name)}</span>
+					<span class="flex-1 text-left">{t(item.name)}</span>
 				</button>
 			{/if}
 		{/each}

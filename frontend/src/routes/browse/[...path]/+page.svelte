@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Toolbar from '$lib/components/Toolbar.svelte';
-	import { _t } from '$lib/i18n/index.svelte';
+	import { t, getLocale } from '$lib/i18n/index.svelte';
 	import FileList from '$lib/components/FileList.svelte';
 	import FileGrid from '$lib/components/FileGrid.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';

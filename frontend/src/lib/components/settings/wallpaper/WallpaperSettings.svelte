@@ -9,7 +9,7 @@
 		type BackgroundImageMode
 	} from '$lib/utils/wallpaper';
 	import WallpaperPickerModal from './WallpaperPickerModal.svelte';
-	import { _t } from '$lib/i18n/index.svelte';
+	import { t, getLocale } from '$lib/i18n/index.svelte';
 
 	interface WallpaperSelection {
 		backgroundImage: string;
@@ -46,11 +46,11 @@
 	const translatedOptions = $derived(
 		WALLPAPER_DISPLAY_OPTIONS.map(opt => ({
 			...opt,
-			label: opt.value === 'cover' ? $_t('settings.cropToFit')
-				: opt.value === 'contain' ? $_t('settings.fitOnScreen')
-				: opt.value === 'stretch' ? $_t('settings.stretch')
-				: opt.value === 'center' ? $_t('settings.center')
-				: opt.value === 'tile' ? $_t('settings.tile')
+			label: opt.value === 'cover' ? {tSettingsCroptofit}
+				: opt.value === 'contain' ? {tSettingsFitonscreen}
+				: opt.value === 'stretch' ? {tSettingsStretch}
+				: opt.value === 'center' ? {tSettingsCenter}
+				: opt.value === 'tile' ? {tSettingsTile}
 				: opt.label
 		}))
 	);
@@ -72,7 +72,7 @@
 		<div class="min-w-56">
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<ImageIcon size={14} class="text-accent" />
-				<span>{$_t('settings.wallpaper')}</span>
+				<span>{{tSettingsWallpaper}}</span>
 			</div>
 			{#if !backgroundImageIsValid}
 				<div class="mt-1 text-xs text-danger">
@@ -84,7 +84,7 @@
 		<div class="flex min-w-64 flex-1 justify-end gap-2">
 			<Button variant="secondary" size="sm" onclick={() => (wallpaperDialogOpen = true)}>
 				<ImageIcon size={14} />
-				{$_t('settings.chooseWallpaper')}
+				{{tSettingsChoosewallpaper}}
 			</Button>
 			<Button
 				variant="secondary"
@@ -92,7 +92,7 @@
 				onclick={handleBackgroundClear}
 				disabled={!hasBackgroundImage}
 			>
-				{$_t('settings.clear')}
+				{{tSettingsClear}}
 			</Button>
 		</div>
 	</div>
@@ -103,7 +103,7 @@
 		<div>
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<ScanSearch size={14} class="text-accent" />
-				<span>{$_t('settings.wallpaperFit')}</span>
+				<span>{{tSettingsWallpaperfit}}</span>
 			</div>
 		</div>
 		<div class="w-48">
@@ -121,7 +121,7 @@
 		<div>
 			<div class="flex items-center gap-2 text-[13px] text-text-primary">
 				<Sparkles size={14} class="text-accent" />
-				<span>{$_t('settings.frostedGlass')}</span>
+				<span>{{tSettingsFrostedglass}}</span>
 			</div>
 		</div>
 		<Toggle

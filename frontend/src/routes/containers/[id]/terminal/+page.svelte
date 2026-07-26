@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { _t } from '$lib/i18n/index.svelte';
+	import { t, getLocale } from '$lib/i18n/index.svelte';
 	import { page } from '$app/state';
 	import { onMount, onDestroy } from 'svelte';
 	import { Button } from '$lib/components/ui';
@@ -30,7 +30,7 @@
 
 		ws.onopen = () => {
 			connected = true;
-			outputBuffer = $_t('containers.connectedToTerminal') + '...\r\n';
+			outputBuffer = {tContainersConnectedtoterminal} + '...\r\n';
 			ws?.send(JSON.stringify({ type: 'auth', token }));
 		};
 
@@ -57,12 +57,12 @@
 
 		ws.onclose = () => {
 			connected = false;
-			outputBuffer += '\r\n' + $_t('containers.connectionLost');
+			outputBuffer += '\r\n' + {tContainersConnectionlost};
 		};
 
 		ws.onerror = () => {
 			connected = false;
-			outputBuffer += '\r\n' + $_t('containers.connectionError');
+			outputBuffer += '\r\n' + {tContainersConnectionerror};
 		};
 	}
 
@@ -127,14 +127,14 @@
 	<div class="mb-4 flex items-center gap-4">
 		<Button variant="secondary" onclick={() => goto(resolve(`/containers/${containerId}`))}>
 			<ArrowLeft size={16} class="mr-2" />
-			{$_t('containers.back')}
+			{{tContainersBack}}
 		</Button>
 		<h1 class="text-2xl font-semibold text-text-primary">
 			<Terminal size={20} class="mr-2" />
-			{$_t('containers.terminal')} - {containerId}
+			{{tContainersTerminal}} - {containerId}
 		</h1>
 		<span class="text-sm text-text-secondary">
-			{connected ? $_t('containers.connected') : $_t('containers.disconnected')}
+			{connected ? {tContainersConnected} : {tContainersDisconnected}}
 		</span>
 	</div>
 

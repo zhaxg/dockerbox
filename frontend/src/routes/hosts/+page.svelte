@@ -1,5 +1,5 @@
 <script lang="ts">
-import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	import { onMount } from 'svelte';
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import { hostsApi, type DockerHost, type DockerHostsConfig } from '$lib/api/hosts';
@@ -242,7 +242,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		// Validate docker directory path
 		const dockerMP = modal.host.mountPoints?.docker;
 		if (!dockerMP || !dockerMP.path?.trim()) {
-			showToast($_t('hostModal.mainDirPath'), 'err');
+			showToast({tHostmodalMaindirpath}, 'err');
 			return null;
 		}
 		const saveData = { ...modal.host, isDefault: modal.isDefault };
@@ -277,18 +277,18 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		try {
 			const result = await hostsApi.test(savedId);
 			showToast(
-				result.status === 'ok' ? $_t('hosts.connectSuccess') + ': ' + result.message : $_t('hosts.connectFailed') + ': ' + result.message,
+				result.status === 'ok' ? {tHostsConnectsuccess} + ': ' + result.message : {tHostsConnectfailed} + ': ' + result.message,
 				result.status === 'ok' ? 'ok' : 'err'
 			);
 		} catch (e) {
-			showToast($_t('hosts.connectFailed') + ': ' + String(e), 'err');
+			showToast({tHostsConnectfailed} + ': ' + String(e), 'err');
 		} finally {
 			testLoading = false;
 		}
 	}
 
 	function deleteHost(id: string, name: string) {
-		showConfirm($_t('hosts.deleteHost'), $_t('hosts.deleteConfirm'), async () => {
+		showConfirm({tHostsDeletehost}, {tHostsDeleteconfirm}, async () => {
 			try {
 				await hostsApi.delete(id);
 				await loadHosts();
@@ -303,11 +303,11 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		try {
 			const result = await hostsApi.test(id);
 			showToast(
-				result.status === 'ok' ? $_t('hosts.connectSuccess') + ': ' + result.message : $_t('hosts.connectFailed') + ': ' + result.message,
+				result.status === 'ok' ? {tHostsConnectsuccess} + ': ' + result.message : {tHostsConnectfailed} + ': ' + result.message,
 				result.status === 'ok' ? 'ok' : 'err'
 			);
 		} catch (e) {
-			showToast($_t('hosts.connectFailed') + ': ' + String(e), 'err');
+			showToast({tHostsConnectfailed} + ': ' + String(e), 'err');
 		} finally {
 			testLoading = false;
 		}
@@ -329,21 +329,21 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 
 <div class="flex h-full flex-col bg-surface-primary">
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
-		<h1 class="text-base font-semibold text-text-primary">{$_t('hosts.title')} <Badge>{hostList.length}</Badge></h1>
+		<h1 class="text-base font-semibold text-text-primary">{{tHostsTitle}} <Badge>{hostList.length}</Badge></h1>
 		<div class="flex items-center gap-2">
 			<div class="relative">
 				<Search size={14} class="absolute top-1/2 left-2.5 -translate-y-1/2 text-text-muted" />
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder={$_t('hosts.search')}
+					placeholder={{tHostsSearch}}
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pr-2 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 				/>
 			</div>
-			<Button variant="secondary" size="sm" onclick={openAdd} title={$_t('hosts.addHost')}
+			<Button variant="secondary" size="sm" onclick={openAdd} title={{tHostsAddhost}}
 				><Plus size={14} /></Button
 			>
-			<Button variant="secondary" size="sm" onclick={loadHosts} title={$_t('hosts.refresh')}
+			<Button variant="secondary" size="sm" onclick={loadHosts} title={{tHostsRefresh}}
 				><RefreshCw size={14} /></Button
 			>
 		</div>
@@ -353,9 +353,9 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 			<div class="flex items-center justify-center py-12"><Spinner size="lg" /></div>
 		{:else if hostList.length === 0}
 			<div class="flex flex-col items-center gap-2 py-12 text-text-muted">
-				<span class="text-sm">{searchQuery ? $_t('hosts.noMatch') : $_t('hosts.noHosts')}</span>
+				<span class="text-sm">{searchQuery ? {tHostsNomatch} : {tHostsNohosts}}</span>
 				<Button variant="primary" size="sm" onclick={openAdd}
-					><Plus size={14} class="mr-1" /> {$_t('hosts.addHost')}</Button
+					><Plus size={14} class="mr-1" /> {{tHostsAddhost}}</Button
 				>
 			</div>
 		{:else}
@@ -396,9 +396,9 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 											? 'text-green-400'
 											: 'text-red-400'}"
 									>
-										{hostStats[host.key].status === 'online' ? $_t('hosts.online') : $_t('hosts.offline')}
+										{hostStats[host.key].status === 'online' ? {tHostsOnline} : {tHostsOffline}}
 									</span>
-								{:else}<span class="text-[11px] text-text-muted">{$_t('hosts.checking')}</span>{/if}
+								{:else}<span class="text-[11px] text-text-muted">{{tHostsChecking}}</span>{/if}
 							</td>
 							<td class={tdClass}>
 								<div class="flex flex-wrap gap-1">
@@ -423,20 +423,20 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 										type="button"
 										class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary"
 										onclick={() => testHost(host.key)}
-										title={$_t('hosts.testConnection')}
+										title={{tHostsTestconnection}}
 										disabled={testLoading}><Plug size={13} /></button
 									>
 									<button
 										type="button"
 										class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary"
 										onclick={() => openEdit(host)}
-										title={$_t('common.edit')}><Pencil size={13} /></button
+										title={{tCommonEdit}}><Pencil size={13} /></button
 									>
 									<button
 										type="button"
 										class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10"
 										onclick={() => deleteHost(host.key, host.name)}
-										title={$_t('common.delete')}><Trash2 size={13} /></button
+										title={{tCommonDelete}}><Trash2 size={13} /></button
 									>
 								</div>
 							</td>
@@ -469,13 +469,13 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
-				<Button variant="secondary" onclick={closeConfirm}>{$_t('common.cancel')}</Button>
+				<Button variant="secondary" onclick={closeConfirm}>{{tCommonCancel}}</Button>
 				<Button
 					variant="danger"
 					onclick={() => {
 						confirmDialog.onConfirm();
 						closeConfirm();
-					}}>{$_t('containers.confirm')}</Button
+					}}>{{tContainersConfirm}}</Button
 				>
 			</div>
 		</div>

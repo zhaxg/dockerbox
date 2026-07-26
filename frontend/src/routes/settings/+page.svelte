@@ -22,7 +22,7 @@
 	import WallpaperSettings from '$lib/components/settings/wallpaper/WallpaperSettings.svelte';
 	import { Button, ProgressButton, Select, Toggle } from '$lib/components/ui';
 	import { normalizeBackgroundImageMode } from '$lib/utils/wallpaper';
-	import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
+	import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		import {
 		deleteLocalWallpaper,
 		isInlineWallpaperDataUrl,
@@ -77,8 +77,8 @@
 	const showApplyProgress = $derived(isApplyingSettings || applyProgress > 0);
 	const saveButtonText = $derived.by(() => {
 		if (applyProgressVariant === 'danger' && applyProgress > 0) return 'Failed';
-		if (applyProgressVariant === 'success' && applyProgress >= 100) return $_t('common.saved');
-		return isApplyingSettings ? $_t('common.saving') : $_t('common.save');
+		if (applyProgressVariant === 'success' && applyProgress >= 100) return {tCommonSaved};
+		return isApplyingSettings ? {tCommonSaving} : {tCommonSave};
 	});
 
 	const navItems: Array<{
@@ -88,55 +88,55 @@
 	}> = [
 		{
 			id: 'all',
-			label: $_t('settings.showAll'),
+			label: {tSettingsShowall},
 			icon: Settings
 		},
 		{
 			id: 'display',
-			label: $_t('settings.fileDisplay'),
+			label: {tSettingsFiledisplay},
 			icon: Eye
 		},
 		{
 			id: 'personalization',
-			label: $_t('settings.personalization'),
+			label: {tSettingsPersonalization},
 			icon: PaintRollerIcon
 		},
 		{
 			id: 'behavior',
-			label: $_t('settings.behavior'),
+			label: {tSettingsBehavior},
 			icon: MousePointer
 		},
 		{
 			id: 'defaults',
-			label: $_t('settings.defaultView'),
+			label: {tSettingsDefaultview},
 			icon: Layout
 		},
 		{
 			id: 'account',
-			label: $_t('settings.account'),
+			label: {tSettingsAccount},
 			icon: User
 		}
 	];
 
 	const sortByOptions = [
-		{ value: 'name', label: $_t('settings.sortByName') },
-		{ value: 'size', label: $_t('settings.sortBySize') },
-		{ value: 'modTime', label: $_t('settings.sortByDate') },
-		{ value: 'type', label: $_t('settings.sortByType') }
+		{ value: 'name', label: {tSettingsSortbyname} },
+		{ value: 'size', label: {tSettingsSortbysize} },
+		{ value: 'modTime', label: {tSettingsSortbydate} },
+		{ value: 'type', label: {tSettingsSortbytype} }
 	];
 
 	const sortDirOptions = [
-		{ value: 'asc', label: $_t('settings.ascending') },
-		{ value: 'desc', label: $_t('settings.descending') }
+		{ value: 'asc', label: {tSettingsAscending} },
+		{ value: 'desc', label: {tSettingsDescending} }
 	];
 
 	const viewModeOptions = [
-		{ value: 'list', label: $_t('settings.listView') },
-		{ value: 'grid', label: $_t('settings.gridView') }
+		{ value: 'list', label: {tSettingsListview} },
+		{ value: 'grid', label: {tSettingsGridview} }
 	];
 
 	const uiFontOptions = [
-		{ value: '', label: $_t('settings.systemDefault') },
+		{ value: '', label: {tSettingsSystemdefault} },
 		...FONT_LIST.map(f => ({ value: f.family, label: f.name })),
 	];
 
@@ -403,7 +403,7 @@
 		<div class="border-b border-border-secondary px-3 py-3">
 			<div class="flex items-center gap-2 text-[13px] font-medium text-text-primary">
 				<Settings size={16} class="text-accent" />
-				<span>{$_t('settings.title')}</span>
+				<span>{{tSettingsTitle}}</span>
 			</div>
 		</div>
 
@@ -435,9 +435,9 @@
 			<div
 				class="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-border-primary bg-surface-secondary px-2 py-1"
 			>
-				<span class="text-[13px] whitespace-nowrap text-text-secondary">{$_t('settings.title')}</span>
+				<span class="text-[13px] whitespace-nowrap text-text-secondary">{{tSettingsTitle}}</span>
 				<span class="text-xs text-text-muted">/</span>
-				<span class="text-[13px] whitespace-nowrap text-text-primary">{$_t('settings.preferences')}</span>
+				<span class="text-[13px] whitespace-nowrap text-text-primary">{{tSettingsPreferences}}</span>
 			</div>
 
 			<div class="w-64 shrink-0 lg:w-96">
@@ -445,7 +445,7 @@
 					value={searchQuery}
 					onInput={handleSearchInput}
 					onClear={handleSearchClear}
-					placeholder={$_t('settings.searchSettings')}
+					placeholder={{tSettingsSearchsettings}}
 					compact
 				/>
 			</div>
@@ -459,13 +459,13 @@
 					disabled={!hasChanges || isApplyingSettings}
 				>
 					<X size={16} />
-					<span class="hidden sm:inline">{$_t('common.cancel')}</span>
+					<span class="hidden sm:inline">{{tCommonCancel}}</span>
 				</Button>
 				<ProgressButton
 					variant="primary"
 					size="sm"
 					onclick={handleSave}
-					title={applyProgressStatus || $_t('common.save')}
+					title={applyProgressStatus || {tCommonSave}}
 					disabled={!canSave}
 					busy={isApplyingSettings}
 					progress={showApplyProgress ? applyProgress : null}
@@ -496,7 +496,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<Eye size={16} class="text-accent" />
-									{$_t('settings.fileDisplay')}
+									{{tSettingsFiledisplay}}
 								</h2>
 							</div>
 						</div>
@@ -505,7 +505,7 @@
 							{#if matchesSearch('show hidden files', 'display files and folders that start with a dot')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{$_t('settings.showHiddenFiles')}</div>
+										<div class="text-[13px] text-text-primary">{{tSettingsShowhiddenfiles}}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.showHiddenFiles}
@@ -518,7 +518,7 @@
 							{#if matchesSearch('show file extensions', 'keep extensions visible in file names')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{$_t('settings.showFileExtensions')}</div>
+										<div class="text-[13px] text-text-primary">{{tSettingsShowfileextensions}}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.showFileExtensions}
@@ -531,7 +531,7 @@
 							{#if matchesSearch('compact mode', 'reduce row and tile spacing', 'density')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{$_t('settings.compactMode')}</div>
+										<div class="text-[13px] text-text-primary">{{tSettingsCompactmode}}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.compactMode}
@@ -550,7 +550,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<PaintRollerIcon size={16} class="text-accent" />
-									{$_t('settings.personalization')}
+									{{tSettingsPersonalization}}
 								</h2>
 							</div>
 						</div>
@@ -560,11 +560,11 @@
 						<div class={settingRowClass}>
 							<div class="flex items-center gap-2 text-[13px] text-text-primary">
 								<span>🌐</span>
-								<span>{$_t('settings.language')}</span>
+								<span>{{tSettingsLanguage}}</span>
 							</div>
 							<div class="flex items-center gap-2">
-								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'zh-CN' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('zh-CN'); currentLang = 'zh-CN'; }}>{$_t('settings.chinese')}</button>
-								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'en' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('en'); currentLang = 'en'; }}>{$_t('settings.english')}</button>
+								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'zh-CN' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('zh-CN'); currentLang = 'zh-CN'; }}>{{tSettingsChinese}}</button>
+								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'en' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('en'); currentLang = 'en'; }}>{{tSettingsEnglish}}</button>
 							</div>
 						</div>
 
@@ -573,7 +573,7 @@
 								<div>
 									<div class="flex items-center gap-2 text-[13px] text-text-primary">
 										<Palette size={14} class="text-accent" />
-										<span>{$_t('settings.accentColor')}</span>
+										<span>{{tSettingsAccentcolor}}</span>
 										</div>
 										{#if !accentColorIsValid}
 											<div class="mt-1 text-xs text-danger">Use a #RRGGBB hex color.</div>
@@ -600,7 +600,7 @@
 												: 'border-danger'}"
 										/>
 										<Button variant="secondary" size="sm" onclick={handleAccentReset}
-											>{$_t('settings.default')}</Button
+											>{{tSettingsDefault}}</Button
 										>
 									</div>
 								</div>
@@ -637,7 +637,7 @@
 						{#if matchesSearch('ui font', 'western font', 'interface font', 'display font', 'font', 'font')}
 							<div class={settingRowClass}>
 								<div>
-									<div class="flex items-center gap-2 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M13 18L8 6L3 18m8-4H5m16 4v-3m0 0v-3m0 3a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/></svg><span>{$_t('settings.font')}</span></div>
+									<div class="flex items-center gap-2 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M13 18L8 6L3 18m8-4H5m16 4v-3m0 0v-3m0 3a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/></svg><span>{{tSettingsFont}}</span></div>
 								</div>
 								<div class="w-56">
 									<select class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none" onchange={handleFontChange}>
@@ -660,7 +660,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<MousePointer size={16} class="text-accent" />
-									{$_t('settings.behavior')}
+									{{tSettingsBehavior}}
 								</h2>
 							</div>
 						</div>
@@ -669,7 +669,7 @@
 							{#if matchesSearch('confirm before delete', 'confirmation', 'delete')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{$_t('settings.confirmBeforeDelete')}</div>
+										<div class="text-[13px] text-text-primary">{{tSettingsConfirmbeforedelete}}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.confirmDelete}
@@ -682,7 +682,7 @@
 							{#if matchesSearch('preview on single click', 'preview', 'single click')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{$_t('settings.previewOnSingleClick')}</div>
+										<div class="text-[13px] text-text-primary">{{tSettingsPreviewonsingleclick}}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.previewOnSingleClick}
@@ -701,7 +701,7 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<Layout size={16} class="text-accent" />
-									{$_t('settings.defaultView')}
+									{{tSettingsDefaultview}}
 								</h2>
 							</div>
 						</div>
@@ -710,7 +710,7 @@
 							{#if matchesSearch('sort by', 'default sort field', 'name', 'size', 'date modified', 'type')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{$_t('settings.sortBy')}</div>
+										<div class="text-[13px] text-text-primary">{{tSettingsSortby}}</div>
 									</div>
 									<div class="w-44">
 										<Select options={sortByOptions} bind:value={settings.defaultSortBy} />
@@ -721,7 +721,7 @@
 							{#if matchesSearch('sort direction', 'ascending', 'descending')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{$_t('settings.sortDirection')}</div>
+										<div class="text-[13px] text-text-primary">{{tSettingsSortdirection}}</div>
 									</div>
 									<div class="w-44">
 										<Select options={sortDirOptions} bind:value={settings.defaultSortDir} />
@@ -732,7 +732,7 @@
 							{#if matchesSearch('view mode', 'list', 'grid')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">{$_t('settings.viewMode')}</div>
+										<div class="text-[13px] text-text-primary">{{tSettingsViewmode}}</div>
 									</div>
 									<div class="w-44">
 										<Select options={viewModeOptions} bind:value={settings.defaultViewMode} />
@@ -749,23 +749,23 @@
 							<div>
 								<h2 class="m-0 flex items-center gap-2 text-sm font-medium">
 									<User size={16} class="text-accent" />
-									{$_t('settings.account')}
+									{{tSettingsAccount}}
 								</h2>
 							</div>
 						</div>
 
 						<div class="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center">
 							<div>
-								<div class="text-[13px] text-text-primary">{$_t('settings.signedInSession')}</div>
+								<div class="text-[13px] text-text-primary">{{tSettingsSignedinsession}}</div>
 							</div>
 							<div class="flex flex-wrap gap-2">
 								<Button variant="secondary" size="sm" onclick={handleReset}>
 									<RotateCcw size={14} />
-									{$_t('settings.resetDefaults')}
+									{{tSettingsResetdefaults}}
 								</Button>
 								<Button variant="danger" size="sm" onclick={handleLogout}>
 									<LogOut size={14} />
-									{$_t('settings.logout')}
+									{{tSettingsLogout}}
 								</Button>
 							</div>
 						</div>

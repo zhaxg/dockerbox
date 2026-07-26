@@ -1,29 +1,26 @@
-import { writable, derived, get } from 'svelte/store';
 import zhCN from './locales/zh-CN.json';
 import en from './locales/en.json';
 
 const messages: Record<string, any> = { 'zh-CN': zhCN, en };
 
-// Use writable store - Svelte 5 still supports store reactivity in templates
-function getInitialLocale(): string {
-	if (typeof window === 'undefined') return 'zh-CN';
+let _locale = $state<string>('zh-CN');
+
+// Initialize from localStorage
+if (typeof window !== 'undefined') {
 	const saved = localStorage.getItem('locale');
-	if (saved && messages[saved]) return saved;
 	const nav = navigator.language;
-	return nav.startsWith('en') ? 'en' : 'zh-CN';
-}
-
-export const locale = writable<string>(getInitialLocale());
-
-export function setLocale(lang: string) {
-	locale.set(lang);
-	if (typeof window !== 'undefined') {
-		localStorage.setItem('locale', lang);
-	}
+	_locale = saved || (nav.startsWith('en') ? 'en' : 'zh-CN');
 }
 
 export function getLocale(): string {
-	return get(locale);
+	return _locale;
+}
+
+export function setLocale(lang: string) {
+	_locale = lang;
+	if (typeof window !== 'undefined') {
+		localStorage.setItem('locale', lang);
+	}
 }
 
 function resolveKey(obj: any, path: string): string {
@@ -34,14 +31,7 @@ function resolveKey(obj: any, path: string): string {
 	return typeof val === 'string' ? val : path;
 }
 
-// Translation function - returns a Svelte store that auto-updates
-// Usage in template: {$_t('key')}  (import as $_t)
-function createTranslator() {
-	return derived(locale, ($locale) => {
-		return (key: string): string => {
-			return resolveKey(messages[$locale] ?? messages['zh-CN'], key);
-		};
-	});
+// Simple translation function - reads _locale reactively
+export function t(key: string): string {
+	return resolveKey(messages[_locale] ?? messages['zh-CN'], key);
 }
-
-export const _t = createTranslator();
