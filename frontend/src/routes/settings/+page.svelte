@@ -505,7 +505,7 @@
 							{#if matchesSearch('show hidden files', 'display files and folders that start with a dot')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">Show hidden files</div>
+										<div class="text-[13px] text-text-primary">{$_t('settings.showHiddenFiles')}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.showHiddenFiles}
@@ -518,7 +518,7 @@
 							{#if matchesSearch('show file extensions', 'keep extensions visible in file names')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">Show file extensions</div>
+										<div class="text-[13px] text-text-primary">{$_t('settings.showFileExtensions')}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.showFileExtensions}
@@ -531,7 +531,7 @@
 							{#if matchesSearch('compact mode', 'reduce row and tile spacing', 'density')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">Compact mode</div>
+										<div class="text-[13px] text-text-primary">{$_t('settings.compactMode')}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.compactMode}
@@ -564,7 +564,7 @@
 							</div>
 							<div class="flex items-center gap-2">
 								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'zh-CN' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('zh-CN'); currentLang = 'zh-CN'; }}>{$_t('settings.chinese')}</button>
-								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'en' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('en'); currentLang = 'en'; }}>English</button>
+								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'en' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('en'); currentLang = 'en'; }}>{$_t('settings.english')}</button>
 							</div>
 						</div>
 
@@ -573,7 +573,7 @@
 								<div>
 									<div class="flex items-center gap-2 text-[13px] text-text-primary">
 										<Palette size={14} class="text-accent" />
-										<span>Accent color</span>
+										<span>{$_t('settings.accentColor')}</span>
 										</div>
 										{#if !accentColorIsValid}
 											<div class="mt-1 text-xs text-danger">Use a #RRGGBB hex color.</div>
@@ -637,7 +637,7 @@
 						{#if matchesSearch('ui font', 'western font', 'interface font', 'display font', 'font', 'font')}
 							<div class={settingRowClass}>
 								<div>
-									<div class="flex items-center gap-2 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M13 18L8 6L3 18m8-4H5m16 4v-3m0 0v-3m0 3a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/></svg><span>{$_t('settings.font')} Font</span></div>
+									<div class="flex items-center gap-2 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M13 18L8 6L3 18m8-4H5m16 4v-3m0 0v-3m0 3a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/></svg><span>{$_t('settings.font')}</span></div>
 								</div>
 								<div class="w-56">
 									<select class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none" onchange={handleFontChange}>
@@ -669,7 +669,7 @@
 							{#if matchesSearch('confirm before delete', 'confirmation', 'delete')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">Confirm before delete</div>
+										<div class="text-[13px] text-text-primary">{$_t('settings.confirmBeforeDelete')}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.confirmDelete}
@@ -682,7 +682,7 @@
 							{#if matchesSearch('preview on single click', 'preview', 'single click')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">Preview on single click</div>
+										<div class="text-[13px] text-text-primary">{$_t('settings.previewOnSingleClick')}</div>
 									</div>
 									<Toggle
 										bind:checked={settings.previewOnSingleClick}
@@ -710,7 +710,7 @@
 							{#if matchesSearch('sort by', 'default sort field', 'name', 'size', 'date modified', 'type')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">Sort by</div>
+										<div class="text-[13px] text-text-primary">{$_t('settings.sortBy')}</div>
 									</div>
 									<div class="w-44">
 										<Select options={sortByOptions} bind:value={settings.defaultSortBy} />
@@ -721,7 +721,7 @@
 							{#if matchesSearch('sort direction', 'ascending', 'descending')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">Sort direction</div>
+										<div class="text-[13px] text-text-primary">{$_t('settings.sortDirection')}</div>
 									</div>
 									<div class="w-44">
 										<Select options={sortDirOptions} bind:value={settings.defaultSortDir} />
@@ -732,7 +732,7 @@
 							{#if matchesSearch('view mode', 'list', 'grid')}
 								<div class={settingRowClass}>
 									<div>
-										<div class="text-[13px] text-text-primary">View mode</div>
+										<div class="text-[13px] text-text-primary">{$_t('settings.viewMode')}</div>
 									</div>
 									<div class="w-44">
 										<Select options={viewModeOptions} bind:value={settings.defaultViewMode} />
@@ -756,7 +756,7 @@
 
 						<div class="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center">
 							<div>
-								<div class="text-[13px] text-text-primary">Signed in session</div>
+								<div class="text-[13px] text-text-primary">{$_t('settings.signedInSession')}</div>
 							</div>
 							<div class="flex flex-wrap gap-2">
 								<Button variant="secondary" size="sm" onclick={handleReset}>

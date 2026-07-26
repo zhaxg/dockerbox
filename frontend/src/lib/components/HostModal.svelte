@@ -335,7 +335,7 @@
 					{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug
 							size={12}
 							class="mr-1"
-						/>{/if}$_t('hostModal.testConnection')
+						/>{/if}{$_t('hostModal.testConnection')}
 				</Button>
 				<div class="flex items-center gap-2 px-1 py-1">
 					<Button variant="secondary" size="sm" onclick={onClose}>{$_t('common.cancel')}</Button>
