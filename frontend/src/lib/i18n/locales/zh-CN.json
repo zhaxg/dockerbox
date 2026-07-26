@@ -57,6 +57,7 @@
     "delete": "删除",
     "logs": "日志",
     "terminal": "终端",
+    "inspect": "检查",
     "running": "运行中",
     "stopped": "已停止",
     "paused": "已暂停",

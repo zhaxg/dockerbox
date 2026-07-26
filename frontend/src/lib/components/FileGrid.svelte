@@ -163,7 +163,7 @@
 	const compactGridClass = 'grid grid-cols-[repeat(auto-fill,96px)] justify-start gap-2 p-2';
 	const tileClass =
 		'group flex aspect-[1/1.15] min-w-0 cursor-default flex-col rounded border border-transparent bg-transparent p-2 text-left outline-none transition-colors duration-100 hover:bg-surface-secondary focus:border-border-focus focus:bg-surface-secondary';
-	const selectedClass = 'border-accent/70 bg-selection hover:bg-selection-hover';
+	const selectedClass = 'border-accent/70 bg-accent/15 hover:bg-accent/20';
 	const thumbnailClass =
 		'flex shrink-0 items-center justify-center overflow-hidden rounded border border-border-primary bg-surface-primary';
 </script>

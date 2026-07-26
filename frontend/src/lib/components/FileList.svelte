@@ -284,10 +284,10 @@
 					{@const sizeDescription = item.isDir ? '' : formatFileSize(item.size)}
 					{@const modifiedDescription = formatFileDate(item.modTime)}
 					<tr
-						class="cursor-default transition-colors duration-50 hover:bg-surface-secondary focus:bg-selection focus:outline-none {isSelected(
+						class="cursor-default transition-colors duration-50 hover:bg-surface-secondary focus:bg-accent/15 focus:outline-none {isSelected(
 							item.path
 						)
-							? 'bg-selection hover:bg-selection-hover'
+							? 'bg-accent/15 hover:bg-accent/20'
 							: ''} {isCut(item.path) ? 'opacity-50' : ''}"
 						onclick={(e) => handleRowClick(item, e)}
 						onkeydown={(e) => handleKeyDown(item, e)}

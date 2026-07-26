@@ -57,6 +57,7 @@
     "delete": "Delete",
     "logs": "Logs",
     "terminal": "Terminal",
+    "inspect": "Inspect",
     "running": "Running",
     "stopped": "Stopped",
     "paused": "Paused",

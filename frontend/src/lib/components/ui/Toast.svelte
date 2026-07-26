@@ -15,10 +15,10 @@
 	};
 
 	const colorMap = {
-		success: 'bg-success/10 border-success/30 text-success',
-		error: 'bg-danger/10 border-danger/30 text-danger',
-		info: 'bg-accent/10 border-accent/30 text-accent',
-		warning: 'bg-warning/10 border-warning/30 text-warning'
+		success: 'bg-success/15 border-success/40 text-success',
+		error: 'bg-danger/15 border-danger/40 text-danger',
+		info: 'bg-accent/15 border-accent/40 text-accent',
+		warning: 'bg-warning/15 border-warning/40 text-warning'
 	};
 
 	const iconColorMap = {

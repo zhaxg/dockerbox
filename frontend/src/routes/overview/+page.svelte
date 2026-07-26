@@ -97,12 +97,20 @@ const tNetworkTraffic = $derived(t("overview.networkTraffic"));
 	}
 
 	function getChartOption(title: string, color: string, max: number, formatter: string) {
+		const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+		const gridLineColor = isLight ? '#e5e5e5' : '#222';
+		const axisColor = isLight ? '#d4d4d4' : '#333';
+		const labelColor = isLight ? '#888' : '#666';
+		const titleColor = isLight ? '#666' : '#aaa';
+		const tooltipBg = isLight ? '#fff' : '#1e1e1e';
+		const tooltipBorder = isLight ? '#e5e5e5' : '#333';
+		const tooltipText = isLight ? '#333' : '#ccc';
 		return {
-			title: { text: title, textStyle: { color: '#aaa', fontSize: 12 }, left: 10, top: 5 },
-			tooltip: { trigger: 'axis', backgroundColor: '#1e1e1e', borderColor: '#333', textStyle: { color: '#ccc', fontSize: 11 } },
+			title: { text: title, textStyle: { color: titleColor, fontSize: 12 }, left: 10, top: 5 },
+			tooltip: { trigger: 'axis', backgroundColor: tooltipBg, borderColor: tooltipBorder, textStyle: { color: tooltipText, fontSize: 11 } },
 			grid: { left: 45, right: 15, top: 30, bottom: 25 },
-			xAxis: { type: 'category', data: [], axisLabel: { color: '#666', fontSize: 10 }, axisLine: { lineStyle: { color: '#333' } } },
-			yAxis: { type: 'value', max, splitLine: { lineStyle: { color: '#222' } }, axisLabel: { color: '#666', fontSize: 10, formatter } },
+			xAxis: { type: 'category', data: [], axisLabel: { color: labelColor, fontSize: 10 }, axisLine: { lineStyle: { color: axisColor } } },
+			yAxis: { type: 'value', max, splitLine: { lineStyle: { color: gridLineColor } }, axisLabel: { color: labelColor, fontSize: 10, formatter } },
 			series: [{
 				type: 'line', data: [], smooth: true, showSymbol: false,
 				lineStyle: { color, width: 1.5 },
@@ -113,13 +121,22 @@ const tNetworkTraffic = $derived(t("overview.networkTraffic"));
 	}
 
 	function getMultiLineChartOption() {
+		const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+		const gridLineColor = isLight ? '#e5e5e5' : '#222';
+		const axisColor = isLight ? '#d4d4d4' : '#333';
+		const labelColor = isLight ? '#888' : '#666';
+		const titleColor = isLight ? '#666' : '#aaa';
+		const legendColor = isLight ? '#555' : '#888';
+		const tooltipBg = isLight ? '#fff' : '#1e1e1e';
+		const tooltipBorder = isLight ? '#e5e5e5' : '#333';
+		const tooltipText = isLight ? '#333' : '#ccc';
 		return {
-			title: { text: {tNetworkTraffic} || 'Network Traffic', textStyle: { color: '#aaa', fontSize: 12 }, left: 10, top: 5 },
-			tooltip: { trigger: 'axis', backgroundColor: '#1e1e1e', borderColor: '#333', textStyle: { color: '#ccc', fontSize: 11 } },
-			legend: { data: ['↓ RX', '↑ TX'], textStyle: { color: '#888', fontSize: 10 }, right: 10, top: 5 },
+			title: { text: tNetworkTraffic || 'Network Traffic', textStyle: { color: titleColor, fontSize: 12 }, left: 10, top: 5 },
+			tooltip: { trigger: 'axis', backgroundColor: tooltipBg, borderColor: tooltipBorder, textStyle: { color: tooltipText, fontSize: 11 } },
+			legend: { data: ['↓ RX', '↑ TX'], textStyle: { color: legendColor, fontSize: 10 }, right: 10, top: 5 },
 			grid: { left: 55, right: 15, top: 35, bottom: 25 },
-			xAxis: { type: 'category', data: [], axisLabel: { color: '#666', fontSize: 10 }, axisLine: { lineStyle: { color: '#333' } } },
-			yAxis: { type: 'value', splitLine: { lineStyle: { color: '#222' } }, axisLabel: { color: '#666', fontSize: 10, formatter: (v: number) => formatSpeed(v) } },
+			xAxis: { type: 'category', data: [], axisLabel: { color: labelColor, fontSize: 10 }, axisLine: { lineStyle: { color: axisColor } } },
+			yAxis: { type: 'value', splitLine: { lineStyle: { color: gridLineColor } }, axisLabel: { color: labelColor, fontSize: 10, formatter: (v: number) => formatSpeed(v) } },
 			series: [
 				{ name: '↓ RX', type: 'line', data: [], smooth: true, showSymbol: false, lineStyle: { color: '#3b82f6', width: 1.5 }, areaStyle: { color: 'rgba(59,130,246,0.1)' }, itemStyle: { color: '#3b82f6' } },
 				{ name: '↑ TX', type: 'line', data: [], smooth: true, showSymbol: false, lineStyle: { color: '#f97316', width: 1.5 }, areaStyle: { color: 'rgba(249,115,22,0.1)' }, itemStyle: { color: '#f97316' } }

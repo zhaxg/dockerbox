@@ -18,6 +18,7 @@
 	import {
 		applyAccentColor,
 		applyFonts,
+		applyTheme,
 		resolvedBackgroundImageUrl,
 		settingsStore
 	} from '$lib/stores/settings';
@@ -106,6 +107,7 @@
 	});
 
 	$effect(() => {
+		applyTheme($settingsStore.theme);
 		applyAccentColor($settingsStore.accentColor);
 		applyFonts($settingsStore.uiFont);
 	});

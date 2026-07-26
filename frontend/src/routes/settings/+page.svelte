@@ -15,6 +15,7 @@
 		FONT_LIST,
 		applyAccentColor,
 		applyFonts,
+		applyTheme,
 		settingsStore,
 		type UserSettings
 	} from '$lib/stores/settings';
@@ -61,6 +62,10 @@ const tSettingsLanguage = $derived(t("settings.language"));
 const tSettingsLogout = $derived(t("settings.logout"));
 const tSettingsPersonalization = $derived(t("settings.personalization"));
 const tSettingsPreferences = $derived(t("settings.preferences"));
+const tSettingsTheme = $derived(t("settings.theme"));
+const tSettingsDark = $derived(t("settings.dark"));
+const tSettingsLight = $derived(t("settings.light"));
+const tSettingsSystem = $derived(t("settings.system"));
 const tSettingsTitle = $derived(t("settings.title"));
 		import {
 		deleteLocalWallpaper,
@@ -74,11 +79,13 @@ const tSettingsTitle = $derived(t("settings.title"));
 		Globe,
 		Layout,
 		LogOut,
+		Moon,
 		MousePointer,
 		Palette,
 		RotateCcw,
 		Save,
 		Settings,
+		Sun,
 		User,
 		PaintRollerIcon,
 		X
@@ -596,6 +603,37 @@ const tSettingsTitle = $derived(t("settings.title"));
 						</div>
 
 						<div>
+							<!-- Theme -->
+							<div class={settingRowClass}>
+								<div class="flex items-center gap-2 text-[13px] text-text-primary">
+									{#if settings.theme === 'light'}
+										<Sun size={14} class="text-accent" />
+									{:else if settings.theme === 'dark'}
+										<Moon size={14} class="text-accent" />
+									{:else}
+										<Settings size={14} class="text-accent" />
+									{/if}
+									<span>{tSettingsTheme}</span>
+								</div>
+								<div class="flex items-center gap-1">
+									<button
+										type="button"
+										class="flex items-center gap-1 rounded px-3 py-1 text-xs transition-colors {settings.theme === 'dark' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}"
+										onclick={() => { settings.theme = 'dark'; applyTheme('dark'); settingsStore.setSetting('theme', 'dark'); }}
+									><Moon size={12} /> {tSettingsDark}</button>
+									<button
+										type="button"
+										class="flex items-center gap-1 rounded px-3 py-1 text-xs transition-colors {settings.theme === 'light' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}"
+										onclick={() => { settings.theme = 'light'; applyTheme('light'); settingsStore.setSetting('theme', 'light'); }}
+									><Sun size={12} /> {tSettingsLight}</button>
+									<button
+										type="button"
+										class="flex items-center gap-1 rounded px-3 py-1 text-xs transition-colors {settings.theme === 'system' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}"
+										onclick={() => { settings.theme = 'system'; applyTheme('system'); settingsStore.setSetting('theme', 'system'); }}
+									><Settings size={12} /> {tSettingsSystem}</button>
+								</div>
+							</div>
+
 							<!-- Language -->
 						<div class={settingRowClass}>
 							<div class="flex items-center gap-2 text-[13px] text-text-primary">

@@ -21,6 +21,7 @@ const tContainersSearch = $derived(t("containers.search"));
 const tContainersStart = $derived(t("containers.start"));
 const tContainersStop = $derived(t("containers.stop"));
 const tContainersTerminal = $derived(t("containers.terminal"));
+const tContainersInspect = $derived(t("containers.inspect"));
 const tContainersTitle = $derived(t("containers.title"));
 const tTableName = $derived(t("table.name"));
 const tTableState = $derived(t("table.state"));
@@ -47,6 +48,8 @@ const tTableActions = $derived(t("table.actions"));
 		Terminal,
 		Info,
 		X,
+		Maximize2,
+		Minimize2,
 		ChevronDown,
 		ChevronUp,
 		BrushCleaning
@@ -95,6 +98,53 @@ const tTableActions = $derived(t("table.actions"));
 	let confirmDialog = $state<{ open: boolean; title: string; message: string; onConfirm: () => void }>({
 		open: false, title: '', message: '', onConfirm: () => {}
 	});
+
+	// Draggable modal state
+	interface ModalDragState { x: number; y: number; maximized: boolean; dragging: boolean; offsetX: number; offsetY: number }
+	function createModalDragState(): ModalDragState { return { x: 0, y: 0, maximized: false, dragging: false, offsetX: 0, offsetY: 0 }; }
+	let logsDrag = $state(createModalDragState());
+	let inspectDrag = $state(createModalDragState());
+	let execDrag = $state(createModalDragState());
+	let confirmDrag = $state(createModalDragState());
+
+	function resetDrag(state: ModalDragState) { state.x = 0; state.y = 0; state.maximized = false; state.dragging = false; }
+
+	function onDragHeader(e: MouseEvent, state: ModalDragState) {
+		if (state.maximized) return;
+		state.dragging = true;
+		state.offsetX = e.clientX - state.x;
+		state.offsetY = e.clientY - state.y;
+		e.preventDefault();
+	}
+
+	function onDragMove(e: MouseEvent) {
+		for (const s of [logsDrag, inspectDrag, execDrag, confirmDrag]) {
+			if (s.dragging) {
+				s.x = e.clientX - s.offsetX;
+				s.y = e.clientY - s.offsetY;
+			}
+		}
+	}
+
+	function onDragEnd() {
+		for (const s of [logsDrag, inspectDrag, execDrag, confirmDrag]) {
+			s.dragging = false;
+		}
+	}
+
+	function toggleMaximize(state: ModalDragState) {
+		if (state.maximized) {
+			state.x = 0; state.y = 0; state.maximized = false;
+		} else {
+			state.x = 0; state.y = 0; state.maximized = true;
+		}
+	}
+
+	function modalStyle(state: ModalDragState): string {
+		if (state.maximized) return '';
+		return `transform: translate(${state.x}px, ${state.y}px)`;
+	}
+
 	let logsEventSource: EventSource | null = null;
 	let execWs: WebSocket | null = null;
 	let execTerminalEl: HTMLDivElement | null = null;
@@ -113,12 +163,16 @@ const tTableActions = $derived(t("table.actions"));
 
 	onMount(async () => {
 		window.addEventListener('host-changed', onHostChanged);
+		window.addEventListener('mousemove', onDragMove);
+		window.addEventListener('mouseup', onDragEnd);
 		await Promise.all([loadContainers(), loadHosts()]);
 		connectSSE();
 	});
 
 	onDestroy(() => {
 		window.removeEventListener('host-changed', onHostChanged);
+		window.removeEventListener('mousemove', onDragMove);
+		window.removeEventListener('mouseup', onDragEnd);
 		if (eventSource) eventSource.close();
 		closeLogsStream();
 		closeExec();
@@ -204,6 +258,7 @@ const tTableActions = $derived(t("table.actions"));
 
 	function showConfirm(title: string, message: string, onConfirm: () => void) {
 		confirmDialog = { open: true, title, message, onConfirm };
+		resetDrag(confirmDrag);
 	}
 	function closeConfirm() { confirmDialog.open = false; }
 
@@ -239,6 +294,7 @@ const tTableActions = $derived(t("table.actions"));
 	// --- Logs Modal ---
 	async function viewLogs(id: string, name: string) {
 		logsModal = { open: true, id, name, content: '', loading: true, tail: 100, streaming: false };
+		resetDrag(logsDrag);
 		try {
 			const data = await dockerApi.get<{ lines: string[] }>(`/docker/containers/${id}/logs?tail=100`);
 			logsModal.content = (data.logs || []).join('\n');
@@ -277,6 +333,7 @@ const tTableActions = $derived(t("table.actions"));
 	// --- Inspect Modal ---
 	async function viewInspect(id: string, name: string) {
 		inspectModal = { open: true, id, name, content: '', loading: true };
+		resetDrag(inspectDrag);
 		try {
 			const data = await dockerApi.get<any>(`/docker/containers/${id}/inspect`);
 			inspectModal.content = JSON.stringify(data, null, 2);
@@ -290,6 +347,7 @@ const tTableActions = $derived(t("table.actions"));
 	// --- Exec Modal ---
 	function openExec(id: string, name: string) {
 		execModal = { open: true, id, name, connected: false, output: '' };
+		resetDrag(execDrag);
 		// Init xterm after DOM update
 		setTimeout(() => initXterm(id), 50);
 	}
@@ -412,12 +470,12 @@ const tTableActions = $derived(t("table.actions"));
 		</h1>
 		<div class="flex items-center gap-2">
 			<div class="relative">
-				<Search size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+				<Search size={12} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
 				<input type="text" bind:value={searchQuery} placeholder={tContainersSearch}
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
-			<Button variant="secondary" size="sm" onclick={cleanupUnused} title={tContainersPruneimages}><BrushCleaning size={14} /></Button>
-			<Button variant="secondary" size="sm" onclick={loadContainers}><RefreshCw size={14} /></Button>
+			<Button variant="secondary" size="sm" onclick={cleanupUnused} title={tContainersPruneimages}><BrushCleaning size={12} /></Button>
+			<Button variant="secondary" size="sm" onclick={loadContainers}><RefreshCw size={12} /></Button>
 		</div>
 	</div>
 
@@ -516,7 +574,7 @@ const tTableActions = $derived(t("table.actions"));
 									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openExec(container.id, container.name)} title={tContainersTerminal}>
 										<Terminal size={13} />
 									</button>
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewInspect(container.id, container.name)} title="Inspect">
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewInspect(container.id, container.name)} title={tContainersInspect}>
 										<Info size={13} />
 									</button>
 								</div>
@@ -532,8 +590,13 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Confirm Dialog -->
 {#if confirmDialog.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary">
-			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
+		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary" style={modalStyle(confirmDrag)}>
+			<h3 class="mb-2 text-lg font-semibold text-text-primary flex items-center gap-2">
+				<span class="cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, confirmDrag)}>{confirmDialog.title}</span>
+				<button type="button" class="ml-auto rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(confirmDrag)}>
+					{#if confirmDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
+				</button>
+			</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
 				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}</Button>
@@ -546,12 +609,17 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Logs Modal -->
 {#if logsModal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
-		<div class="flex h-[70vh] w-[750px] flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary">
-			<div class="flex items-center justify-between px-3 py-2">
+		<div class="flex flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary {logsDrag.maximized ? 'fixed inset-3' : 'h-[70vh] w-[750px]'}" style={modalStyle(logsDrag)}>
+			<div class="flex items-center justify-between px-3 py-2 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, logsDrag)}>
 				<h3 class="text-sm font-semibold text-text-primary">{tContainersLogs} - {logsModal.name}</h3>
-				<button type="button" class="text-text-muted hover:text-text-primary" onclick={() => { closeLogsStream(); logsModal.open = false; }}>
-					<X size={16} />
-				</button>
+				<div class="flex items-center gap-1">
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(logsDrag)}>
+						{#if logsDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
+					</button>
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => { closeLogsStream(); logsModal.open = false; }}>
+						<X size={16} />
+					</button>
+				</div>
 			</div>
 			<div class="flex-1 overflow-auto rounded-md bg-black p-3">
 				{#if logsModal.loading}
@@ -567,18 +635,25 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Inspect Modal -->
 {#if inspectModal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="flex h-[80vh] w-[900px] flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary">
-			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
-				<h3 class="text-sm font-semibold text-text-primary">Inspect - {inspectModal.name}</h3>
-				<button type="button" class="text-text-muted hover:text-text-primary" onclick={() => { inspectModal.open = false; }}>
-					<X size={16} />
-				</button>
+		<div class="flex flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary {inspectDrag.maximized ? 'fixed inset-3' : 'h-[80vh] w-[900px]'}" style={modalStyle(inspectDrag)}>
+			<div class="flex items-center justify-between px-3 py-2 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, inspectDrag)}>
+				<div class="flex items-center gap-2">
+					<h3 class="text-sm font-semibold text-text-primary">{tContainersInspect} - {inspectModal.name}</h3>
+				</div>
+				<div class="flex items-center gap-1">
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(inspectDrag)}>
+						{#if inspectDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
+					</button>
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => { inspectModal.open = false; }}>
+						<X size={16} />
+					</button>
+				</div>
 			</div>
-			<div class="flex-1 overflow-auto p-4">
+			<div class="flex-1 overflow-auto rounded-md bg-black p-3">
 				{#if inspectModal.loading}
 					<div class="flex items-center justify-center py-8"><Spinner /></div>
 				{:else}
-					<pre class="whitespace-pre-wrap font-mono text-xs text-text-secondary">{inspectModal.content}</pre>
+					<pre class="whitespace-pre font-mono text-xs overflow-x-auto" style="color: #00ff00">{inspectModal.content}</pre>
 				{/if}
 			</div>
 		</div>
@@ -588,12 +663,17 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Exec Modal -->
 {#if execModal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
-		<div class="flex h-[70vh] w-[750px] flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary">
-			<div class="flex items-center justify-between px-3 py-2">
+		<div class="flex flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary {execDrag.maximized ? 'fixed inset-3' : 'h-[70vh] w-[750px]'}" style={modalStyle(execDrag)}>
+			<div class="flex items-center justify-between px-3 py-2 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, execDrag)}>
 				<h3 class="text-sm font-semibold text-text-primary">{tContainersTerminal} - {execModal.name}</h3>
-				<button type="button" class="text-text-muted hover:text-text-primary" onclick={closeExec}>
-					<X size={16} />
-				</button>
+				<div class="flex items-center gap-1">
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(execDrag)}>
+						{#if execDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
+					</button>
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={closeExec}>
+						<X size={16} />
+					</button>
+				</div>
 			</div>
 			<div class="flex-1 rounded-md bg-black p-3">
 				<div

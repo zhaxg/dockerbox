@@ -60,7 +60,7 @@ const tTableActions = $derived(t("table.actions"));
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { api } from '$lib/api/client';
 	import { dockerApi } from '$lib/api/docker';
-	import { Play, RefreshCw, Eye, RotateCcw, Package, Plus, Search, Trash2, X, Save, Download, BrushCleaning } from 'lucide-svelte';
+	import { Play, RefreshCw, Eye, RotateCcw, Package, Plus, Search, Trash2, X, Maximize2, Minimize2, Save, Download, BrushCleaning } from 'lucide-svelte';
 	import type * as Monaco from 'monaco-editor';
 
 	interface ComposeProject {
@@ -109,6 +109,38 @@ const tTableActions = $derived(t("table.actions"));
 		open: false, loading: false, projects: [], selected: new Set(), importing: false
 	});
 
+	// Draggable modal state
+	interface ModalDragState { x: number; y: number; maximized: boolean; dragging: boolean; offsetX: number; offsetY: number }
+	function createDragState(): ModalDragState { return { x: 0, y: 0, maximized: false, dragging: false, offsetX: 0, offsetY: 0 }; }
+	function resetDrag(s: ModalDragState) { s.x = 0; s.y = 0; s.maximized = false; s.dragging = false; }
+	let importDrag = $state(createDragState());
+	let confirmDrag = $state(createDragState());
+	let editorDrag = $state(createDragState());
+
+	function onDragHeader(e: MouseEvent, s: ModalDragState) {
+		if (s.maximized) return;
+		s.dragging = true;
+		s.offsetX = e.clientX - s.x;
+		s.offsetY = e.clientY - s.y;
+		e.preventDefault();
+	}
+	function onDragMove(e: MouseEvent) {
+		for (const s of [importDrag, confirmDrag, editorDrag]) {
+			if (s.dragging) { s.x = e.clientX - s.offsetX; s.y = e.clientY - s.offsetY; }
+		}
+	}
+	function onDragEnd() {
+		for (const s of [importDrag, confirmDrag, editorDrag]) { s.dragging = false; }
+	}
+	function toggleMaximize(s: ModalDragState) {
+		if (s.maximized) { s.x = 0; s.y = 0; s.maximized = false; }
+		else { s.x = 0; s.y = 0; s.maximized = true; }
+	}
+	function modalStyle(s: ModalDragState): string {
+		if (s.maximized) return '';
+		return `transform: translate(${s.x}px, ${s.y}px)`;
+	}
+
 	let editorContainer: HTMLDivElement | null = null;
 	let monacoEditor: Monaco.editor.IStandaloneCodeEditor | null = null;
 	let monacoApi: typeof Monaco | null = null;
@@ -121,12 +153,16 @@ const tTableActions = $derived(t("table.actions"));
 
 	onMount(async () => {
 		window.addEventListener('host-changed', onHostChanged);
+		window.addEventListener('mousemove', onDragMove);
+		window.addEventListener('mouseup', onDragEnd);
 		await Promise.all([loadProjects(), loadHosts()]);
 		startStatusPoller();
 	});
 
 	onDestroy(() => {
 		window.removeEventListener('host-changed', onHostChanged);
+		window.removeEventListener('mousemove', onDragMove);
+		window.removeEventListener('mouseup', onDragEnd);
 		if (statusInterval) clearInterval(statusInterval);
 	});
 
@@ -185,6 +221,7 @@ const tTableActions = $derived(t("table.actions"));
 
 	function showConfirm(title: string, message: string, onConfirm: () => void) {
 		confirmDialog = { open: true, title, message, onConfirm };
+		resetDrag(confirmDrag);
 	}
 	function closeConfirm() { confirmDialog.open = false; }
 
@@ -293,6 +330,7 @@ const tTableActions = $derived(t("table.actions"));
 	// --- Import ---
 	async function scanAvailable() {
 		importModal = { open: true, loading: true, projects: [], selected: new Set(), importing: false };
+		resetDrag(importDrag);
 		try {
 			const data = await dockerApi.get<{ projects: ComposeProject[] }>('/docker/compose/available');
 			importModal.projects = data.projects || [];
@@ -362,6 +400,7 @@ const tTableActions = $derived(t("table.actions"));
 			composeContent: "services:\n  my-service:\n    image: nginx:latest\n    ports:\n      - \"8080:80\"\n",
 			saving: false, error: '', dirty: false, loading: false
 		};
+		resetDrag(editorDrag);
 		initEditor();
 	}
 
@@ -370,6 +409,7 @@ const tTableActions = $derived(t("table.actions"));
 			open: true, mode: 'edit', projectId: project.id, projectName: project.name, projectPath: project.path,
 			composeContent: '', saving: false, error: '', dirty: false, loading: true
 		};
+		resetDrag(editorDrag);
 		try {
 			const data = await dockerApi.get<{ content: string }>(`/docker/compose/${project.id}/file`);
 			editorModal.composeContent = data?.content || '';
@@ -521,10 +561,15 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Import Modal -->
 {#if importModal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="flex h-[60vh] w-[600px] flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary">
-			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
+		<div class="flex flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary {importDrag.maximized ? 'fixed inset-3' : 'h-[60vh] w-[600px]'}" style={modalStyle(importDrag)}>
+			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, importDrag)}>
 				<h3 class="text-sm font-semibold text-text-primary">{tComposeScanimport + ' Compose ' + tComposeProject}</h3>
-				<button type="button" class="text-text-muted hover:text-text-primary" onclick={() => { importModal.open = false; }}><X size={16} /></button>
+				<div class="flex items-center gap-1">
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(importDrag)}>
+						{#if importDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
+					</button>
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => { importModal.open = false; }}><X size={16} /></button>
+				</div>
 			</div>
 			<div class="flex-1 overflow-auto p-4">
 				{#if importModal.loading}
@@ -564,8 +609,13 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Confirm Dialog -->
 {#if confirmDialog.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary">
-			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
+		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary" style={modalStyle(confirmDrag)}>
+			<h3 class="mb-2 text-lg font-semibold text-text-primary flex items-center gap-2">
+				<span class="cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, confirmDrag)}>{confirmDialog.title}</span>
+				<button type="button" class="ml-auto rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(confirmDrag)}>
+					{#if confirmDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
+				</button>
+			</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
 				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}</Button>
@@ -587,8 +637,8 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Editor Modal (New + Edit) -->
 {#if editorModal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="flex h-[85vh] w-[900px] flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary">
-			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
+		<div class="flex flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary {editorDrag.maximized ? 'fixed inset-3' : 'h-[85vh] w-[900px]'}" style={modalStyle(editorDrag)}>
+			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, editorDrag)}>
 				<div class="flex items-center gap-3">
 					<h3 class="text-sm font-semibold text-text-primary">{editorModal.mode === 'new' ? tComposeNew + ' Compose ' + tComposeProject : editorModal.projectName}</h3>
 					{#if editorModal.dirty}<span class="text-[11px] text-orange-400">● {tComposeModified}</span>{/if}
@@ -602,6 +652,10 @@ const tTableActions = $derived(t("table.actions"));
 					<Button variant="primary" size="sm" onclick={saveEditor} disabled={editorModal.saving || (editorModal.mode === 'edit' && !editorModal.dirty)}>
 						{#if editorModal.saving}<Spinner size={14} class="mr-1" /> {tComposeSaving}...{:else}<Save size={14} class="mr-1" /> {editorModal.mode === 'new' ? tFilesCreate : tCommonSave}{/if}
 					</Button>
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(editorDrag)}>
+						{#if editorDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
+					</button>
+					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={closeEditor}><X size={16} /></button>
 				</div>
 			</div>
 			<div class="flex-1 overflow-hidden">

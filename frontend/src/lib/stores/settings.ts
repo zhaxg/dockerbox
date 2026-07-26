@@ -41,6 +41,7 @@ function setHostFavorites(favorites: FavoriteFolder[]) {
 }
 
 export interface UserSettings {
+	theme: 'dark' | 'light' | 'system';
 	showHiddenFiles: boolean;
 	showFileExtensions: boolean;
 	confirmDelete: boolean;
@@ -79,6 +80,7 @@ const THEME_COLOR_PROPERTIES = [
 ];
 
 const defaultSettings: UserSettings = {
+	theme: 'dark',
 	showHiddenFiles: false,
 	showFileExtensions: true,
 	confirmDelete: true,
@@ -269,6 +271,19 @@ export function applyAccentColor(accentColor: string | null): void {
 	rootStyle.setProperty('--color-accent-muted', mixColor(color, '#1e1e1e', 0.55));
 	rootStyle.setProperty('--color-selection', mixColor(color, '#1e1e1e', 0.55));
 	rootStyle.setProperty('--color-selection-hover', mixColor(color, '#000000', 0.32));
+}
+
+export function applyTheme(theme: 'dark' | 'light' | 'system'): void {
+	if (typeof document === 'undefined') return;
+
+	const root = document.documentElement;
+
+	if (theme === 'system') {
+		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+	} else {
+		root.setAttribute('data-theme', theme);
+	}
 }
 
 function loadSettings(): UserSettings {
