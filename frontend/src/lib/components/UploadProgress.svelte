@@ -3,6 +3,7 @@
 	 * UploadProgress — flat list, no card wrapper
 	 */
 
+	import { _t } from '$lib/i18n/index.svelte';
 	import type { UploadProgress as UploadProgressType } from '$lib/utils/upload';
 	import { formatFileSize, formatPercentage } from '$lib/utils/format';
 	import { X, Check, AlertCircle } from 'lucide-svelte';
@@ -45,11 +46,11 @@
 
 	function getStatusText(upload: UploadProgressType): string {
 		switch (upload.status) {
-			case 'pending': return '排队中';
+			case 'pending': return $_t('upload.queued');
 			case 'uploading': return formatPercentage(upload.percentage, 0, false);
-			case 'complete': return '完成';
-			case 'error': return upload.error || '失败';
-			case 'cancelled': return '已取消';
+			case 'complete': return $_t('upload.completed');
+			case 'error': return upload.error || $_t('upload.failed');
+			case 'cancelled': return $_t('upload.cancelled');
 			default: return '';
 		}
 	}

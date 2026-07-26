@@ -136,7 +136,7 @@
 	];
 
 	const uiFontOptions = [
-		{ value: '', label: '系统默认' },
+		{ value: '', label: $_t('settings.systemDefault') },
 		...FONT_LIST.map(f => ({ value: f.family, label: f.name })),
 	];
 
@@ -563,7 +563,7 @@
 								<span>{$_t('settings.language')}</span>
 							</div>
 							<div class="flex items-center gap-2">
-								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'zh-CN' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('zh-CN'); currentLang = 'zh-CN'; }}>中文</button>
+								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'zh-CN' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('zh-CN'); currentLang = 'zh-CN'; }}>{$_t('settings.chinese')}</button>
 								<button type="button" class="rounded px-3 py-1 text-xs transition-colors {currentLang === 'en' ? 'bg-accent text-white' : 'bg-surface-tertiary text-text-secondary hover:text-text-primary'}" onclick={() => { setLocale('en'); currentLang = 'en'; }}>English</button>
 							</div>
 						</div>
@@ -634,10 +634,10 @@
 								bind:frostedGlass={settings.frostedGlass}
 							/>
 
-						{#if matchesSearch('ui font', 'western font', 'interface font', 'display font', 'font', '字体')}
+						{#if matchesSearch('ui font', 'western font', 'interface font', 'display font', 'font', 'font')}
 							<div class={settingRowClass}>
 								<div>
-									<div class="flex items-center gap-2 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M13 18L8 6L3 18m8-4H5m16 4v-3m0 0v-3m0 3a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/></svg><span>字体 Font</span></div>
+									<div class="flex items-center gap-2 text-[13px] text-text-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M13 18L8 6L3 18m8-4H5m16 4v-3m0 0v-3m0 3a3 3 0 1 1-6 0a3 3 0 0 1 6 0"/></svg><span>{$_t('settings.font')} Font</span></div>
 								</div>
 								<div class="w-56">
 									<select class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none" onchange={handleFontChange}>

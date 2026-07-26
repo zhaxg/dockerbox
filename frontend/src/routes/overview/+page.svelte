@@ -98,7 +98,7 @@
 
 	function getMultiLineChartOption() {
 		return {
-			title: { text: $_t('overview.networkTraffic') || '网络流量', textStyle: { color: '#aaa', fontSize: 12 }, left: 10, top: 5 },
+			title: { text: $_t('overview.networkTraffic') || 'Network Traffic', textStyle: { color: '#aaa', fontSize: 12 }, left: 10, top: 5 },
 			tooltip: { trigger: 'axis', backgroundColor: '#1e1e1e', borderColor: '#333', textStyle: { color: '#ccc', fontSize: 11 } },
 			legend: { data: ['↓ RX', '↑ TX'], textStyle: { color: '#888', fontSize: 10 }, right: 10, top: 5 },
 			grid: { left: 55, right: 15, top: 35, bottom: 25 },
@@ -247,7 +247,7 @@
 						<span class="text-xs text-text-muted">CPU</span>
 					</div>
 					<div class="text-xl font-bold text-text-primary">{hostStats.cpu.usage}%</div>
-					<div class="text-[11px] text-text-muted">{hostStats.cpu.cores} 核心</div>
+					<div class="text-[11px] text-text-muted">{hostStats.cpu.cores} {$_t('overview.cores')}</div>
 				</div>
 				<div class="rounded-lg border border-border-secondary bg-surface-secondary p-3">
 					<div class="flex items-center gap-2 mb-1">

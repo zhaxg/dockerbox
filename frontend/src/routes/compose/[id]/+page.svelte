@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _t } from '$lib/i18n/index.svelte';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api/client';
@@ -41,7 +42,7 @@
 			const data = await dockerApi.get<{ content: string }>(`/docker/compose/${projectId}/file`);
 			composeContent = data?.content || '';
 		} catch (e) {
-			error = e instanceof Error ? e.message : '加载失败';
+			error = e instanceof Error ? e.message : $_t('compose.loadFailed');
 		} finally {
 			loading = false;
 		}
@@ -112,7 +113,7 @@
 	async function handleSave() {
 		if (isNew) {
 			// Create new project
-			if (!projectName.trim()) { error = '请输入项目名称'; return; }
+			if (!projectName.trim()) { error = $_t('compose.emptyName'); return; }
 			saving = true; error = '';
 			try {
 				await dockerApi.post('/docker/compose', {
@@ -122,7 +123,7 @@
 				});
 				goto(resolve('/compose'));
 			} catch (e) {
-				error = e instanceof Error ? e.message : '创建失败';
+				error = e instanceof Error ? e.message : $_t('compose.createFailed');
 			} finally {
 				saving = false;
 			}
@@ -133,7 +134,7 @@
 				await dockerApi.put(`/docker/compose/${projectId}/file`, { content: composeContent });
 				dirty = false;
 			} catch (e) {
-				error = e instanceof Error ? e.message : '保存失败';
+				error = e instanceof Error ? e.message : $_t('compose.saveFailed');
 			} finally {
 				saving = false;
 			}
@@ -149,17 +150,17 @@
 				<ArrowLeft size={18} />
 			</button>
 			<h1 class="text-base font-semibold text-text-primary">
-				{isNew ? '新建 Compose 项目' : projectId}
+				{isNew ? $_t('compose.new') + ' Compose ' + $_t('compose.project') : projectId}
 			</h1>
 			{#if dirty}
-				<span class="text-[11px] text-orange-400">● 已修改</span>
+				<span class="text-[11px] text-orange-400">● {$_t('compose.modified')}</span>
 			{/if}
 		</div>
 		<div class="flex items-center gap-2">
 			{#if isNew}
-				<input type="text" bind:value={projectName} placeholder="项目名称"
+				<input type="text" bind:value={projectName} placeholder={$_t('compose.projectName')}
 					class="h-7 w-40 rounded border border-border-secondary bg-surface-secondary px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
-				<input type="text" bind:value={projectPath} placeholder="存储路径"
+				<input type="text" bind:value={projectPath} placeholder={$_t('compose.storagePath')}
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			{/if}
 			{#if error}
@@ -167,9 +168,9 @@
 			{/if}
 			<Button variant="primary" size="sm" onclick={handleSave} disabled={!canSave}>
 				{#if saving}
-					<Spinner size={14} class="mr-1" /> 保存中...
+					<Spinner size={14} class="mr-1" /> {$_t('compose.saving")}...
 				{:else}
-					<Save size={14} class="mr-1" /> {isNew ? '创建' : '保存'}
+					<Save size={14} class="mr-1" /> {isNew ? $_t('compose.create') : $_t('compose.save')}
 				{/if}
 			</Button>
 		</div>

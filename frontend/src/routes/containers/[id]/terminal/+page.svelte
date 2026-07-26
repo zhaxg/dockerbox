@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _t } from '$lib/i18n/index.svelte';
 	import { page } from '$app/state';
 	import { onMount, onDestroy } from 'svelte';
 	import { Button } from '$lib/components/ui';
@@ -29,7 +30,7 @@
 
 		ws.onopen = () => {
 			connected = true;
-			outputBuffer = '已连接到容器终端...\r\n';
+			outputBuffer = $_t('containers.connectedToTerminal') + '...\r\n';
 			ws?.send(JSON.stringify({ type: 'auth', token }));
 		};
 
@@ -56,12 +57,12 @@
 
 		ws.onclose = () => {
 			connected = false;
-			outputBuffer += '\r\n连接已断开';
+			outputBuffer += '\r\n' + $_t('containers.connectionLost');
 		};
 
 		ws.onerror = () => {
 			connected = false;
-			outputBuffer += '\r\n连接错误';
+			outputBuffer += '\r\n' + $_t('containers.connectionError');
 		};
 	}
 
@@ -126,14 +127,14 @@
 	<div class="mb-4 flex items-center gap-4">
 		<Button variant="secondary" onclick={() => goto(resolve(`/containers/${containerId}`))}>
 			<ArrowLeft size={16} class="mr-2" />
-			返回
+			{$_t('containers.back')}
 		</Button>
 		<h1 class="text-2xl font-semibold text-text-primary">
 			<Terminal size={20} class="mr-2" />
-			终端 - {containerId}
+			{$_t('containers.terminal')} - {containerId}
 		</h1>
 		<span class="text-sm text-text-secondary">
-			{connected ? '已连接' : '未连接'}
+			{connected ? $_t('containers.connected') : $_t('containers.disconnected')}
 		</span>
 	</div>
 

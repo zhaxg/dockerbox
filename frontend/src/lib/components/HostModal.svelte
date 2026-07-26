@@ -105,7 +105,7 @@
 				>
 			</div>
 			<div class="flex-1 space-y-4 overflow-auto p-4">
-				<!-- {$_t('hostModal.name')} + 默认 -->
+				<!-- i18n: name + default -->
 				<div class="flex items-end gap-3">
 					<div class="flex-1">
 						<label class="mb-1 block text-[11px] text-text-muted"
@@ -114,7 +114,7 @@
 						<input
 							type="text"
 							bind:value={host.name}
-							placeholder="主NAS"
+							placeholder={$_t('hostModal.displayName')}
 							class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 						/>
 					</div>
@@ -124,7 +124,7 @@
 						<input type="checkbox" bind:checked={isDefault} class="rounded accent-green-500" /> {$_t('hostModal.defaultHost')}
 					</label>
 				</div>
-				<!-- {$_t('hostModal.connectionType')} + 端点 -->
+				<!-- i18n: connection + endpoint -->
 				<div class="grid grid-cols-3 gap-3">
 					<div>
 						<label class="mb-1 block text-[11px] text-text-muted">{$_t('hostModal.connectionType')}</label>
@@ -149,12 +149,12 @@
 						/>
 					</div>
 				</div>
-				<!-- SSH 密钥 -->
+				<!-- SSH Key -->
 				{#if host.driver === 'ssh'}
 					<div class="space-y-3 rounded border border-border-secondary bg-surface-secondary p-3">
 						<div class="flex items-center justify-between">
 							<span class="flex items-center gap-1 text-[11px] font-medium text-text-muted"
-								><Key size={12} /> ED25519 密钥对</span
+								><Key size={12} /> ED25519 {$_t('hostModal.keyPair')}</span
 							>
 							<div class="flex items-center gap-1.5">
 								<input
@@ -165,32 +165,32 @@
 									onchange={onKeyFileUpload}
 								/>
 								<Button variant="secondary" size="sm" onclick={() => keyFileInput?.click()}
-									><FileUp size={12} class="mr-1" />上传私钥</Button
+									><FileUp size={12} class="mr-1" />{$_t('hostModal.uploadKey')}</Button
 								>
 								<Button
 									variant="secondary"
 									size="sm"
 									onclick={onGenKeyPair}
 									disabled={genKeyLoading}
-									>{#if genKeyLoading}<Spinner size={12} />{:else}一键生成密钥对{/if}</Button
+									>{#if genKeyLoading}<Spinner size={12} />{:else}$_t('hostModal.generateKey'){/if}</Button
 								>
 							</div>
 						</div>
 						<div>
-							<label class="mb-1 block text-[10px] text-text-muted">私钥</label>
+							<label class="mb-1 block text-[10px] text-text-muted">{$_t('hostModal.privateKey')}</label>
 							<textarea
 								bind:value={host.sshKey}
 								rows={3}
-								placeholder="点击生成或粘贴"
+								placeholder={$_t('hostModal.clickGenerate')}
 								class="w-full resize-none rounded border border-border-secondary bg-black/30 px-2 py-1 font-mono text-[11px] text-green-400 placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 							></textarea>
 						</div>
 						<div>
-							<label class="mb-1 block text-[10px] text-text-muted">公钥</label>
+							<label class="mb-1 block text-[10px] text-text-muted">{$_t('hostModal.publicKey')}</label>
 							<input
 								type="text"
 								bind:value={host.sshPubKey}
-								placeholder="点击生成或粘贴"
+								placeholder={$_t('hostModal.clickGenerate')}
 								class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 font-mono text-[11px] text-green-400 placeholder:text-text-muted focus:border-border-focus focus:outline-none"
 							/>
 						</div>
@@ -201,9 +201,9 @@
 								onclick={() => onCopyText(host.sshKey || '', 'priv')}
 								disabled={!host.sshKey}
 							>
-								{#if copied['priv']}<Check size={10} class="text-green-400" />已复制{:else}<Copy
+								{#if copied['priv']}<Check size={10} class="text-green-400" />$_t('hostModal.copied'){:else}<Copy
 										size={10}
-									/>私钥{/if}
+									/>{$_t('hostModal.privateKey')}{/if}
 							</button>
 							<button
 								type="button"
@@ -211,9 +211,9 @@
 								onclick={() => onCopyText(host.sshPubKey || '', 'pub')}
 								disabled={!host.sshPubKey}
 							>
-								{#if copied['pub']}<Check size={10} class="text-green-400" />已复制{:else}<Copy
+								{#if copied['pub']}<Check size={10} class="text-green-400" />$_t('hostModal.copied'){:else}<Copy
 										size={10}
-									/>公钥{/if}
+									/>{$_t('hostModal.publicKey')}{/if}
 							</button>
 							<button
 								type="button"
@@ -221,9 +221,9 @@
 								onclick={() => onCopyText(onGetCopyCmd(), 'cmd')}
 								disabled={!host.sshPubKey || !host.endpoint}
 							>
-								{#if copied['cmd']}<Check size={10} class="text-green-400" />已复制{:else}<Terminal
+								{#if copied['cmd']}<Check size={10} class="text-green-400" />{$_t('hostModal.copied')}{:else}<Terminal
 										size={10}
-									/>公钥设置命令{/if}
+									/>{$_t('hostModal.keyCommand')}{/if}
 							</button>
 							<button
 								type="button"
@@ -233,12 +233,12 @@
 								{#if copied['podman']}<Check
 										size={10}
 										class="text-green-400"
-									/>已复制{:else}<Terminal size={10} />Podman命令{/if}
+									/>{$_t('hostModal.copied')}{:else}<Terminal size={10} />Podman {$_t('common.command')}{/if}
 							</button>
 						</div>
 					</div>
 				{/if}
-				<!-- 标签 -->
+				<!-- Tags -->
 				<div>
 					<label class="mb-1 block text-[11px] text-text-muted">{$_t('hostModal.tags')}</label>
 					<input
@@ -335,7 +335,7 @@
 					{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug
 							size={12}
 							class="mr-1"
-						/>{/if}测试连接
+						/>{/if}$_t('hostModal.testConnection')
 				</Button>
 				<div class="flex items-center gap-2 px-1 py-1">
 					<Button variant="secondary" size="sm" onclick={onClose}>{$_t('common.cancel')}</Button>

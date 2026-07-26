@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _t } from '$lib/i18n/index.svelte';
 	import { page } from '$app/state';
 	import { onMount, onDestroy } from 'svelte';
 	import { api } from '$lib/api/client';
@@ -140,7 +141,7 @@
 	<div class="mb-6 flex items-center gap-4">
 		<Button variant="secondary" onclick={() => goto(resolve('/containers'))}>
 			<ArrowLeft size={16} class="mr-2" />
-			返回
+			{$_t('containers.back')}
 		</Button>
 		{#if container}
 			<div class="flex items-center gap-3">
@@ -157,11 +158,11 @@
 		<Card class="mb-6">
 			<div class="grid grid-cols-2 gap-4 text-sm">
 				<div><span class="text-text-secondary">ID:</span> <span class="text-text-primary">{container.id}</span></div>
-				<div><span class="text-text-secondary">状态:</span> <span class="text-text-primary">{container.status}</span></div>
-				<div class="col-span-2"><span class="text-text-secondary">镜像:</span> <span class="text-text-primary">{container.image}</span></div>
+				<div><span class="text-text-secondary">{$_t('common.status')}</span> <span class="text-text-primary">{container.status}</span></div>
+				<div class="col-span-2"><span class="text-text-secondary">{$_t('containers.image')}</span> <span class="text-text-primary">{container.image}</span></div>
 				{#if container.ports?.length > 0}
 					<div class="col-span-2">
-						<span class="text-text-secondary">端口:</span>
+						<span class="text-text-secondary">{$_t('common.port')}</span>
 						{#each container.ports as port}
 							{#if port.hostPort}
 								<a href="http://localhost:{port.hostPort}" target="_blank" class="ml-2 text-blue-400 hover:underline">{port.hostPort}:{port.containerPort}</a>
@@ -172,13 +173,13 @@
 			</div>
 			<div class="mt-4 flex gap-2">
 			{#if container.state === 'running'}
-			<Button variant="secondary" size="sm" onclick={stopContainer}><StopCircle size={14} class="mr-1" />停止</Button>
-			<Button variant="secondary" size="sm" onclick={restartContainer}><RefreshCw size={14} class="mr-1" />重启</Button>
+			<Button variant="secondary" size="sm" onclick={stopContainer}><StopCircle size={14} class="mr-1" />{$_t('compose.stop')}</Button>
+			<Button variant="secondary" size="sm" onclick={restartContainer}><RefreshCw size={14} class="mr-1" />{$_t('containers.restart')}</Button>
 			<Button variant="secondary" size="sm" onclick={() => goto(resolve(`/containers/${containerId}/terminal`))}>
-			<Terminal size={14} class="mr-1" />终端
+			<Terminal size={14} class="mr-1" />{$_t('containers.terminal')}
 			</Button>
 			{:else}
-			<Button variant="primary" size="sm" onclick={startContainer}><Play size={14} class="mr-1" />启动</Button>
+			<Button variant="primary" size="sm" onclick={startContainer}><Play size={14} class="mr-1" />{$_t('containers.start')}</Button>
 			{/if}
 			 <Button variant="secondary" size="sm" onclick={inspectContainer}><Info size={14} class="mr-1" />Inspect</Button>
 				</div>
@@ -187,13 +188,13 @@
 		<!-- Logs -->
 		<Card>
 			<div class="mb-4 flex items-center justify-between">
-				<h2 class="text-lg font-semibold text-text-primary">日志</h2>
+				<h2 class="text-lg font-semibold text-text-primary">{$_t('compose.logs')}</h2>
 				<div class="flex gap-2">
 					<select bind:value={tail} class="rounded border border-border-secondary bg-surface-secondary px-2 py-1 text-sm text-text-primary">
-						<option value={50}>50 行</option>
-						<option value={100}>100 行</option>
-						<option value={500}>500 行</option>
-						<option value={1000}>1000 行</option>
+						<option value={50}>50 {$_t('containers.line')}</option>
+						<option value={100}>100 {$_t('containers.line')}</option>
+						<option value={500}>500 {$_t('containers.line')}</option>
+						<option value={1000}>1000 {$_t('containers.line')}</option>
 					</select>
 					<Button variant="secondary" size="sm" onclick={loadLogs}>
 						<RefreshCw size={14} class={logsLoading ? 'animate-spin' : ''} />
@@ -203,7 +204,7 @@
 						size="sm"
 						onclick={toggleStreaming}
 					>
-						{streaming ? '停止流式' : '实时流式'}
+						{streaming ? ' + $_t('containers.stopStream') + ' : ' + $_t('containers.logsStream') + '}
 					</Button>
 				</div>
 			</div>
@@ -211,7 +212,7 @@
 				{#if logsLoading}
 					<Spinner size="sm" />
 				{:else if logs.length === 0}
-					<p class="text-text-muted">暂无日志</p>
+					<p class="text-text-muted">{$_t('containers.noLogs')}</p>
 				{:else}
 					{#each logs as line}
 						<div class="whitespace-pre-wrap">{line}</div>
@@ -227,7 +228,7 @@
 			<div class="mx-4 max-h-[80vh] w-full max-w-4xl overflow-auto rounded-lg bg-surface-primary p-6">
 				<div class="mb-4 flex items-center justify-between">
 					<h2 class="text-lg font-semibold text-text-primary">Container Inspect</h2>
-					<Button variant="secondary" size="sm" onclick={() => showInspect = false}>关闭</Button>
+					<Button variant="secondary" size="sm" onclick={() => showInspect = false}>{$_t('common.close')}</Button>
 				</div>
 				<pre class="max-h-[60vh] overflow-auto rounded bg-black p-4 font-mono text-xs text-green-400">{JSON.stringify(inspectData, null, 2)}</pre>
 			</div>

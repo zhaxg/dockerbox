@@ -102,7 +102,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 
 	function cleanupUnused() {
-		showConfirm('清理未使用资源', '确定要清理所有未使用的镜像和网络吗？', async () => {
+		showConfirm($_t('containers.pruneUnused'), $_t('containers.pruneConfirm'), async () => {
 			try {
 				const [imgResult, netResult] = await Promise.all([
 					dockerApi.post<{ deleted: number; spaceMB: number; message: string }>('/docker/images/prune'),
@@ -114,11 +114,11 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 				if (parts.length > 0) {
 					toastStore.success(parts.join('，'));
 				} else {
-					toastStore.info('没有需要清理的资源');
+					toastStore.info($_t('containers.noResources'));
 				}
 				loadContainers();
 			} catch (e) {
-				toastStore.error('清理失败');
+				toastStore.error($_t('containers.pruneFailed'));
 				console.error(e);
 			}
 		});
@@ -187,7 +187,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 
 	function stopContainer(id: string) {
-		showConfirm('停止容器', '确定要停止这个容器吗？', async () => {
+		showConfirm($_t('containers.stop'), $_t('containers.stopConfirm'), async () => {
 			try {
 				await dockerApi.post(`/docker/containers/${id}/stop`);
 				const idx = containers.findIndex((c) => c.id === id);
@@ -197,7 +197,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	}
 
 	function restartContainer(id: string) {
-		showConfirm('重启容器', '确定要重启这个容器吗？', async () => {
+		showConfirm($_t('containers.restart'), $_t('containers.restartConfirm'), async () => {
 			try {
 				await dockerApi.post(`/docker/containers/${id}/restart`);
 				const idx = containers.findIndex((c) => c.id === id);
@@ -376,7 +376,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 <div class="flex h-full flex-col bg-surface-primary">
 	<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3">
 		<h1 class="text-base font-semibold text-text-primary">
-			容器
+			{$_t('containers.title')}
 			{#if currentHost}<Badge variant="info">{currentHost.name}</Badge>{/if}
 			<Badge>{filteredContainers.length}</Badge>
 		</h1>
@@ -386,7 +386,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 				<input type="text" bind:value={searchQuery} placeholder="{tContainersSearch}"
 					class="h-7 w-48 rounded border border-border-secondary bg-surface-secondary pl-8 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
-			<Button variant="secondary" size="sm" onclick={cleanupUnused} title="清理未使用的镜像和网络"><BrushCleaning size={14} /></Button>
+			<Button variant="secondary" size="sm" onclick={cleanupUnused} title={$_t('containers.pruneImages')}><BrushCleaning size={14} /></Button>
 			<Button variant="secondary" size="sm" onclick={loadContainers}><RefreshCw size={14} /></Button>
 		</div>
 	</div>
@@ -397,7 +397,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 		{:else if filteredContainers.length === 0}
 			<div class="flex flex-col items-center gap-2 py-12 text-text-muted">
 				<Container size={36} class="opacity-50" />
-				<span class="text-sm">{searchQuery ? '没有匹配的容器' : '暂无容器'}</span>
+				<span class="text-sm">{searchQuery ? $_t('containers.noMatch') : $_t('containers.noContainers')}</span>
 			</div>
 		{:else}
 			<table class="w-full min-w-[1050px] border-collapse text-[13px] leading-5">
@@ -469,21 +469,21 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 							<td class="{tdClass}">
 								<div class="flex justify-end gap-1">
 									{#if container.state === 'running'}
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => stopContainer(container.id)} title="停止">
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10" onclick={() => stopContainer(container.id)} title={$_t('containers.stop')}>
 											<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
 										</button>
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => restartContainer(container.id)} title="重启">
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => restartContainer(container.id)} title={$_t('containers.restart')}>
 											<RefreshCw size={13} />
 										</button>
 									{:else}
-										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => startContainer(container.id)} title="启动">
+										<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-500/10" onclick={() => startContainer(container.id)} title={$_t('containers.start')}>
 											<Play size={13} />
 										</button>
 									{/if}
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewLogs(container.id, container.name)} title="日志">
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewLogs(container.id, container.name)} title={$_t('containers.logs')}>
 										<Eye size={13} />
 									</button>
-									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openExec(container.id, container.name)} title="终端">
+									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => openExec(container.id, container.name)} title={$_t('containers.terminal')}>
 										<Terminal size={13} />
 									</button>
 									<button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary" onclick={() => viewInspect(container.id, container.name)} title="Inspect">
@@ -506,8 +506,8 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
-				<Button variant="secondary" onclick={closeConfirm}>取消</Button>
-				<Button variant="danger" onclick={() => { confirmDialog.onConfirm(); closeConfirm(); }}>确定</Button>
+				<Button variant="secondary" onclick={closeConfirm}>{$_t('common.cancel')}</Button>
+				<Button variant="danger" onclick={() => { confirmDialog.onConfirm(); closeConfirm(); }}>{$_t('common.confirm')}</Button>
 			</div>
 		</div>
 	</div>
@@ -518,7 +518,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
 		<div class="flex h-[70vh] w-[750px] flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary">
 			<div class="flex items-center justify-between px-3 py-2">
-				<h3 class="text-sm font-semibold text-text-primary">日志 - {logsModal.name}</h3>
+				<h3 class="text-sm font-semibold text-text-primary">{$_t('containers.logs')} - {logsModal.name}</h3>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={() => { closeLogsStream(); logsModal.open = false; }}>
 					<X size={16} />
 				</button>
@@ -560,7 +560,7 @@ import { _t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
 		<div class="flex h-[70vh] w-[750px] flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary">
 			<div class="flex items-center justify-between px-3 py-2">
-				<h3 class="text-sm font-semibold text-text-primary">终端 - {execModal.name}</h3>
+				<h3 class="text-sm font-semibold text-text-primary">{$_t('containers.terminal')} - {execModal.name}</h3>
 				<button type="button" class="text-text-muted hover:text-text-primary" onclick={closeExec}>
 					<X size={16} />
 				</button>
