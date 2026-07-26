@@ -12,6 +12,8 @@ const tCommonConfirmdelete = $derived(t("common.confirmDelete"));
 const tCommonDelete = $derived(t("common.delete"));
 const tCommonItem = $derived(t("common.item"));
 const tCommonItems = $derived(t("common.items"));
+const tFilesDeleted = $derived(t("files.deleted"));
+const tFilesDeleteQueued = $derived(t("files.deleteQueued"));
 const tFilesTitle = $derived(t("files.title"));
 	import FileList from '$lib/components/FileList.svelte';
 	import FileGrid from '$lib/components/FileGrid.svelte';
@@ -562,16 +564,26 @@ const tFilesTitle = $derived(t("files.title"));
 		if (items.length === 0) return;
 
 		try {
-			for (const item of items) {
-				if (item.isDir) {
-					// Use job for directory deletion
-					jobsStore.upsertJob(await createDeleteJob(item.path));
-				} else {
-					await deleteFile(item.path);
-				}
+			const count = items.length;
+			const dirs = items.filter((i) => i.isDir);
+			const files = items.filter((i) => !i.isDir);
+
+			for (const item of dirs) {
+				jobsStore.upsertJob(await createDeleteJob(item.path));
 			}
+			for (const item of files) {
+				await deleteFile(item.path);
+			}
+
 			selectedPaths = new Set();
 			directoryQuery.refetch();
+
+			if (files.length > 0) {
+				toastStore.success(`${files.length} ${files.length === 1 ? tCommonItem : tCommonItems} ${tFilesDeleted}`);
+			}
+			if (dirs.length > 0) {
+				toastStore.info(`${dirs.length} ${dirs.length === 1 ? tCommonItem : tCommonItems} ${tFilesDeleteQueued}`);
+			}
 		} catch (error) {
 			console.error('Delete failed:', error);
 			toastStore.error(getErrorMessage(error, 'Delete failed'));

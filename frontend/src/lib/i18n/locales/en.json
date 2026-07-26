@@ -253,6 +253,8 @@
     "create": "Create",
     "createFailed": "Create failed",
     "deleteConfirm": "Delete this?",
+    "deleted": "Deleted successfully",
+    "deleteQueued": "Deletion queued",
     "emptyPath": "Path cannot be empty",
     "pin": "Pin to Favorites",
     "unpin": "Unpin from Favorites",

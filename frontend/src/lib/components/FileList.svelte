@@ -54,6 +54,9 @@
 	// Context menu state
 	let contextMenu = $state<{ x: number; y: number; items: FileInfo[] } | null>(null);
 
+	// Shift-click range selection anchor (index of last non-shift click)
+	let anchorIndex = $state<number | null>(null);
+
 	function handleSort(field: SortField) {
 		if (sortBy === field) {
 			const newDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -64,19 +67,30 @@
 	}
 
 	function handleRowClick(item: FileInfo, event: MouseEvent) {
+		const clickedIndex = items.findIndex((i) => i.path === item.path);
+
 		if (event.ctrlKey || event.metaKey) {
+			// Ctrl/Cmd + click: toggle individual item, update anchor
 			const newSelection = new SvelteSet<string>(selectedPaths);
 			if (newSelection.has(item.path)) {
 				newSelection.delete(item.path);
 			} else {
 				newSelection.add(item.path);
 			}
+			anchorIndex = clickedIndex;
 			onSelectionChange?.(newSelection);
-		} else if (event.shiftKey && selectedPaths.size > 0) {
-			const newSelection = new SvelteSet<string>(selectedPaths);
-			newSelection.add(item.path);
+		} else if (event.shiftKey && anchorIndex !== null) {
+			// Shift + click: select range from anchor to clicked item
+			const start = Math.min(anchorIndex, clickedIndex);
+			const end = Math.max(anchorIndex, clickedIndex);
+			const newSelection = new SvelteSet<string>();
+			for (let i = start; i <= end; i++) {
+				newSelection.add(items[i].path);
+			}
 			onSelectionChange?.(newSelection);
 		} else {
+			// Normal click: select only this item, set anchor
+			anchorIndex = clickedIndex;
 			const newSelection = new SvelteSet<string>([item.path]);
 			onSelectionChange?.(newSelection);
 		}

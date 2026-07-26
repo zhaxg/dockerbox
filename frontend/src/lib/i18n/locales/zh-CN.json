@@ -253,6 +253,8 @@
     "create": "创建",
     "createFailed": "创建失败",
     "deleteConfirm": "确定要删除吗？",
+    "deleted": "删除成功",
+    "deleteQueued": "删除已加入队列",
     "emptyPath": "路径不能为空",
     "pin": "添加到收藏",
     "unpin": "从收藏移除",

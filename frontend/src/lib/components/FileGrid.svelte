@@ -47,7 +47,12 @@
 	let contextMenu = $state<{ x: number; y: number; items: FileInfo[] } | null>(null);
 	let thumbnailErrors = new SvelteSet<string>();
 
+	// Shift-click range selection anchor (index of last non-shift click)
+	let anchorIndex = $state<number | null>(null);
+
 	function handleItemClick(item: FileInfo, event: MouseEvent) {
+		const clickedIndex = items.findIndex((i) => i.path === item.path);
+
 		if (event.ctrlKey || event.metaKey) {
 			const newSelection = new SvelteSet<string>(selectedPaths);
 			if (newSelection.has(item.path)) {
@@ -55,12 +60,18 @@
 			} else {
 				newSelection.add(item.path);
 			}
+			anchorIndex = clickedIndex;
 			onSelectionChange?.(newSelection);
-		} else if (event.shiftKey && selectedPaths.size > 0) {
-			const newSelection = new SvelteSet<string>(selectedPaths);
-			newSelection.add(item.path);
+		} else if (event.shiftKey && anchorIndex !== null) {
+			const start = Math.min(anchorIndex, clickedIndex);
+			const end = Math.max(anchorIndex, clickedIndex);
+			const newSelection = new SvelteSet<string>();
+			for (let i = start; i <= end; i++) {
+				newSelection.add(items[i].path);
+			}
 			onSelectionChange?.(newSelection);
 		} else {
+			anchorIndex = clickedIndex;
 			const newSelection = new SvelteSet<string>([item.path]);
 			onSelectionChange?.(newSelection);
 		}

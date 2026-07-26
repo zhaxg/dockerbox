@@ -3,9 +3,11 @@
 .env.local
 .env.*.local
 
+
 # IDE
 .idea/
 .vscode/
+.code-graph/
 *.swp
 *.swo
 *~
@@ -41,6 +43,9 @@ coverage/
 coverage.out
 coverage.html
 
+# Playwright test results
+.playwright-mcp/
+
 # Node modules (frontend has its own .gitignore)
 node_modules/
 
@@ -52,10 +57,7 @@ backend/bin/
 .docker/
 boxbox-linux
 backend/internal/static/dist/
-.playwright-mcp/
 backend/boxbox
 
 # Build output
 backend/server
-*.tmp
-.code-graph/
