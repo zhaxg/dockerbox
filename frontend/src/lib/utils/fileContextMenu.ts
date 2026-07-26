@@ -5,6 +5,8 @@
 
 import type { ContextMenuItem } from '$lib/components/ui/ContextMenu.svelte';
 import type { FileInfo } from '$lib/api/files';
+import { get } from 'svelte/store';
+import { _t } from '$lib/i18n/index.svelte';
 import {
 	Copy,
 	Scissors,
