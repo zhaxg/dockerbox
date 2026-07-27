@@ -114,7 +114,6 @@ const tTableActions = $derived(t("table.actions"));
 	function createDragState(): ModalDragState { return { x: 0, y: 0, maximized: false, dragging: false, offsetX: 0, offsetY: 0 }; }
 	function resetDrag(s: ModalDragState) { s.x = 0; s.y = 0; s.maximized = false; s.dragging = false; }
 	let importDrag = $state(createDragState());
-	let confirmDrag = $state(createDragState());
 	let editorDrag = $state(createDragState());
 
 	function onDragHeader(e: MouseEvent, s: ModalDragState) {
@@ -125,12 +124,12 @@ const tTableActions = $derived(t("table.actions"));
 		e.preventDefault();
 	}
 	function onDragMove(e: MouseEvent) {
-		for (const s of [importDrag, confirmDrag, editorDrag]) {
+		for (const s of [importDrag, editorDrag]) {
 			if (s.dragging) { s.x = e.clientX - s.offsetX; s.y = e.clientY - s.offsetY; }
 		}
 	}
 	function onDragEnd() {
-		for (const s of [importDrag, confirmDrag, editorDrag]) { s.dragging = false; }
+		for (const s of [importDrag, editorDrag]) { s.dragging = false; }
 	}
 	function toggleMaximize(s: ModalDragState) {
 		if (s.maximized) { s.x = 0; s.y = 0; s.maximized = false; }
@@ -222,7 +221,6 @@ const tTableActions = $derived(t("table.actions"));
 
 	function showConfirm(title: string, message: string, onConfirm: () => void) {
 		confirmDialog = { open: true, title, message, onConfirm };
-		resetDrag(confirmDrag);
 	}
 	function closeConfirm() { confirmDialog.open = false; }
 
@@ -605,12 +603,6 @@ const tTableActions = $derived(t("table.actions"));
 				{:else if importModal.projects.length === 0}
 					<p class="text-sm text-text-secondary text-center py-8">{tComposeNoimportable}</p>
 				{:else}
-					<div class="mb-3 flex items-center gap-2">
-						<button type="button" class="text-xs text-accent hover:underline" onclick={selectAllImport}>
-							{importModal.selected.size === importModal.projects.length ? tComposeDeselectall : tFilesSelectall}
-						</button>
-						<span class="text-xs text-text-muted">{tComposeSelected} {importModal.selected.size}/{importModal.projects.length}</span>
-					</div>
 					<div class="flex flex-col gap-2">
 						{#each importModal.projects as project}
 							<label class="flex items-center gap-3 rounded border border-border-secondary bg-surface-secondary px-3 py-2 cursor-pointer hover:border-border-focus transition-colors">
@@ -624,11 +616,21 @@ const tTableActions = $derived(t("table.actions"));
 					</div>
 				{/if}
 			</div>
-			<div class="flex justify-end gap-2 border-t border-border-secondary px-4 py-3">
-				<Button variant="secondary" size="sm" onclick={() => { importModal.open = false; }}>{tCommonCancel}</Button>
-				<Button variant="primary" size="sm" onclick={doImport} disabled={importModal.selected.size === 0 || importModal.importing}>
-					{#if importModal.importing}<Spinner size={14} class="mr-1" /> {tComposeImporting}...{:else}{tComposeImportselected}{/if}
-				</Button>
+			<div class="flex items-center justify-between gap-2 border-t border-border-secondary px-4 py-3">
+				<div class="flex items-center gap-2">
+					{#if !importModal.loading && importModal.projects.length > 0}
+						<button type="button" class="text-xs text-accent hover:underline" onclick={selectAllImport}>
+							{importModal.selected.size === importModal.projects.length ? tComposeDeselectall : tFilesSelectall}
+						</button>
+						<span class="text-xs text-text-muted">{tComposeSelected} {importModal.selected.size}/{importModal.projects.length}</span>
+					{/if}
+				</div>
+				<div class="flex gap-2">
+					<Button variant="secondary" size="sm" onclick={() => { importModal.open = false; }}>{tCommonCancel}</Button>
+					<Button variant="primary" size="sm" onclick={doImport} disabled={importModal.selected.size === 0 || importModal.importing}>
+						{#if importModal.importing}<Spinner size={14} class="mr-1" /> {tComposeImporting}...{:else}{tComposeImportselected}{/if}
+					</Button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -637,13 +639,8 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Confirm Dialog -->
 {#if confirmDialog.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary" style={modalStyle(confirmDrag)}>
-			<h3 class="mb-2 text-lg font-semibold text-text-primary flex items-center gap-2">
-				<span class="cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, confirmDrag)}>{confirmDialog.title}</span>
-				<button type="button" class="ml-auto rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(confirmDrag)}>
-					{#if confirmDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
-				</button>
-			</h3>
+		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary">
+			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
 				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}</Button>

@@ -94,6 +94,13 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 	if cfg.DockerHosts == nil {
 		cfg.DockerHosts = &model.DockerHostsConfig{Hosts: make(map[string]*model.DockerHost)}
 	}
+	// Check for duplicate endpoint
+	for id, existing := range cfg.DockerHosts.Hosts {
+		if existing.Endpoint == host.Endpoint && existing.Driver == host.Driver {
+			writeError(w, fmt.Sprintf("Host with endpoint %s already exists (id: %s)", host.Endpoint, id), model.ErrCodeValidationError, http.StatusConflict)
+			return
+		}
+	}
 	hostID := generateHostID()
 	if _, exists := cfg.DockerHosts.Hosts[hostID]; exists {
 		writeError(w, "Host ID already exists", model.ErrCodeValidationError, http.StatusBadRequest)

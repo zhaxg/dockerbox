@@ -105,7 +105,6 @@ const tTableActions = $derived(t("table.actions"));
 	let logsDrag = $state(createModalDragState());
 	let inspectDrag = $state(createModalDragState());
 	let execDrag = $state(createModalDragState());
-	let confirmDrag = $state(createModalDragState());
 
 	function resetDrag(state: ModalDragState) { state.x = 0; state.y = 0; state.maximized = false; state.dragging = false; }
 
@@ -118,7 +117,7 @@ const tTableActions = $derived(t("table.actions"));
 	}
 
 	function onDragMove(e: MouseEvent) {
-		for (const s of [logsDrag, inspectDrag, execDrag, confirmDrag]) {
+		for (const s of [logsDrag, inspectDrag, execDrag]) {
 			if (s.dragging) {
 				s.x = e.clientX - s.offsetX;
 				s.y = e.clientY - s.offsetY;
@@ -127,7 +126,7 @@ const tTableActions = $derived(t("table.actions"));
 	}
 
 	function onDragEnd() {
-		for (const s of [logsDrag, inspectDrag, execDrag, confirmDrag]) {
+		for (const s of [logsDrag, inspectDrag, execDrag]) {
 			s.dragging = false;
 		}
 	}
@@ -258,7 +257,6 @@ const tTableActions = $derived(t("table.actions"));
 
 	function showConfirm(title: string, message: string, onConfirm: () => void) {
 		confirmDialog = { open: true, title, message, onConfirm };
-		resetDrag(confirmDrag);
 	}
 	function closeConfirm() { confirmDialog.open = false; }
 
@@ -601,13 +599,8 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Confirm Dialog -->
 {#if confirmDialog.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary" style={modalStyle(confirmDrag)}>
-			<h3 class="mb-2 text-lg font-semibold text-text-primary flex items-center gap-2">
-				<span class="cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, confirmDrag)}>{confirmDialog.title}</span>
-				<button type="button" class="ml-auto rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(confirmDrag)}>
-					{#if confirmDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
-				</button>
-			</h3>
+		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary">
+			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
 				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}</Button>

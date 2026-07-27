@@ -274,7 +274,10 @@ const tTableActions = $derived(t("table.actions"));
 		try {
 			if (modal.mode === 'add') {
 				const result = await hostsApi.create<{id: string, host: any}>(saveData);
-				if (result?.id) modal.host.id = result.id;
+				if (result?.id) {
+					modal.host.id = result.id;
+					modal.mode = 'edit'; // Switch to edit mode to prevent duplicate creation
+				}
 			} else {
 				await hostsApi.update(modal.host.id, saveData);
 			}

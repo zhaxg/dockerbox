@@ -70,17 +70,7 @@ func (s *DockerService) sshExec(ctx context.Context, cmd string) (string, error)
 		return "", fmt.Errorf("no SSH config")
 	}
 
-	// Write key to temp file
-	keyFile, err := os.CreateTemp("", "boxbox-ssh-*")
-	if err != nil {
-		return "", err
-	}
-	keyFile.WriteString(s.sshKey)
-	keyFile.Close()
-	os.Chmod(keyFile.Name(), 0600)
-	defer os.Remove(keyFile.Name())
-
-	// Parse host: ssh://user@host:port -> user@host -p port
+	// Parse host
 	host := strings.TrimPrefix(s.sshHost, "ssh://")
 	parts := strings.SplitN(host, ":", 2)
 	addr := parts[0]
@@ -89,19 +79,42 @@ func (s *DockerService) sshExec(ctx context.Context, cmd string) (string, error)
 		port = parts[1]
 	}
 
-	sshCmd := exec.CommandContext(ctx, "ssh",
-		"-i", keyFile.Name(),
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-p", port,
-		addr,
-		cmd,
-	)
-	var stdout, stderr bytes.Buffer
-	sshCmd.Stdout = &stdout
-	sshCmd.Stderr = &stderr
-	err = sshCmd.Run()
+	// Parse private key
+	signer, err := ssh.ParsePrivateKey([]byte(s.sshKey))
 	if err != nil {
+		return "", fmt.Errorf("parse SSH key: %w", err)
+	}
+
+	config := &ssh.ClientConfig{
+		User:            strings.Split(addr, "@")[0],
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
+	}
+
+	// Extract hostname from user@host
+	sshAddr := strings.SplitN(addr, "@", 2)
+	if len(sshAddr) > 1 {
+		addr = sshAddr[1]
+	}
+
+	conn, err := ssh.Dial("tcp", addr+":"+port, config)
+	if err != nil {
+		return "", fmt.Errorf("ssh dial %s:%s user=%s: %w", addr, port, config.User, err)
+	}
+	defer conn.Close()
+
+	session, err := conn.NewSession()
+	if err != nil {
+		return "", fmt.Errorf("ssh session: %w", err)
+	}
+	defer session.Close()
+
+	var stdout, stderr bytes.Buffer
+	session.Stdout = &stdout
+	session.Stderr = &stderr
+
+	if err := session.Run(cmd); err != nil {
 		return "", fmt.Errorf("ssh exec failed: %w (%s)", err, strings.TrimSpace(stderr.String()))
 	}
 	return strings.TrimSpace(stdout.String()), nil

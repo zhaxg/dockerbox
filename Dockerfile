@@ -61,7 +61,8 @@ WORKDIR /app
 # - ca-certificates: HTTPS support
 # - tzdata: Timezone support
 # - wget: Health check
-RUN apk add --no-cache ca-certificates tzdata wget
+# - openssh-client: SSH connections to remote Docker hosts
+RUN apk add --no-cache ca-certificates tzdata wget openssh-client
 
 # Copy binary from builder
 COPY --from=backend-builder /server /app/server
