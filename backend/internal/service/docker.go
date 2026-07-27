@@ -878,7 +878,7 @@ func (s *DockerService) PruneImages(ctx context.Context) (types.ImagesPruneRepor
 	if s.runtime == "podman" {
 		return s.pruneImagesCLI(ctx)
 	}
-	return s.client.ImagesPrune(ctx, filters.NewArgs())
+	return s.client.ImagesPrune(ctx, filters.NewArgs(filters.Arg("dangling", "false")))
 }
 
 // pruneImagesCLI runs "podman image prune -a --force" to remove all unused images.
