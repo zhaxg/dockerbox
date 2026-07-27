@@ -115,6 +115,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: dockerbox-*
           merge-multiple: true
 
       - name: Create GitHub Release
