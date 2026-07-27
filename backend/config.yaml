@@ -24,35 +24,13 @@ max_upload_mb: 10240
 # Docker Hosts
 # =============================================================================
 docker_hosts:
-    default: host210
+    default: local
     hosts:
-        host086:
-            display_name: fnos
-            driver: ssh
-            endpoint: zhaxg@192.168.132.86:2322
-            mount_points:
-                docker:
-                    path: /vol1/1000/docker
-                    read_only: false
-            ssh_key: |-
-                -----BEGIN OPENSSH PRIVATE KEY-----
-                b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-                QyNTUxOQAAACC6VO6rFccUT6ld3/33DX1SbBuOnP1m53QpCFtDdsdZJgAAAJCEn4/fhJ+P
-                3wAAAAtzc2gtZWQyNTUxOQAAACC6VO6rFccUT6ld3/33DX1SbBuOnP1m53QpCFtDdsdZJg
-                AAAEATfUWYDQZCo04oWsPbsYYec+6WaGNEL0jlPfKov1p/fbpU7qsVxxRPqV3f/fcNfVJs
-                G46c/WbndCkIW0N2x1kmAAAABmJveGJveAECAwQFBgc=
-                -----END OPENSSH PRIVATE KEY-----
-        host210:
-            display_name: 192.168.132.210
+        local:
+            display_name: Local Docker
             driver: socket
             endpoint: /var/run/docker.sock
             mount_points:
                 docker:
                     path: /opt/docker
-                    read_only: false
-                opt:
-                    path: /opt
-                    read_only: false
-                tmp:
-                    path: /tmp
                     read_only: false

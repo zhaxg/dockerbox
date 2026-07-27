@@ -108,7 +108,7 @@ func Save(cfg *model.ServerConfig) error {
 		}
 	}
 
-	doc["dockerhosts"] = hostsMap
+	doc["docker_hosts"] = hostsMap
 
 	// Write back
 	out, err := yaml.Marshal(doc)

@@ -80,6 +80,7 @@ docker_hosts:
     default: local
     hosts:
         local:
+            display_name: Local Docker
             driver: socket
             endpoint: /var/run/docker.sock
             mount_points:
