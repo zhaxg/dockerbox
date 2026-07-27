@@ -13,6 +13,7 @@
 	import { listDirectory, listRoots, type FileInfo, type MountPoint } from '$lib/api/files';
 	import { resolveBackgroundImage, toServerBackgroundImage } from '$lib/stores/settings';
 	import { formatFileSize } from '$lib/utils/format';
+	import { t } from '$lib/i18n/index.svelte';
 	import {
 		DEFAULT_BACKGROUND_IMAGE_MODE,
 		WALLPAPER_DISPLAY_OPTIONS,
@@ -69,7 +70,7 @@
 	let localWallpaperInput: HTMLInputElement;
 
 	const isPreviewing = $derived(previewBackgroundImage !== null);
-	const title = $derived(isPreviewing ? 'Preview Wallpaper' : 'Choose Wallpaper');
+	const title = $derived(isPreviewing ? t('wallpaper.previewWallpaper') : t('wallpaper.chooseWallpaper'));
 	const modalSize = $derived(isPreviewing ? 'lg' : 'md');
 	const serverWallpaperEntries = $derived.by(() =>
 		serverWallpaperItems.filter((item) => item.isDir || isWallpaperImageFile(item))
@@ -104,7 +105,7 @@
 			serverWallpaperRoots = response.roots;
 		} catch (error) {
 			serverWallpaperError =
-				error instanceof Error ? error.message : 'Unable to load server folders.';
+				error instanceof Error ? error.message : t('wallpaper.loadingFolders');
 		} finally {
 			serverWallpaperLoading = false;
 		}
@@ -125,7 +126,7 @@
 			});
 			serverWallpaperItems = response.items;
 		} catch (error) {
-			serverWallpaperError = error instanceof Error ? error.message : 'Unable to open this folder.';
+			serverWallpaperError = error instanceof Error ? error.message : t('wallpaper.noImages');
 			serverWallpaperItems = [];
 		} finally {
 			serverWallpaperLoading = false;
@@ -166,28 +167,28 @@
 		localWallpaperProgress = 0;
 		localWallpaperProgressLabel = '';
 		if (!file.type.startsWith('image/') && !isLocalImageFile(file.name)) {
-			localWallpaperError = 'Choose an image file.';
+			localWallpaperError = t('wallpaper.chooseImage');
 			return;
 		}
 
 		if (file.size > LOCAL_WALLPAPER_MAX_BYTES) {
-			localWallpaperError = `Choose an image smaller than ${formatFileSize(LOCAL_WALLPAPER_MAX_BYTES)} so it can be saved locally.`;
+			localWallpaperError = t('wallpaper.imageTooLarge', { size: formatFileSize(LOCAL_WALLPAPER_MAX_BYTES) });
 			return;
 		}
 
 		try {
 			localWallpaperUploading = true;
-			localWallpaperProgressLabel = 'Preparing wallpaper upload...';
+			localWallpaperProgressLabel = t('wallpaper.prepareUpload');
 			previewBackgroundImage = await readFileAsDataUrl(file, (progress) => {
 				localWallpaperProgress = progress;
 				localWallpaperProgressLabel =
-					progress >= 100 ? 'Preparing preview...' : 'Uploading wallpaper...';
+					progress >= 100 ? t('wallpaper.preparing') : t('wallpaper.uploading');
 			});
 			previewName = file.name;
 			previewOrigin = 'local';
 			previewMode = normalizeBackgroundImageMode(currentMode);
 		} catch {
-			localWallpaperError = 'Unable to read this image.';
+			localWallpaperError = t('wallpaper.readError');
 			localWallpaperProgress = 0;
 			localWallpaperProgressLabel = '';
 		} finally {
@@ -238,12 +239,12 @@
 		{#if isPreviewing}
 			<Button variant="ghost" size="sm" onclick={returnFromPreview}>
 				<ChevronLeft size={14} />
-				{previewOrigin === 'server' ? 'Back to folder' : 'Back'}
+				{previewOrigin === 'server' ? t('wallpaper.backToFolder') : t('wallpaper.back')}
 			</Button>
 		{:else if wallpaperSource === 'server'}
 			<Button variant="ghost" size="sm" onclick={() => (wallpaperSource = null)}>
 				<ChevronLeft size={14} />
-				Sources
+				{t('wallpaper.sources')}
 			</Button>
 		{/if}
 	{/snippet}
@@ -317,7 +318,7 @@
 				</div>
 				<Button onclick={applyPreview}>
 					<Check size={16} />
-					Use Wallpaper
+					{t('wallpaper.useWallpaper')}
 				</Button>
 			</div>
 		</div>
@@ -331,8 +332,8 @@
 				>
 					<span class="rounded bg-accent/15 p-2 text-accent"><HardDrive size={22} /></span>
 					<span>
-						<span class="block text-sm font-medium text-text-primary">This Server</span>
-						<span class="block text-xs text-text-muted">Browse mounted folders</span>
+						<span class="block text-sm font-medium text-text-primary">{t('wallpaper.thisServer')}</span>
+						<span class="block text-xs text-text-muted">{t('wallpaper.browseMounted')}</span>
 					</span>
 				</button>
 
@@ -345,9 +346,9 @@
 				>
 					<span class="rounded bg-accent/15 p-2 text-accent"><Upload size={22} /></span>
 					<span>
-						<span class="block text-sm font-medium text-text-primary">This Device</span>
+						<span class="block text-sm font-medium text-text-primary">{t('wallpaper.thisDevice')}</span>
 						<span class="block text-xs text-text-muted">
-							{localWallpaperUploading ? 'Uploading wallpaper...' : 'Upload a local image'}
+							{localWallpaperUploading ? t('wallpaper.uploading') : t('wallpaper.uploadLocal')}
 						</span>
 					</span>
 				</button>
@@ -449,7 +450,7 @@
 				>
 					{#if serverWallpaperEntries.length === 0}
 						<div class="px-3 py-8 text-center text-sm text-text-secondary">
-							No image files found in this folder.
+							{t('wallpaper.noImages')}
 						</div>
 					{:else}
 						{#each serverWallpaperEntries as item (item.path)}

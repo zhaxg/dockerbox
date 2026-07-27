@@ -2,6 +2,7 @@
 	import { Folder, Home, Loader2 } from 'lucide-svelte';
 	import { onDestroy, tick } from 'svelte';
 	import { listDirectory, listRoots } from '$lib/api/files';
+	import { t } from '$lib/i18n/index.svelte';
 
 	interface PathSuggestion {
 		path: string;
@@ -467,7 +468,7 @@
 			event.stopPropagation();
 			handleRootClick();
 		}}
-		title="Go to root"
+		title={t('pathbar.goToRoot')}
 	>
 		<Home size={14} />
 	</button>
@@ -479,7 +480,7 @@
 					aria-hidden="true"
 				>
 					{#if pathDraft.length === 0}
-						<span class="text-text-muted">Type a location</span>
+						<span class="text-text-muted">{t('pathbar.typeLocation')}</span>
 					{:else}
 						<div class="flex min-w-0 items-center overflow-hidden">
 							{#each draftDisplayParts as part, index (`path-part-${index}-${part.text}-${part.selected}-${part.caret}`)}
@@ -516,11 +517,11 @@
 					onfocus={handlePathInputFocus}
 					onblur={handlePathInputBlur}
 					class="absolute inset-0 z-10 h-full w-full cursor-text border-none bg-transparent p-0 text-[13px] text-transparent caret-transparent outline-none selection:bg-transparent"
-					placeholder="Type a location"
+					placeholder={t('pathbar.typeLocation')}
 					autocomplete="off"
 					autocapitalize="off"
 					spellcheck="false"
-					aria-label="Location"
+					aria-label={t('pathbar.location')}
 					role="combobox"
 					aria-autocomplete="list"
 					aria-expanded={showSuggestionPopup}
@@ -529,7 +530,7 @@
 				/>
 			</form>
 		{:else if pathSegments.length === 0}
-			<span class="text-[13px] whitespace-nowrap text-text-primary">This Server</span>
+			<span class="text-[13px] whitespace-nowrap text-text-primary">{t('pathbar.thisServer')}</span>
 		{:else}
 			<div class="flex flex-1 items-center gap-1 overflow-hidden">
 				{#each pathSegments as segment, index (index)}
@@ -559,13 +560,13 @@
 				id={suggestionListId}
 				bind:this={suggestionListEl}
 				role="listbox"
-				aria-label="Location suggestions"
+				aria-label={t('pathbar.locationSuggestions')}
 				class="absolute top-full right-0 left-0 z-[200] mt-1 max-h-64 overflow-auto rounded border border-border-primary bg-[#202020] py-1 shadow-2xl ring-1 ring-black/40"
 			>
 				{#if isLoadingSuggestions && suggestions.length === 0}
 					<div class="flex items-center gap-2 px-3 py-2 text-xs text-text-secondary">
 						<Loader2 size={14} class="animate-spin" />
-						<span>Finding folders...</span>
+						<span>{t('pathbar.findingFolders')}</span>
 					</div>
 				{/if}
 

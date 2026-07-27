@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
+	"dockerbox/backend/internal/config"
 )
 
 // ComposeProjectRecord represents a BoxBox-created compose project.

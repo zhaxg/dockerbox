@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jR4dh3y/BoxBox/backend/internal/service"
+	"dockerbox/backend/internal/service"
 )
 
 // SSEHandler handles Server-Sent Events connections.

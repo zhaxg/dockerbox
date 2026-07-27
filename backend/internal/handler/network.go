@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
+	"dockerbox/backend/internal/model"
 )
 
 // NetworkHandler handles Docker network-related HTTP requests.

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/filesystem"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/filesystem"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"

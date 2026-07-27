@@ -20,10 +20,10 @@ import (
 
 	"net/url"
 	"github.com/go-chi/chi/v5"
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/fileutil"
-	"github.com/jR4dh3y/BoxBox/backend/internal/service"
+	"dockerbox/backend/internal/config"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/fileutil"
+	"dockerbox/backend/internal/service"
 )
 
 var errUploadTooLarge = errors.New("upload too large")

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/filesystem"
+	"dockerbox/backend/internal/config"
+	"dockerbox/backend/internal/pkg/filesystem"
 )
 
 type SettingsService interface {

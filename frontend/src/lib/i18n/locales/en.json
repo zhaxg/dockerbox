@@ -260,7 +260,9 @@
     "pin": "Pin to Favorites",
     "unpin": "Unpin from Favorites",
     "properties": "Properties",
-    "open": "Open"
+    "open": "Open",
+    "forward": "Forward",
+    "up": "Up"
   },
   "upload": {
     "queued": "Queued",
@@ -313,5 +315,36 @@
     "confirmDelete": "Delete",
     "item": "item",
     "items": "items"
+  },
+  "pathbar": {
+    "thisServer": "This Server",
+    "typeLocation": "Type a location",
+    "goToRoot": "Go to root",
+    "location": "Location",
+    "locationSuggestions": "Location suggestions",
+    "findingFolders": "Finding folders..."
+  },
+  "wallpaper": {
+    "thisServer": "This Server",
+    "browseMounted": "Browse mounted folders",
+    "thisDevice": "This Device",
+    "uploadLocal": "Upload a local image",
+    "uploading": "Uploading wallpaper...",
+    "chooseSource": "Sources",
+    "backToFolder": "Back to folder",
+    "back": "Back",
+    "useWallpaper": "Use Wallpaper",
+    "previewWallpaper": "Preview Wallpaper",
+    "chooseWallpaper": "Choose Wallpaper",
+    "loadingFolders": "Loading server folders...",
+    "noFolders": "No server folders are available.",
+    "noImages": "No image files found in this folder.",
+    "readOnly": "Read only",
+    "prepareUpload": "Preparing wallpaper upload...",
+    "preparing": "Preparing preview...",
+    "readError": "Unable to read this image.",
+    "chooseImage": "Choose an image file.",
+    "imageTooLarge": "Choose an image smaller than {size} so it can be saved locally.",
+    "sources": "Sources"
   }
 }

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"net/url"
 	"github.com/go-chi/chi/v5"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/validator"
-	"github.com/jR4dh3y/BoxBox/backend/internal/service"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/validator"
+	"dockerbox/backend/internal/service"
 )
 
 // FileHandler handles file-related HTTP requests

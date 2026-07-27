@@ -42,11 +42,11 @@
 	}
 
 	function defineThemes(monacoApi: typeof Monaco) {
-		monacoApi.editor.defineTheme('boxbox-dark', {
+		monacoApi.editor.defineTheme('dockerbox-dark', {
 			base: 'vs-dark', inherit: true, rules: [],
 			colors: { 'editor.background': '#1e1e1e', 'editor.foreground': '#d4d4d4', 'editorLineNumber.foreground': '#5a5a5a', 'editorLineNumber.activeForeground': '#c6c6c6', 'editor.selectionBackground': '#264f78', 'editor.lineHighlightBackground': '#2a2a2a' }
 		});
-		monacoApi.editor.defineTheme('boxbox-light', {
+		monacoApi.editor.defineTheme('dockerbox-light', {
 			base: 'vs', inherit: true, rules: [],
 			colors: { 'editor.background': '#ffffff', 'editor.foreground': '#1a1a1a', 'editorLineNumber.foreground': '#999999', 'editorLineNumber.activeForeground': '#333333', 'editor.selectionBackground': '#bfdbfe', 'editor.lineHighlightBackground': '#f5f5f5' }
 		});
@@ -56,7 +56,7 @@
 		if (themeObserver) themeObserver.disconnect();
 		themeObserver = new MutationObserver(() => {
 			if (!monaco || !editor) return;
-			monaco.editor.setTheme(isLightTheme() ? 'boxbox-light' : 'boxbox-dark');
+			monaco.editor.setTheme(isLightTheme() ? 'dockerbox-light' : 'dockerbox-dark');
 		});
 		themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 	}
@@ -73,7 +73,7 @@
 		const createdEditor = monacoApi.editor.create(containerElement, {
 			value: content ?? '',
 			language: language,
-			theme: isLightTheme() ? 'boxbox-light' : 'boxbox-dark',
+			theme: isLightTheme() ? 'dockerbox-light' : 'dockerbox-dark',
 			readOnly: false,
 			minimap: { enabled: true },
 			scrollBeyondLastLine: false,

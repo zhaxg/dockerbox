@@ -47,7 +47,7 @@ type ServerConfig struct {
 	DevMode     bool         `mapstructure:"dev_mode"`
 
 	// Docker settings
-	DockerHosts   *DockerHostsConfig `mapstructure:"dockerhosts"`
+	DockerHosts   *DockerHostsConfig `mapstructure:"docker_hosts"`
 
 	// Security settings
 	Users          map[string]string `mapstructure:"users"`           // username -> password

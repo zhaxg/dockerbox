@@ -12,38 +12,33 @@
 # Documentation
 *.md
 docs/
-!README.md
+screenshots/
 
-# Local environment files
+# Environment
 .env
 .env.*
-!.env.example
 
-# Frontend build artifacts (built in container)
+# Frontend (built in container)
 frontend/node_modules
 frontend/.svelte-kit
 frontend/build
 
-# Backend build artifacts (built in container)
-backend/server
-backend/*.exe
-backend/*.test
-backend/coverage.*
+# Backend (built in container)
+backend/bin/
+backend/tmp/
 
-# Test files
+# Tests
 *_test.go
 *.test.ts
 *.spec.ts
+tests/
 
-# Temp files
+# Temp
 tmp/
-temp/
 *.log
 
-# Old Docker files (will be deleted)
-nginx/
-docker-compose.prod.yml
-frontend/Dockerfile
-backend/Dockerfile
-frontend/.dockerignore
-backend/.dockerignore
+# Misc
+LICENSE
+config.yaml
+data/
+logs/

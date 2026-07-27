@@ -1,7 +1,7 @@
-const DATABASE_NAME = 'boxbox-wallpapers';
+const DATABASE_NAME = 'dockerbox-wallpapers';
 const DATABASE_VERSION = 1;
 const STORE_NAME = 'wallpapers';
-const LOCAL_WALLPAPER_PREFIX = 'boxbox-local-wallpaper:';
+const LOCAL_WALLPAPER_PREFIX = 'dockerbox-local-wallpaper:';
 const LOCAL_WALLPAPER_ID_PATTERN = /^[a-z0-9_-]{8,}$/i;
 const INLINE_WALLPAPER_PATTERN = /^data:image\/(avif|gif|jpeg|jpg|png|svg\+xml|webp);base64,/i;
 

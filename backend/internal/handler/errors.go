@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/validator"
-	"github.com/jR4dh3y/BoxBox/backend/internal/service"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/validator"
+	"dockerbox/backend/internal/service"
 )
 
 var errHostIdRequired = errors.New("hostId parameter is required when multiple hosts are configured")

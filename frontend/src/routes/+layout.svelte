@@ -162,7 +162,7 @@
 									class="flex items-center gap-2 text-lg font-semibold text-text-primary no-underline hover:text-accent"
 								>
 									<FolderOpen size={24} class="text-accent" />
-									<span>BoxBox</span>
+									<span>DockerBox</span>
 								</a>
 								<nav class="flex items-center gap-4">
 									<Button variant="secondary" size="sm" onclick={handleLogout}>Logout</Button>

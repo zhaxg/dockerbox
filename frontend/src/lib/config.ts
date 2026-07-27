@@ -57,5 +57,5 @@ export const CONFIG = {
 export const STORAGE_KEYS = {
 	ACCESS_TOKEN: 'accessToken',
 	REFRESH_TOKEN: 'refreshToken',
-	SETTINGS: 'boxbox_settings'
+	SETTINGS: 'dockerbox_settings'
 } as const;

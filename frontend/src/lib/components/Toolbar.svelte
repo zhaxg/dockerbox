@@ -12,6 +12,7 @@
 	} from 'lucide-svelte';
 	import EditablePathBar from '$lib/components/EditablePathBar.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
 	interface Props {
 		pathSegments?: string[];
@@ -64,7 +65,7 @@
 >
 	<!-- Navigation buttons -->
 	<div class="flex gap-0.5">
-		<button type="button" class={navBtnClass} disabled={!canGoBack} onclick={onBack} title="Back">
+		<button type="button" class={navBtnClass} disabled={!canGoBack} onclick={onBack} title={t('common.back')}>
 			<ChevronLeft size={18} />
 		</button>
 		<button
@@ -72,11 +73,11 @@
 			class={navBtnClass}
 			disabled={!canGoForward}
 			onclick={onForward}
-			title="Forward"
+			title={t('files.forward')}
 		>
 			<ChevronRight size={18} />
 		</button>
-		<button type="button" class={navBtnClass} disabled={!canGoUp} onclick={onUp} title="Up">
+		<button type="button" class={navBtnClass} disabled={!canGoUp} onclick={onUp} title={t('files.up')}>
 			<ChevronUp size={18} />
 		</button>
 	</div>
@@ -103,14 +104,14 @@
 			class={navBtnClass}
 			disabled={uploadDisabled}
 			onclick={onUpload}
-			title="Upload files"
+			title={t('files.upload')}
 		>
 			<FolderUp size={16} />
 		</button>
-		<button type="button" class={navBtnClass} onclick={onRefresh} title="Refresh">
+		<button type="button" class={navBtnClass} onclick={onRefresh} title={t('files.refresh')}>
 			<RefreshCw size={16} />
 		</button>
-		<button type="button" class={navBtnClass} onclick={onSettings} title="Settings">
+		<button type="button" class={navBtnClass} onclick={onSettings} title={t('nav.settings')}>
 			<Settings size={16} />
 		</button>
 	</div>

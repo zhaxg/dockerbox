@@ -443,12 +443,12 @@ const tTableActions = $derived(t("table.actions"));
 
 		const isLight = document.documentElement.getAttribute('data-theme') === 'light';
 
-		monacoApi.editor.defineTheme('boxbox-dark', {
+		monacoApi.editor.defineTheme('dockerbox-dark', {
 			base: 'vs-dark', inherit: true, rules: [],
 			colors: { 'editor.background': '#1e1e1e', 'editor.foreground': '#d4d4d4', 'editorLineNumber.foreground': '#5a5a5a', 'editorLineNumber.activeForeground': '#c6c6c6', 'editor.selectionBackground': '#264f78', 'editor.lineHighlightBackground': '#2a2a2a' }
 		});
 
-		monacoApi.editor.defineTheme('boxbox-light', {
+		monacoApi.editor.defineTheme('dockerbox-light', {
 			base: 'vs', inherit: true, rules: [],
 			colors: { 'editor.background': '#ffffff', 'editor.foreground': '#1a1a1a', 'editorLineNumber.foreground': '#999999', 'editorLineNumber.activeForeground': '#333333', 'editor.selectionBackground': '#bfdbfe', 'editor.lineHighlightBackground': '#f5f5f5' }
 		});
@@ -456,7 +456,7 @@ const tTableActions = $derived(t("table.actions"));
 		monacoEditor = monacoApi.editor.create(editorContainer, {
 			value: editorModal.composeContent,
 			language: 'yaml',
-			theme: isLight ? 'boxbox-light' : 'boxbox-dark',
+			theme: isLight ? 'dockerbox-light' : 'dockerbox-dark',
 			minimap: { enabled: false },
 			fontSize: 13,
 			lineNumbers: 'on',
@@ -482,7 +482,7 @@ const tTableActions = $derived(t("table.actions"));
 		themeObserver = new MutationObserver(() => {
 			if (!monacoEditor || !monacoApi) return;
 			const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-			monacoApi.editor.setTheme(isLight ? 'boxbox-light' : 'boxbox-dark');
+			monacoApi.editor.setTheme(isLight ? 'dockerbox-light' : 'dockerbox-dark');
 		});
 		themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 	}

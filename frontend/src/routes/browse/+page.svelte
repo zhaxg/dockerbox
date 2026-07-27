@@ -713,7 +713,7 @@ const tFilesTitle = $derived(t("files.title"));
 </script>
 
 <svelte:head>
-	<title>BoxBox</title>
+	<title>DockerBox</title>
 </svelte:head>
 
 

@@ -1,4 +1,4 @@
-# BoxBox Project Guide
+# DockerBox Project Guide
 
 ## Architecture
 

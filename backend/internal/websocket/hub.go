@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
+	"dockerbox/backend/internal/model"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to them

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
+	"dockerbox/backend/internal/config"
 )
 
 // Auth-related errors

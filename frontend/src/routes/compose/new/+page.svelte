@@ -88,7 +88,7 @@
 	function createEditor() {
 		if (!monaco || !containerElement || editor) return;
 
-		monaco.editor.defineTheme('boxbox-dark', {
+		monaco.editor.defineTheme('dockerbox-dark', {
 			base: 'vs-dark',
 			inherit: true,
 			rules: [],
@@ -105,7 +105,7 @@
 		editor = monaco.editor.create(containerElement, {
 			value: composeContent,
 			language: 'yaml',
-			theme: 'boxbox-dark',
+			theme: 'dockerbox-dark',
 			minimap: { enabled: false },
 			fontSize: 13,
 			lineNumbers: 'on',

@@ -5,8 +5,8 @@ package service
 import (
 	"errors"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/filesystem"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/filesystem"
 )
 
 // getDiskUsage is a stub for non-Linux platforms

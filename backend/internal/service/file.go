@@ -11,10 +11,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/filesystem"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/fileutil"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/validator"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/filesystem"
+	"dockerbox/backend/internal/pkg/fileutil"
+	"dockerbox/backend/internal/pkg/validator"
 )
 
 // File service errors

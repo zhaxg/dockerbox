@@ -1,32 +1,20 @@
-chunk_size_mb: 5
-data_dir: /vol1/1000/docker/boxbox/data
-dockerhosts:
-    default: host-nas
-    hosts:
-        host-nas:
-            driver: ssh
-            endpoint: zhaxg@192.168.132.86:2322
-            id: host-nas
-            mountpoints:
-                docker:
-                    isdocker: true
-                    path: /vol1/1000/docker
-                    readonly: false
-            name: 主NAS
-            sshkey: ""
-            sshpubkey: ""
-            tags: []
+# Server
 host: 0.0.0.0
-jwt_secret: boxbox-test-secret-key-2025
-max_upload_mb: 10240
-mount_points:
-    - name: docker
-      path: /vol1/1000/docker
-      read_only: false
-    - name: home
-      path: /home/zhaxg
-      read_only: false
-port: 8090
-rate_limit_rps: 10
+port: 80
+
+# Security
+jwt_secret: change-me-to-a-random-string
 users:
-    admin: admin123
+    admin: change-me
+
+# Docker Hosts
+docker_hosts:
+    default: local
+    hosts:
+        local:
+            driver: socket
+            endpoint: /var/run/docker.sock
+            mount_points:
+                docker:
+                    path: /opt/docker
+                    read_only: false

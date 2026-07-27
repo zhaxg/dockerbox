@@ -119,7 +119,7 @@
 >
 	<!-- Logo -->
 	<div class="border-b border-border-secondary px-4 py-3">
-		<h1 class="text-lg font-semibold text-text-primary">BoxBox</h1>
+		<h1 class="text-lg font-semibold text-text-primary">DockerBox</h1>
 	</div>
 
 	<!-- Host Switcher -->

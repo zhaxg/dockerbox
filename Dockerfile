@@ -1,11 +1,11 @@
 # =============================================================================
-# BoxBox - Unified Multi-Stage Dockerfile
+# DockerBox - Unified Multi-Stage Dockerfile
 # =============================================================================
 # This Dockerfile builds both frontend and backend into a single container.
 # Frontend is compiled to static files and embedded in the Go binary via go:embed.
 #
-# Build: docker build -t boxbox .
-# Run:   docker run -p 80:80 -v /your/files:/media/files boxbox
+# Build: docker build -t dockerbox .
+# Run:   docker run -p 80:80 -v /your/files:/media/files dockerbox
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -70,10 +70,10 @@ COPY --from=backend-builder /server /app/server
 COPY backend/config.yaml /app/config.yaml
 
 # Create writable runtime directories
-RUN mkdir -p /data /tmp/boxbox && chmod 1777 /tmp /tmp/boxbox
+RUN mkdir -p /data /tmp/dockerbox && chmod 1777 /tmp /tmp/dockerbox
 
 # Store upload chunk temp files on a dedicated writable path
-ENV TMPDIR=/tmp/boxbox
+ENV TMPDIR=/tmp/dockerbox
 
 # Expose the server port (port 80 for Traefik compatibility)
 EXPOSE 80

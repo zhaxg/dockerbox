@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/service"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/service"
 )
 
 func (h *DockerHandler) ListComposeProjects(w http.ResponseWriter, r *http.Request) {

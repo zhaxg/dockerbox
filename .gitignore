@@ -1,63 +1,54 @@
-# Environment files
-.env
-.env.local
-.env.*.local
 
-
-# IDE
-.idea/
-.vscode/
-.code-graph/
-*.swp
-*.swo
 *~
-
-# OS files
-.DS_Store
-Thumbs.db
-
+backend/bin/
+backend/boxbox
+backend/internal/static/dist/
+backend/server
+boxbox-linux
 # Build artifacts
+# Build output
+.code-graph/
+coverage/
+coverage.html
+coverage.out
+# Coverage reports
+*.dll
+.docker/
+# Docker
+.DS_Store
+*.dylib
+.env
+# Environment files
+.env.*.local
+.env.local
 *.exe
 *.exe~
-*.dll
-*.so
-*.dylib
-
-# Logs
+frontend/tests/results/
+# Go
+# IDE
+.idea/
+# Local dev runtime
 *.log
 logs/
-
-# SSL certificates (keep example, ignore real ones)
-nginx/certs/*.pem
+# Logs
 nginx/certs/*.crt
-nginx/certs/*.key
 !nginx/certs/.gitkeep
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Coverage reports
-coverage/
-coverage.out
-coverage.html
-
-# Playwright test results
-.playwright-mcp/
-
-# Node modules (frontend has its own .gitignore)
+nginx/certs/*.key
+nginx/certs/*.pem
 node_modules/
-
-# Go
+# Node modules (frontend has its own .gitignore)
+# OS files
+# Playwright
+.playwright-mcp/
+# Playwright test results
+*.so
+# SSL certificates (keep example, ignore real ones)
+*.swo
+*.swp
+temp/
+# Temporary files
+Thumbs.db
+*.tmp
+tmp/
 vendor/
-backend/bin/
-
-# Docker
-.docker/
-boxbox-linux
-backend/internal/static/dist/
-backend/boxbox
-
-# Build output
-backend/server
+.vscode/

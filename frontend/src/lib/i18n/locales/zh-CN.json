@@ -260,7 +260,9 @@
     "pin": "添加到收藏",
     "unpin": "从收藏移除",
     "properties": "属性",
-    "open": "打开"
+    "open": "打开",
+    "forward": "前进",
+    "up": "上级目录"
   },
   "upload": {
     "queued": "排队中",
@@ -313,5 +315,36 @@
     "confirmDelete": "确定删除",
     "item": "个项目",
     "items": "个项目"
+  },
+  "pathbar": {
+    "thisServer": "本机",
+    "typeLocation": "输入路径",
+    "goToRoot": "返回根目录",
+    "location": "路径",
+    "locationSuggestions": "路径建议",
+    "findingFolders": "正在查找文件夹..."
+  },
+  "wallpaper": {
+    "thisServer": "本机",
+    "browseMounted": "浏览挂载目录",
+    "thisDevice": "本机上传",
+    "uploadLocal": "上传本地图片",
+    "uploading": "正在上传壁纸...",
+    "chooseSource": "选择来源",
+    "backToFolder": "返回文件夹",
+    "back": "返回",
+    "useWallpaper": "使用壁纸",
+    "previewWallpaper": "预览壁纸",
+    "chooseWallpaper": "选择壁纸",
+    "loadingFolders": "正在加载服务器文件夹...",
+    "noFolders": "没有可用的服务器文件夹",
+    "noImages": "此文件夹中没有图片文件",
+    "readOnly": "只读",
+    "prepareUpload": "正在准备壁纸上传...",
+    "preparing": "正在准备预览...",
+    "readError": "无法读取此图片",
+    "chooseImage": "请选择图片文件",
+    "imageTooLarge": "图片大小不能超过 {size}",
+    "sources": "来源"
   }
 }

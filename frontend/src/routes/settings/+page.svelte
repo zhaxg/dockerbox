@@ -440,7 +440,7 @@ const tSettingsTitle = $derived(t("settings.title"));
 </script>
 
 <svelte:head>
-	<title>Settings - BoxBox</title>
+	<title>Settings - DockerBox</title>
 </svelte:head>
 
 <div class="flex h-screen w-full overflow-hidden bg-surface-primary text-text-primary">

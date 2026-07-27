@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
+	"dockerbox/backend/internal/config"
 )
 
 

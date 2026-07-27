@@ -1,84 +1,29 @@
 # =============================================================================
-# BoxBox Docker Compose
+# DockerBox Docker Compose
 # =============================================================================
-# Single-container deployment for homelab/NAS file management.
-#
 # Usage:
-#   1. Copy .env.example to .env and configure your settings.
-#   2. Run: docker compose pull && docker compose up -d
-#   3. Access at http://localhost:${HOST_PORT:-8080}
-#
-# Uses normal host port binding by default.
+#   1. Edit config.yaml
+#   2. docker compose pull && docker compose up -d
 # =============================================================================
 
 services:
-  boxbox:
-    image: ${BOXBOX_IMAGE:-ghcr.io/jr4dh3y/boxbox:latest}
-    container_name: boxbox
+  dockerbox:
+    image: ghcr.io/zhaxg/dockerbox:latest
+    container_name: dockerbox
     restart: unless-stopped
-    env_file:
-      - .env
     ports:
-      - "${HOST_PORT:-8080}:80"
-    environment:
-      - BOXBOX_JWT_SECRET=${BOXBOX_JWT_SECRET:?Set BOXBOX_JWT_SECRET in .env}
-      - BOXBOX_USERS_admin=${BOXBOX_USERS_admin:?Set BOXBOX_USERS_admin in .env}
-      - BOXBOX_RATE_LIMIT_RPS=${BOXBOX_RATE_LIMIT_RPS:-10}
-      - BOXBOX_ALLOWED_ORIGINS=${BOXBOX_ALLOWED_ORIGINS:-}
-      - CONFIG_PATH=/app/config.yaml
-      - TMPDIR=/tmp/boxbox
+      - "8080:80"
     volumes:
-      # Configuration
-      - ./backend/config.yaml:/app/config.yaml:ro
-
-      # Mount points for file access (customize these for your setup)
-      # rslave enables mount propagation so container sees new host mounts
-      - /media/devmon:/media/devmon:rslave
-      - /:/host_root:ro,rslave
-      - ${HOME_PATH:-${HOME:-/home/user}}:/home/user
-
-      # Sidebar quick-access folders. By default these point inside HOME_PATH,
-      # or the host user's HOME when HOME_PATH is unset.
-      # Set any *_PATH variable in .env to map that shortcut to a custom host path.
-      - ${DESKTOP_PATH:-${HOME_PATH:-${HOME:-/home/user}}/Desktop}:/home/user/Desktop
-      - ${DOWNLOADS_PATH:-${HOME_PATH:-${HOME:-/home/user}}/Downloads}:/home/user/Downloads
-      - ${DOCUMENTS_PATH:-${HOME_PATH:-${HOME:-/home/user}}/Documents}:/home/user/Documents
-      - ${MUSIC_PATH:-${HOME_PATH:-${HOME:-/home/user}}/Music}:/home/user/Music
-      - ${PICTURES_PATH:-${HOME_PATH:-${HOME:-/home/user}}/Pictures}:/home/user/Pictures
-      - ${VIDEOS_PATH:-${HOME_PATH:-${HOME:-/home/user}}/Videos}:/home/user/Videos
-
-      # Persistent storage
-      - boxbox-temp:/tmp/boxbox
-      - boxbox-data:/data
-
-    # Security: Run without full privileges, only necessary capabilities
-    privileged: false
-    cap_add:
-      - DAC_READ_SEARCH  # Read files regardless of permission bits
-      - CHOWN            # Change file ownership
-      - FOWNER           # Bypass permission checks for file owner
-
-    security_opt:
-      - no-new-privileges:true
-
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 128M
-
-    # Health monitoring
+      # Config
+      - ./config.yaml:/app/config.yaml
+      # Data (compose project index, survives restart)
+      - ./data:/app/data
+      # Logs (compose deploy logs)
+      - ./logs:/app/logs
+      # Add your mount points here:
+      # - /mnt/nas:/mnt/nas:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:80/health | grep -q 'ok' || exit 1"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
-
-volumes:
-  boxbox-temp:
-    driver: local
-  boxbox-data:
-    driver: local

@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
 	testDir: './tests',
-	outputDir: '.playwright-mcp/',
+	// outputDir removed - use system temp directory instead of polluting project
 	timeout: 30000,
 	expect: { timeout: 10000 },
 	use: {

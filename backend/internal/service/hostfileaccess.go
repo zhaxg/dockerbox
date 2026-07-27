@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
+	"dockerbox/backend/internal/model"
 )
 
 // HostFileAccess abstracts file operations on a Docker host.

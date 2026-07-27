@@ -1,4 +1,4 @@
-module github.com/jR4dh3y/BoxBox/backend
+module dockerbox/backend
 
 go 1.25.0
 

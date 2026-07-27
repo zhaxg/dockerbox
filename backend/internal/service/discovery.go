@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/filesystem"
+	"dockerbox/backend/internal/config"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/filesystem"
 )
 
 // DiscoverMountPoints expands mount points with auto_discover enabled

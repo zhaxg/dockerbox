@@ -16,9 +16,9 @@ test('selection colors in light mode', async ({ page }) => {
 
 	// Switch to light mode first via settings store
 	await page.evaluate(() => {
-		const settings = JSON.parse(localStorage.getItem('boxbox_settings') || '{}');
+		const settings = JSON.parse(localStorage.getItem('dockerbox_settings') || '{}');
 		settings.theme = 'light';
-		localStorage.setItem('boxbox_settings', JSON.stringify(settings));
+		localStorage.setItem('dockerbox_settings', JSON.stringify(settings));
 	});
 
 	// Reload to apply theme

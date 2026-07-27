@@ -16,14 +16,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
-	"github.com/jR4dh3y/BoxBox/backend/internal/handler"
-	"github.com/jR4dh3y/BoxBox/backend/internal/middleware"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/filesystem"
-	"github.com/jR4dh3y/BoxBox/backend/internal/service"
-	"github.com/jR4dh3y/BoxBox/backend/internal/static"
-	"github.com/jR4dh3y/BoxBox/backend/internal/websocket"
+	"dockerbox/backend/internal/config"
+	"dockerbox/backend/internal/handler"
+	"dockerbox/backend/internal/middleware"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/filesystem"
+	"dockerbox/backend/internal/service"
+	"dockerbox/backend/internal/static"
+	"dockerbox/backend/internal/websocket"
 )
 
 func main() {

@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
-	"github.com/jR4dh3y/BoxBox/backend/internal/service"
-	ws "github.com/jR4dh3y/BoxBox/backend/internal/websocket"
+	"dockerbox/backend/internal/config"
+	"dockerbox/backend/internal/service"
+	ws "dockerbox/backend/internal/websocket"
 )
 
 // WebSocketHandler handles WebSocket connections

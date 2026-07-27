@@ -718,7 +718,7 @@
 </script>
 
 <svelte:head>
-	<title>BoxBox</title>
+	<title>DockerBox</title>
 </svelte:head>
 
 <div class="flex h-screen w-full overflow-hidden bg-surface-primary">

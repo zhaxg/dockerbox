@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/filesystem"
-	"github.com/jR4dh3y/BoxBox/backend/internal/pkg/validator"
-	"github.com/jR4dh3y/BoxBox/backend/internal/websocket"
+	"dockerbox/backend/internal/config"
+	"dockerbox/backend/internal/model"
+	"dockerbox/backend/internal/pkg/filesystem"
+	"dockerbox/backend/internal/pkg/validator"
+	"dockerbox/backend/internal/websocket"
 )
 
 // Job service errors

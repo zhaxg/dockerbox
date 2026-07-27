@@ -3,7 +3,6 @@ package model
 import "testing"
 
 func TestServerConfigRejectsUnsafeAuthDefaults(t *testing.T) {
-	validMounts := []MountPoint{{Name: "home", Path: "/home/user"}}
 
 	tests := []struct {
 		name string
@@ -13,7 +12,6 @@ func TestServerConfigRejectsUnsafeAuthDefaults(t *testing.T) {
 			name: "missing users",
 			cfg: ServerConfig{
 				JWTSecret:   "test-secret",
-				MountPoints: validMounts,
 				Port:        80,
 				MaxUploadMB: 1,
 				ChunkSizeMB: 1,
@@ -24,7 +22,6 @@ func TestServerConfigRejectsUnsafeAuthDefaults(t *testing.T) {
 			cfg: ServerConfig{
 				JWTSecret:   "change-me-in-production",
 				Users:       map[string]string{"admin": "correct-password"},
-				MountPoints: validMounts,
 				Port:        80,
 				MaxUploadMB: 1,
 				ChunkSizeMB: 1,
@@ -35,7 +32,6 @@ func TestServerConfigRejectsUnsafeAuthDefaults(t *testing.T) {
 			cfg: ServerConfig{
 				JWTSecret:   "test-secret",
 				Users:       map[string]string{"admin": "change-me-in-production"},
-				MountPoints: validMounts,
 				Port:        80,
 				MaxUploadMB: 1,
 				ChunkSizeMB: 1,

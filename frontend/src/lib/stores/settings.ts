@@ -30,14 +30,14 @@ function getHostFavorites(): FavoriteFolder[] {
 	const hostId = getCurrentHostId();
 	if (!hostId) return [];
 	try {
-		return JSON.parse(localStorage.getItem('boxbox_fav_' + hostId) || '[]');
+		return JSON.parse(localStorage.getItem('dockerbox_fav_' + hostId) || '[]');
 	} catch { return []; }
 }
 
 function setHostFavorites(favorites: FavoriteFolder[]) {
 	const hostId = getCurrentHostId();
 	if (!hostId) return;
-	localStorage.setItem('boxbox_fav_' + hostId, JSON.stringify(favorites));
+	localStorage.setItem('dockerbox_fav_' + hostId, JSON.stringify(favorites));
 }
 
 export interface UserSettings {
@@ -66,7 +66,7 @@ export interface FavoriteFolder {
 
 export const DEFAULT_ACCENT_COLOR = '#4a9eff';
 
-const SERVER_BACKGROUND_PREFIX = 'boxbox-server:';
+const SERVER_BACKGROUND_PREFIX = 'dockerbox-server:';
 
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const THEME_COLOR_PROPERTIES = [

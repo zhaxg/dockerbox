@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jR4dh3y/BoxBox/backend/internal/config"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
+	"dockerbox/backend/internal/config"
+	"dockerbox/backend/internal/model"
 )
 
 // systemMountInfo stores information about a mount point from /proc/mounts

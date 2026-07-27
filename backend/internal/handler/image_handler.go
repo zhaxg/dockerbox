@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jR4dh3y/BoxBox/backend/internal/model"
+	"dockerbox/backend/internal/model"
 )
 
 func (h *DockerHandler) ListImages(w http.ResponseWriter, r *http.Request) {

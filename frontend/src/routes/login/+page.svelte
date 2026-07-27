@@ -30,7 +30,7 @@
 </script>
 
 <svelte:head>
-	<title>Login - BoxBox</title>
+	<title>Login - DockerBox</title>
 </svelte:head>
 
 <div class="flex min-h-screen items-center justify-center bg-surface-primary p-4">
@@ -38,11 +38,8 @@
 		class="w-full max-w-[400px] rounded-lg border border-border-primary bg-surface-secondary p-8"
 	>
 		<div class="mb-8 flex flex-col items-center">
-			<div class="mb-2 flex items-center gap-3">
-				<span class="text-accent"><FolderOpen size={32} /></span>
-				<h1 class="m-0 text-2xl font-semibold text-text-primary">BoxBox</h1>
-			</div>
-			<p class="m-0 text-sm text-text-secondary">Sign in to access your files</p>
+			<h1 class="m-0 text-2xl font-semibold text-text-primary">DockerBox</h1>
+			<p class="m-0 mt-2 text-sm text-text-secondary">Sign in to access your files</p>
 		</div>
 
 		<form class="flex flex-col gap-5" onsubmit={handleSubmit}>
