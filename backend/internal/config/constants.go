@@ -117,10 +117,10 @@ const (
 // Data storage constants
 const (
 	// DefaultDataDir is the default directory for persistent data storage
-	DefaultDataDir = "/app/data"
+	DefaultDataDir = "./data"
 	
 	// ComposeProjectsFile is the file storing BoxBox-created compose projects
-	ComposeProjectsFile = "/app/data/compose-projects.json"
+	ComposeProjectsFile = "./data/compose-projects.json"
 
 	// DriveNamesFileName is the filename for storing custom drive names
 	DriveNamesFileName = "drive-names.json"

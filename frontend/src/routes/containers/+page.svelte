@@ -674,7 +674,7 @@ const tTableActions = $derived(t("table.actions"));
 <!-- Exec Modal -->
 {#if execModal.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3">
-		<div class="flex flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary {execDrag.maximized ? 'fixed inset-3' : 'h-[70vh] w-[750px]'}" style={modalStyle(execDrag)}>
+		<div class="flex flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary overflow-hidden {execDrag.maximized ? 'fixed inset-3' : 'h-[70vh] w-[750px]'}" style={modalStyle(execDrag)}>
 			<div class="flex items-center justify-between px-3 py-2 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, execDrag)}>
 				<h3 class="text-sm font-semibold text-text-primary">{tContainersTerminal} - {execModal.name}</h3>
 				<div class="flex items-center gap-1">
@@ -686,7 +686,7 @@ const tTableActions = $derived(t("table.actions"));
 					</button>
 				</div>
 			</div>
-			<div class="flex-1 rounded-md bg-black p-3">
+			<div class="flex-1 min-h-0 rounded-md bg-black p-3">
 				<div
 					bind:this={execTerminalEl}
 					class="h-full w-full focus:outline-none"

@@ -30,11 +30,11 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		csp := strings.Join([]string{
 			"default-src 'self'",
 			"script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://static.cloudflareinsights.com",
-			"style-src 'self' 'unsafe-inline'",
-			"font-src 'self' data:",
+			"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
+			"font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com",
 			"img-src 'self' data: blob:",
 			"worker-src 'self' blob:",
-			"connect-src 'self' ws: wss:",
+			"connect-src 'self' ws: wss: https://cdn.jsdelivr.net",
 		}, "; ")
 		w.Header().Set("Content-Security-Policy", csp)
 

@@ -5,7 +5,7 @@
 # Frontend is compiled to static files and embedded in the Go binary via go:embed.
 #
 # Build: docker build -t dockerbox .
-# Run:   docker run -p 80:80 -v /your/files:/media/files dockerbox
+# Run:   docker run -p 80:80 -v ./config.yaml:/app/config.yaml dockerbox
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -70,7 +70,7 @@ COPY --from=backend-builder /server /app/server
 COPY backend/config.yaml /app/config.yaml
 
 # Create writable runtime directories
-RUN mkdir -p /data /tmp/dockerbox && chmod 1777 /tmp /tmp/dockerbox
+RUN mkdir -p /app/data /tmp/dockerbox && chmod 1777 /tmp /tmp/dockerbox
 
 # Store upload chunk temp files on a dedicated writable path
 ENV TMPDIR=/tmp/dockerbox

@@ -3,9 +3,9 @@ host: 0.0.0.0
 port: 80
 
 # Security
-jwt_secret: change-me-to-a-random-string
+jwt_secret: 9928b1157091
 users:
-    admin: change-me
+    admin: admin
 
 # Docker Hosts
 docker_hosts:
@@ -14,6 +14,7 @@ docker_hosts:
         local:
             driver: socket
             endpoint: /var/run/docker.sock
+            display_name: LocalDocker
             mount_points:
                 docker:
                     path: /opt/docker

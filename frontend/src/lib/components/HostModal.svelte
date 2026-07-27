@@ -126,6 +126,7 @@
 	title={mode === 'add' ? tHostmodalAddhost : tHostmodalEdithost + ' - ' + host.name}
 	size="lg"
 	draggable
+	persistent
 	onclose={onClose}
 >
 	<div class="space-y-4">
