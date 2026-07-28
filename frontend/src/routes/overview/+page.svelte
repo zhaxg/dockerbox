@@ -2,7 +2,6 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { t, setLocale, getLocale } from '$lib/i18n/index.svelte';
 	import { Spinner } from '$lib/components/ui';
-	import { api } from '$lib/api/client';
 	import { dockerApi } from '$lib/api/docker';
 	import { Cpu, MemoryStick, Globe, Gauge, Container, Package, HardDrive, Activity } from 'lucide-svelte';
 	import * as echarts from 'echarts';
@@ -38,9 +37,9 @@ const tNetworkTraffic = $derived(t("overview.networkTraffic"));
 
 	let loading = $state(true);
 	let eventSource: EventSource | null = null;
-	let cpuChartEl: HTMLDivElement;
-	let memChartEl: HTMLDivElement;
-	let netChartEl: HTMLDivElement;
+	let cpuChartEl: HTMLDivElement = $state(undefined!);
+	let memChartEl: HTMLDivElement = $state(undefined!);
+	let netChartEl: HTMLDivElement = $state(undefined!);
 	let cpuChart: echarts.ECharts | null = null;
 	let memChart: echarts.ECharts | null = null;
 	let netChart: echarts.ECharts | null = null;

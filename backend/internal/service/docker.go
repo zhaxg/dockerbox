@@ -64,23 +64,13 @@ func (s *DockerService) newSFTPClient() (*sftp.Client, error) {
 	return sftp.NewClient(conn)
 }
 
-// sshExec runs a command on the remote host via SSH.
+// sshExec runs a command on the remote host via SSH using Go's native crypto/ssh.
 func (s *DockerService) sshExec(ctx context.Context, cmd string) (string, error) {
 	if s.sshKey == "" || s.sshHost == "" {
 		return "", fmt.Errorf("no SSH config")
 	}
 
-	// Write key to temp file
-	keyFile, err := os.CreateTemp("", "boxbox-ssh-*")
-	if err != nil {
-		return "", err
-	}
-	keyFile.WriteString(s.sshKey)
-	keyFile.Close()
-	os.Chmod(keyFile.Name(), 0600)
-	defer os.Remove(keyFile.Name())
-
-	// Parse host: ssh://user@host:port -> user@host -p port
+	// Parse host: ssh://user@host:port
 	host := strings.TrimPrefix(s.sshHost, "ssh://")
 	parts := strings.SplitN(host, ":", 2)
 	addr := parts[0]
@@ -89,19 +79,40 @@ func (s *DockerService) sshExec(ctx context.Context, cmd string) (string, error)
 		port = parts[1]
 	}
 
-	sshCmd := exec.CommandContext(ctx, "ssh",
-		"-i", keyFile.Name(),
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-p", port,
-		addr,
-		cmd,
-	)
-	var stdout, stderr bytes.Buffer
-	sshCmd.Stdout = &stdout
-	sshCmd.Stderr = &stderr
-	err = sshCmd.Run()
+	signer, err := ssh.ParsePrivateKey([]byte(s.sshKey))
 	if err != nil {
+		return "", fmt.Errorf("parse SSH key: %w", err)
+	}
+
+	config := &ssh.ClientConfig{
+		User:            strings.Split(addr, "@")[0],
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
+	}
+
+	sshAddr := strings.SplitN(addr, "@", 2)
+	if len(sshAddr) > 1 {
+		addr = sshAddr[1]
+	}
+
+	conn, err := ssh.Dial("tcp", addr+":"+port, config)
+	if err != nil {
+		return "", fmt.Errorf("ssh dial %s:%s user=%s: %w", addr, port, config.User, err)
+	}
+	defer conn.Close()
+
+	session, err := conn.NewSession()
+	if err != nil {
+		return "", fmt.Errorf("ssh new session: %w", err)
+	}
+	defer session.Close()
+
+	var stdout, stderr bytes.Buffer
+	session.Stdout = &stdout
+	session.Stderr = &stderr
+
+	if err := session.Run(cmd); err != nil {
 		return "", fmt.Errorf("ssh exec failed: %w (%s)", err, strings.TrimSpace(stderr.String()))
 	}
 	return strings.TrimSpace(stdout.String()), nil
@@ -278,13 +289,6 @@ func (s *DockerService) RestartContainer(ctx context.Context, id string) error {
 	})
 }
 
-// DeleteContainer removes a container.
-func (s *DockerService) DeleteContainer(ctx context.Context, id string) error {
-	return s.client.ContainerRemove(ctx, id, container.RemoveOptions{
-		Force: true,
-	})
-}
-
 // GetContainerLogs returns container logs.
 func (s *DockerService) GetContainerLogs(ctx context.Context, id string, tail int) ([]string, error) {
 	if tail <= 0 {
@@ -348,44 +352,6 @@ func (s *DockerService) GetStats(ctx context.Context, id string) (cpu float64, m
 	}
 
 	return cpu, memory, network, nil
-}
-
-// ListImages returns all Docker images with container counts.
-func (s *DockerService) ListImages(ctx context.Context) ([]types.ImageSummary, error) {
-	images, err := s.client.ImageList(ctx, types.ImageListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	// Docker API returns Containers=-1 by default. Count from actual containers.
-	containers, err := s.client.ContainerList(ctx, container.ListOptions{All: true})
-	if err != nil {
-		return images, nil // return images even if container count fails
-	}
-
-	// Build image ID -> count map
-	imageCounts := make(map[string]int64)
-	for _, c := range containers {
-		imageID := c.ImageID
-		imageCounts[imageID]++
-	}
-
-	// Set counts on images (Docker defaults to -1, set to 0 if no containers)
-	for i := range images {
-		if count, ok := imageCounts[images[i].ID]; ok {
-			images[i].Containers = count
-		} else {
-			images[i].Containers = 0
-		}
-	}
-
-	return images, nil
-}
-
-// DeleteImage removes a Docker image.
-func (s *DockerService) DeleteImage(ctx context.Context, id string) error {
-	_, err := s.client.ImageRemove(ctx, id, types.ImageRemoveOptions{})
-	return err
 }
 
 // GetDockerStats returns system-wide Docker statistics.
@@ -600,27 +566,6 @@ func (s *DockerService) ComposeClean(ctx context.Context, projectPath string) (*
 	}, nil
 }
 
-// ComposeBuild runs docker-compose build.
-func (s *DockerService) ComposeBuild(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := composeCommand(ctx, s.runtime, "build")
-	cmd.Dir = projectPath
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return &model.ComposeAction{
-			Success: false,
-			Message: "Failed to build compose project",
-			Output:  string(output),
-		}, err
-	}
-
-	return &model.ComposeAction{
-		Success: true,
-		Message: "Compose project built",
-		Output:  string(output),
-	}, nil
-}
-
 // ComposeRestart runs docker-compose restart.
 func (s *DockerService) ComposeRestart(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
 	cmd := composeCommand(ctx, s.runtime, "restart")
@@ -638,27 +583,6 @@ func (s *DockerService) ComposeRestart(ctx context.Context, projectPath string) 
 	return &model.ComposeAction{
 		Success: true,
 		Message: "Compose project restarted",
-		Output:  string(output),
-	}, nil
-}
-
-// ComposePull runs docker-compose pull.
-func (s *DockerService) ComposePull(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
-	cmd := composeCommand(ctx, s.runtime, "pull")
-	cmd.Dir = projectPath
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return &model.ComposeAction{
-			Success: false,
-			Message: "Failed to pull compose project",
-			Output:  string(output),
-		}, err
-	}
-
-	return &model.ComposeAction{
-		Success: true,
-		Message: "Compose project pulled",
 		Output:  string(output),
 	}, nil
 }
@@ -730,41 +654,6 @@ func (s *DockerService) GetComposeFile(ctx context.Context, projectPath string) 
 // SaveComposeFile saves a docker-compose file.
 func (s *DockerService) SaveComposeFile(projectPath string, content string) error {
 	return writeFileContent(projectPath+"/docker-compose.yml", content)
-}
-
-// GetComposeEnv reads a .env file.
-// GetComposeEnv reads .env file content. Tries local first, then Docker API.
-func (s *DockerService) GetComposeEnv(ctx context.Context, projectPath string) (string, error) {
-	// Try local first
-	if content, err := readFileContent(projectPath + "/.env"); err == nil {
-		return content, nil
-	}
-
-	// Find running container and read via Docker API
-	containers, err := s.client.ContainerList(ctx, container.ListOptions{All: true})
-	if err != nil {
-		return "", fmt.Errorf("failed to list containers: %w", err)
-	}
-
-	for _, c := range containers {
-		wd := c.Labels["com.docker.compose.project.working_dir"]
-		if wd == projectPath && c.State == "running" {
-			path := projectPath + "/.env"
-			files := map[string]*string{path: new(string)}
-			s.ReadComposeFilesViaDocker(ctx, files)
-			if *files[path] != "" {
-				return *files[path], nil
-			}
-			break
-		}
-	}
-
-	return "", fmt.Errorf(".env file not found at %s", projectPath)
-}
-
-// SaveComposeEnv saves a .env file.
-func (s *DockerService) SaveComposeEnv(projectPath string, content string) error {
-	return writeFileContent(projectPath+"/.env", content)
 }
 
 // DeleteComposeProject removes a compose project directory.
@@ -860,19 +749,6 @@ func readFileContent(path string) (string, error) {
 	return string(data), nil
 }
 
-// PullImage pulls a Docker image.
-func (s *DockerService) PullImage(ctx context.Context, imageRef string) error {
-	reader, err := s.client.ImagePull(ctx, imageRef, types.ImagePullOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to pull image: %w", err)
-	}
-	defer reader.Close()
-
-	// Consume the reader to complete the pull
-	io.Copy(io.Discard, reader)
-	return nil
-}
-
 // PruneImages removes unused Docker images.
 func (s *DockerService) PruneImages(ctx context.Context) (types.ImagesPruneReport, error) {
 	if s.runtime == "podman" {
@@ -923,55 +799,6 @@ func (s *DockerService) pruneImagesCLI(ctx context.Context) (types.ImagesPruneRe
 		}
 	}
 	return types.ImagesPruneReport{ImagesDeleted: deleted, SpaceReclaimed: spaceReclaimed}, nil
-}
-
-// KillContainer sends a signal to a container.
-func (s *DockerService) KillContainer(ctx context.Context, id string, signal string) error {
-	return s.client.ContainerKill(ctx, id, signal)
-}
-
-// ListNetworks returns all Docker networks with container counts.
-func (s *DockerService) ListNetworks(ctx context.Context) ([]model.Network, error) {
-	networks, err := s.client.NetworkList(ctx, types.NetworkListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list networks: %w", err)
-	}
-
-	// Count containers per network
-	containers, err := s.client.ContainerList(ctx, container.ListOptions{All: true})
-	if err != nil {
-		containers = nil
-	}
-
-	networkCounts := make(map[string]int)
-	for _, c := range containers {
-		for _, net := range c.NetworkSettings.Networks {
-			networkCounts[net.NetworkID]++
-		}
-	}
-
-	result := make([]model.Network, 0, len(networks))
-	for _, n := range networks {
-		count := networkCounts[n.ID]
-		result = append(result, model.Network{
-			ID:         n.ID[:12],
-			Name:       n.Name,
-			Driver:     n.Driver,
-			Scope:      n.Scope,
-			Created:    n.Created.String(),
-			Subnet:     getSubnet(n),
-			Gateway:    getGateway(n),
-			Internal:   n.Internal,
-			Containers: count,
-		})
-	}
-
-	return result, nil
-}
-
-// RemoveNetwork removes a Docker network.
-func (s *DockerService) RemoveNetwork(ctx context.Context, id string) error {
-	return s.client.NetworkRemove(ctx, id)
 }
 
 // PruneNetworks removes unused Docker networks.
@@ -1159,59 +986,6 @@ func findCommonParent(paths []string) string {
 }
 
 
-
-// GetHostIP returns the host machine's real LAN IP.
-// Finds a running container and execs "cat /etc/hosts" to read the host IP.
-func (s *DockerService) GetHostIP(ctx context.Context) string {
-	containers, err := s.client.ContainerList(ctx, container.ListOptions{All: true})
-	if err != nil || len(containers) == 0 {
-		return "localhost"
-	}
-
-	for _, c := range containers {
-		if c.State != "running" {
-			continue
-		}
-		output, err := s.execInContainer(ctx, c.ID, []string{"cat", "/proc/net/fib_trie"})
-		if err != nil || output == "" {
-			continue
-		}
-		// Parse /proc/net/fib_trie: find "192.168.x.x" host IP
-		for _, line := range strings.Split(output, "\n") {
-			for _, field := range strings.Fields(line) {
-				ip := strings.Trim(field, "\n")
-				// Strip CIDR notation
-				if idx := strings.Index(ip, "/"); idx > 0 {
-					ip = ip[:idx]
-				}
-				// Must be 192.168.x.x, not .0 (network) or .255 (broadcast)
-				if strings.HasPrefix(ip, "192.168.") && !strings.HasSuffix(ip, ".0") && !strings.HasSuffix(ip, ".255") {
-					return ip
-				}
-			}
-		}
-		break
-	}
-	return "localhost"
-}
-
-func getSubnet(n types.NetworkResource) string {
-	for _, ipam := range n.IPAM.Config {
-		if ipam.Subnet != "" {
-			return ipam.Subnet
-		}
-	}
-	return ""
-}
-
-func getGateway(n types.NetworkResource) string {
-	for _, ipam := range n.IPAM.Config {
-		if ipam.Gateway != "" {
-			return ipam.Gateway
-		}
-	}
-	return ""
-}
 
 // ListFilesViaDocker lists files via SFTP.
 func (s *DockerService) ListFilesViaDocker(ctx context.Context, hostPath string) ([]model.FileInfo, error) {

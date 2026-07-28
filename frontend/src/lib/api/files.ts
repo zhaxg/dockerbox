@@ -64,13 +64,6 @@ export interface DriveStats {
 }
 
 /**
- * Drive stats response
- */
-export interface DriveStatsResponse {
-	drives: DriveStats[];
-}
-
-/**
  * Options for listing directory contents
  */
 export interface ListOptions {
@@ -135,14 +128,6 @@ export async function listRoots(): Promise<RootsResponse> {
 	const params: Record<string, string> = {};
 	if (hostId) params.hostId = hostId;
 	return api.get<RootsResponse>('/files', params);
-}
-
-/**
- * Get drive statistics for all mount points
- * GET /api/v1/files/stats
- */
-export async function getDriveStats(): Promise<DriveStatsResponse> {
-	return api.get<DriveStatsResponse>('/files/stats');
 }
 
 /**

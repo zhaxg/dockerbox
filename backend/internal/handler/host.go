@@ -1,18 +1,21 @@
 package handler
 
 import (
-	"encoding/json"
+	"crypto/ed25519"
 	"crypto/rand"
-	"math/big"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/ssh"
 	"dockerbox/backend/internal/config"
 	"dockerbox/backend/internal/model"
 	"dockerbox/backend/internal/service"
@@ -333,38 +336,38 @@ func (h *HostHandler) SSHKeyPairInstructions(w http.ResponseWriter, r *http.Requ
 	}, http.StatusOK)
 }
 
-// SSHKeyGen generates an ED25519 key pair and returns them.
+// SSHKeyGen generates an ED25519 key pair using Go's native crypto/ed25519.
 func (h *HostHandler) SSHKeyGen(w http.ResponseWriter, r *http.Request) {
-	// Generate ED25519 key pair via temp files
-	tmpDir, err := os.MkdirTemp("", "boxbox-keygen-*")
+	_, privKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("failed to create temp dir: %v", err)}, http.StatusOK)
-		return
-	}
-	defer os.RemoveAll(tmpDir)
-
-	keyPath := tmpDir + "/id_ed25519"
-	cmd := exec.Command("ssh-keygen", "-t", "ed25519", "-C", "boxbox", "-f", keyPath, "-N", "")
-	if err := cmd.Run(); err != nil {
 		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("keygen failed: %v", err)}, http.StatusOK)
 		return
 	}
 
-	privKey, err := os.ReadFile(keyPath)
+	// Encode private key in PEM format
+	privPEM, err := ssh.MarshalPrivateKey(privKey, "boxbox")
 	if err != nil {
-		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("failed to read private key: %v", err)}, http.StatusOK)
+		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("private key encoding failed: %v", err)}, http.StatusOK)
 		return
 	}
+	privBytes := pem.EncodeToMemory(privPEM)
 
-	pubKey, err := os.ReadFile(keyPath + ".pub")
-	if err != nil {
-		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("failed to read public key: %v", err)}, http.StatusOK)
+	// Encode public key in OpenSSH format
+	pub, ok := privKey.Public().(ed25519.PublicKey)
+	if !ok {
+		writeJSON(w, map[string]interface{}{"status": "error", "message": "failed to get public key"}, http.StatusOK)
 		return
 	}
+	pubKey, err := ssh.NewPublicKey(pub)
+	if err != nil {
+		writeJSON(w, map[string]interface{}{"status": "error", "message": fmt.Sprintf("public key encoding failed: %v", err)}, http.StatusOK)
+		return
+	}
+	pubBytes := ssh.MarshalAuthorizedKey(pubKey)
 
 	writeJSON(w, map[string]interface{}{
-		"private_key": strings.TrimSpace(string(privKey)),
-		"public_key":  strings.TrimSpace(string(pubKey)),
+		"private_key": strings.TrimSpace(string(privBytes)),
+		"public_key":  strings.TrimSpace(string(pubBytes)),
 	}, http.StatusOK)
 }
 
@@ -391,27 +394,39 @@ func (h *HostHandler) SSHPushKey(w http.ResponseWriter, r *http.Request) {
 		req.Port = "22"
 	}
 
-	// Check sshpass
-	if exec.Command("which", "sshpass").Run() != nil {
-		writeJSON(w, map[string]interface{}{
-			"status":  "error",
-			"message": "sshpass not installed. Install: apt install sshpass",
-		}, http.StatusOK)
-		return
+	// Push pubkey via Go native SSH with password authentication
+	config := &ssh.ClientConfig{
+		User:            req.User,
+		Auth:            []ssh.AuthMethod{ssh.Password(req.Password)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
 	}
 
-	// Push pubkey via ssh - pipe via stdin to avoid shell escaping
-	cmd := exec.Command("sshpass", "-p", req.Password, "ssh",
-		"-o", "StrictHostKeyChecking=no",
-		"-p", req.Port,
-		req.User+"@"+req.Host,
-		"sh", "-c", "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
-	cmd.Stdin = strings.NewReader(req.PubKey + "\n")
-	output, err := cmd.CombinedOutput()
+	conn, err := ssh.Dial("tcp", req.Host+":"+req.Port, config)
 	if err != nil {
 		writeJSON(w, map[string]interface{}{
 			"status":  "error",
-			"message": fmt.Sprintf("push failed: %s", string(output)),
+			"message": fmt.Sprintf("SSH connection failed: %v", err),
+		}, http.StatusOK)
+		return
+	}
+	defer conn.Close()
+
+	session, err := conn.NewSession()
+	if err != nil {
+		writeJSON(w, map[string]interface{}{
+			"status":  "error",
+			"message": fmt.Sprintf("SSH session failed: %v", err),
+		}, http.StatusOK)
+		return
+	}
+	defer session.Close()
+
+	session.Stdin = strings.NewReader(req.PubKey + "\n")
+	if err := session.Run("sh -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"); err != nil {
+		writeJSON(w, map[string]interface{}{
+			"status":  "error",
+			"message": fmt.Sprintf("push failed: %v", err),
 		}, http.StatusOK)
 		return
 	}

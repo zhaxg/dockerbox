@@ -202,29 +202,6 @@ func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "stopped", "message": "Compose stopped"}, http.StatusOK)
 }
 
-// ComposeBuild builds a compose project.
-func (h *DockerHandler) ComposeBuild(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.getService(r).ComposeBuild(r.Context(), path)
-	if err != nil {
-		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, result, http.StatusOK)
-}
-
 // ComposeRestart restarts a compose project.
 func (h *DockerHandler) ComposeRestart(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -251,29 +228,6 @@ func (h *DockerHandler) ComposeRestart(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "started", "message": "Compose restart started"}, http.StatusOK)
 }
 
-// ComposePull pulls images for a compose project.
-func (h *DockerHandler) ComposePull(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.getService(r).ComposePull(r.Context(), path)
-	if err != nil {
-		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, result, http.StatusOK)
-}
-
 // ComposeRedeploy runs docker-compose down then up.
 func (h *DockerHandler) ComposeRedeploy(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -292,26 +246,6 @@ func (h *DockerHandler) ComposeRedeploy(w http.ResponseWriter, r *http.Request) 
 	runner.StartRedeploy(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), path)
 
 	writeJSON(w, map[string]string{"status": "started", "message": "Redeploy started"}, http.StatusOK)
-}
-
-// ComposeRebuild rebuilds a compose project (docker compose up -d --build).
-func (h *DockerHandler) ComposeRebuild(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	runner := service.GetComposeRunner()
-	runner.Start(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"up", "-d", "--build"}, path)
-
-	writeJSON(w, map[string]string{"status": "started", "message": "Compose rebuild started"}, http.StatusOK)
 }
 
 // ComposeLogs returns compose project logs from the log file.
@@ -384,59 +318,6 @@ func (h *DockerHandler) SaveComposeFile(w http.ResponseWriter, r *http.Request) 
 	}
 
 	writeJSON(w, map[string]string{"message": "Compose file saved"}, http.StatusOK)
-}
-
-// GetComposeEnv returns the .env content.
-func (h *DockerHandler) GetComposeEnv(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	content, err := h.getService(r).GetComposeEnv(r.Context(), path)
-	if err != nil {
-		writeError(w, "Failed to get env file", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"content": content}, http.StatusOK)
-}
-
-// SaveComposeEnv saves the .env content.
-func (h *DockerHandler) SaveComposeEnv(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	path, err := h.resolveProjectPath(r.Context(), r, id)
-	if err != nil {
-		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	var req struct {
-		Content string `json:"content"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if err := h.getService(r).SaveComposeEnv(path, req.Content); err != nil {
-		writeError(w, "Failed to save env file", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Env file saved"}, http.StatusOK)
 }
 
 // DeleteComposeProject removes a compose project from management (keeps disk files).
@@ -571,101 +452,6 @@ func (h *DockerHandler) ScanAvailableProjects(w http.ResponseWriter, r *http.Req
 	}
 
 	writeJSON(w, map[string]interface{}{"projects": available}, http.StatusOK)
-}
-
-// ImportComposeProjects imports discovered projects into the compose store.
-func (h *DockerHandler) ImportComposeProjects(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Names []string `json:"names"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if len(req.Names) == 0 {
-		writeError(w, "No projects specified", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	hostID := getHostID(r)
-	if hostID == "" {
-		hostID = h.defaultHostID
-	}
-
-	store := service.GetComposeStore()
-	paths := h.getComposePaths(r)
-
-	var imported []string
-	for _, name := range req.Names {
-		// Check if already imported
-		alreadyImported := false
-		for _, sp := range store.ListByHost(hostID) {
-			if sp.Name == name {
-				alreadyImported = true
-				break
-			}
-		}
-		if alreadyImported {
-			continue
-		}
-
-		// Find the project path
-		found := false
-		for _, basePath := range paths {
-			candidate := filepath.Join(basePath, name)
-			// For SSH hosts, skip local file check - just add to store
-			svc := h.getService(r)
-			if svc.GetSSHHost() != "" {
-				store.Add(hostID, name, candidate)
-				imported = append(imported, name)
-				found = true
-				break
-			}
-			// For local hosts, check if compose file exists
-			for _, fname := range []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"} {
-				composeFile := filepath.Join(candidate, fname)
-				if _, err := os.Stat(composeFile); err == nil {
-					store.Add(hostID, name, candidate)
-					imported = append(imported, name)
-					found = true
-					break
-				}
-			}
-			if found {
-				break
-			}
-		}
-	}
-
-	writeJSON(w, map[string]interface{}{"imported": imported}, http.StatusOK)
-}
-
-// sshListDir lists directories in a remote path via SSH.
-func sshListDir(sshHost, sshKey, path string) ([]string, error) {
-	host, port := parseSSHHost(sshHost)
-	keyFile := service.WriteSSHKeyTemp(sshKey)
-	defer os.Remove(keyFile)
-	
-	cmd := exec.Command("ssh", "-i", keyFile, "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
-		"-p", port, host, "ls -1 "+path)
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-	return strings.Split(strings.TrimSpace(string(out)), "\n"), nil
-}
-
-// sshFileExists checks if a file exists on the remote host via SSH.
-func sshFileExists(sshHost, sshKey, path string) bool {
-	host, port := parseSSHHost(sshHost)
-	keyFile := service.WriteSSHKeyTemp(sshKey)
-	defer os.Remove(keyFile)
-	
-	cmd := exec.Command("ssh", "-i", keyFile, "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
-		"-p", port, host, "test -f "+path+" && echo ok")
-	out, err := cmd.Output()
-	return err == nil && strings.TrimSpace(string(out)) == "ok"
 }
 
 // parseSSHHost parses sshHost into host and port.

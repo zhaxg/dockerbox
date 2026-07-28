@@ -34,7 +34,6 @@ const tTableActions = $derived(t("table.actions"));
 	import { onMount, onDestroy } from 'svelte';
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
-	import { api } from '$lib/api/client';
 	import { dockerApi } from '$lib/api/docker';
 	import { toastStore } from '$lib/stores/toast.svelte';
 	import {
@@ -147,7 +146,7 @@ const tTableActions = $derived(t("table.actions"));
 
 	let logsEventSource: EventSource | null = null;
 	let execWs: WebSocket | null = null;
-	let execTerminalEl: HTMLDivElement | null = null;
+	let execTerminalEl: HTMLDivElement | null = $state(null);
 	let xterm: XTerminal | null = null;
 	let fitAddon: FitAddon | null = null;
 
@@ -602,12 +601,12 @@ const tTableActions = $derived(t("table.actions"));
 {#if confirmDialog.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary" style={modalStyle(confirmDrag)}>
-			<h3 class="mb-2 text-lg font-semibold text-text-primary flex items-center gap-2">
+			<h2 class="mb-2 text-lg font-semibold text-text-primary flex items-center gap-2">
 				<span class="cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, confirmDrag)}>{confirmDialog.title}</span>
 				<button type="button" class="ml-auto rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(confirmDrag)}>
 					{#if confirmDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
 				</button>
-			</h3>
+			</h2>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
 				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}</Button>

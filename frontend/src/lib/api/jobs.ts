@@ -74,7 +74,7 @@ export async function getJob(jobId: string): Promise<Job> {
  * Create a new background job
  * POST /api/v1/jobs
  */
-export async function createJob(request: CreateJobRequest): Promise<Job> {
+async function createJob(request: CreateJobRequest): Promise<Job> {
 	return api.post<Job>('/jobs', request);
 }
 

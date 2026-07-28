@@ -121,6 +121,8 @@
 			{#if title}
 				<div
 					class="flex items-center justify-between border-b border-border-secondary px-4 py-3 {draggable ? 'cursor-move' : ''}"
+					role={draggable ? 'button' : undefined}
+					aria-label={draggable ? 'Drag to move' : undefined}
 					onmousedown={draggable ? onDragHeader : undefined}
 				>
 					<h2 class="text-lg font-medium text-text-primary">{title}</h2>

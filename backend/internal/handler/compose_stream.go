@@ -145,24 +145,4 @@ func (h *DockerHandler) AbortComposeOperation(w http.ResponseWriter, r *http.Req
 }
 
 // GetComposeStatus returns the status of a compose operation.
-func (h *DockerHandler) GetComposeStatus(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Project ID required", "VALIDATION_ERROR", http.StatusBadRequest)
-		return
-	}
 
-	runner := service.GetComposeRunner()
-	run := runner.Get(id)
-	if run == nil {
-		writeJSON(w, map[string]interface{}{"status": "none"}, http.StatusOK)
-		return
-	}
-
-	output := run.GetOutput()
-	writeJSON(w, map[string]interface{}{
-		"status": string(run.GetStatus()),
-		"output": output,
-		"running": run.IsRunning(),
-	}, http.StatusOK)
-}

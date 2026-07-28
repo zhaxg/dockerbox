@@ -2,7 +2,6 @@
 	import { t, getLocale } from '$lib/i18n/index.svelte';
 	import { page } from '$app/state';
 	import { onMount, onDestroy } from 'svelte';
-	import { api } from '$lib/api/client';
 	import { dockerApi } from '$lib/api/docker';
 	import { Card, Spinner, Button } from '$lib/components/ui';
 	import { ArrowLeft, Play, StopCircle, RefreshCw, Trash2, Terminal, Skull, Info } from 'lucide-svelte';

@@ -123,24 +123,17 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 	// Container routes
 	r.Route("/containers", func(r chi.Router) {
 		r.Get("/", h.ListContainers)
-		r.Get("/host-ip", h.GetHostIP)
-		r.Get("/stats", h.GetStats)
 		r.Get("/{id}", h.GetContainer)
 		r.Get("/{id}/inspect", h.InspectContainer)
 		r.Post("/{id}/start", h.StartContainer)
 		r.Post("/{id}/stop", h.StopContainer)
 		r.Post("/{id}/restart", h.RestartContainer)
-		r.Post("/{id}/kill", h.KillContainer)
-		r.Delete("/{id}", h.DeleteContainer)
 		r.Get("/{id}/logs", h.GetContainerLogs)
 		r.Get("/{id}/exec", h.ExecWebSocket)
 	})
 
 	// Image routes
 	r.Route("/images", func(r chi.Router) {
-		r.Get("/", h.ListImages)
-		r.Delete("/{id}", h.DeleteImage)
-		r.Post("/pull", h.PullImage)
 		r.Post("/prune", h.PruneImages)
 	})
 
@@ -148,42 +141,28 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/compose", func(r chi.Router) {
 		r.Get("/", h.ListComposeProjects)
 		r.Get("/available", h.ScanAvailableProjects)
-		r.Post("/import", h.ImportComposeProjects)
 		r.Get("/check-name", h.CheckComposeName)
 		r.Post("/", h.CreateComposeProject)
 		r.Post("/{id}/up", h.ComposeUp)
 		r.Post("/{id}/down", h.ComposeDown)
-		r.Post("/{id}/build", h.ComposeBuild)
 		r.Post("/{id}/restart", h.ComposeRestart)
-		r.Post("/{id}/pull", h.ComposePull)
 		r.Post("/{id}/redeploy", h.ComposeRedeploy)
-		r.Post("/{id}/rebuild", h.ComposeRebuild)
 		r.Get("/{id}/logs", h.ComposeLogs)
 		r.Get("/{id}/file", h.GetComposeFile)
 		r.Put("/{id}/file", h.SaveComposeFile)
-		r.Get("/{id}/env", h.GetComposeEnv)
-		r.Put("/{id}/env", h.SaveComposeEnv)
 		r.Delete("/{id}", h.DeleteComposeProject)
 		r.Get("/{id}/stream", h.StreamComposeLogs)
 		r.Post("/{id}/abort", h.AbortComposeOperation)
 		r.Post("/{id}/clean", h.ComposeClean)
-		r.Get("/{id}/status", h.GetComposeStatus)
 	})
 
 	// Network routes
 	r.Route("/networks", func(r chi.Router) {
-		r.Get("/", h.ListNetworks)
-		r.Delete("/{id}", h.RemoveNetwork)
 		r.Post("/prune", h.PruneNetworks)
 	})
 }
 
 // GetHostIP returns the Docker host's IP address.
-func (h *DockerHandler) GetHostIP(w http.ResponseWriter, r *http.Request) {
-	hostIP := h.getService(r).GetHostIP(r.Context())
-	writeJSON(w, map[string]string{"ip": hostIP}, http.StatusOK)
-}
-
 // ListContainers returns all Docker containers.
 func (h *DockerHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
 	containers, err := h.getService(r).ListContainers(r.Context())
@@ -295,46 +274,6 @@ func (h *DockerHandler) RestartContainer(w http.ResponseWriter, r *http.Request)
 }
 
 // KillContainer kills a Docker container.
-func (h *DockerHandler) KillContainer(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Container ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	var req struct {
-		Signal string `json:"signal"`
-	}
-	// signal is optional; default to SIGKILL
-	signal := "SIGKILL"
-	if err := json.NewDecoder(r.Body).Decode(&req); err == nil && req.Signal != "" {
-		signal = req.Signal
-	}
-
-	if err := h.getService(r).KillContainer(r.Context(), id, signal); err != nil {
-		writeError(w, "Failed to kill container", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Container killed"}, http.StatusOK)
-}
-
-// DeleteContainer removes a Docker container.
-func (h *DockerHandler) DeleteContainer(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Container ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
-		return
-	}
-
-	if err := h.getService(r).DeleteContainer(r.Context(), id); err != nil {
-		writeError(w, "Failed to delete container", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, map[string]string{"message": "Container deleted"}, http.StatusOK)
-}
-
 // GetContainerLogs returns logs for a Docker container.
 func (h *DockerHandler) GetContainerLogs(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -360,37 +299,25 @@ func (h *DockerHandler) GetContainerLogs(w http.ResponseWriter, r *http.Request)
 }
 
 // GetStats returns resource usage statistics for a container.
-func (h *DockerHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	// Return empty stats - real stats are fetched per-container in ListContainers
-	writeJSON(w, map[string]interface{}{}, http.StatusOK)
-}
-
-// ListImages returns all Docker images.
-// ListComposeProjects returns all compose projects for the current host.
-// ListNetworks returns all Docker networks.
-func (h *DockerHandler) ListNetworks(w http.ResponseWriter, r *http.Request) {
-	networks, err := h.getService(r).ListNetworks(r.Context())
+// PruneImages removes unused Docker images.
+func (h *DockerHandler) PruneImages(w http.ResponseWriter, r *http.Request) {
+	reclaimed, err := h.getService(r).PruneImages(r.Context())
 	if err != nil {
-		writeError(w, "Failed to list networks", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
-	}
-	writeJSON(w, map[string]interface{}{"networks": networks}, http.StatusOK)
-}
-
-// RemoveNetwork removes a Docker network.
-func (h *DockerHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		writeError(w, "Network ID is required", model.ErrCodeValidationError, http.StatusBadRequest)
+		writeError(w, "Failed to prune images", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.getService(r).RemoveNetwork(r.Context(), id); err != nil {
-		writeError(w, "Failed to remove network", model.ErrCodeInternalError, http.StatusInternalServerError)
-		return
+	deleted := 0
+	if reclaimed.ImagesDeleted != nil {
+		deleted = len(reclaimed.ImagesDeleted)
 	}
+	spaceMB := reclaimed.SpaceReclaimed / 1024 / 1024
 
-	writeJSON(w, map[string]string{"message": "Network removed"}, http.StatusOK)
+	writeJSON(w, map[string]interface{}{
+		"deleted": deleted,
+		"spaceMB": spaceMB,
+		"message": fmt.Sprintf("deleted %d images, freed %dMB", deleted, spaceMB),
+	}, http.StatusOK)
 }
 
 // PruneNetworks removes unused Docker networks.

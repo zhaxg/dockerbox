@@ -2,7 +2,6 @@
 	import { t, getLocale } from '$lib/i18n/index.svelte';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api/client';
 	import { dockerApi } from '$lib/api/docker';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
 	import { Spinner, Button } from '$lib/components/ui';

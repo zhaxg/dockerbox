@@ -133,8 +133,8 @@
 		<!-- Name + Default -->
 		<div class="flex items-end gap-3">
 			<div class="flex-1">
-				<label class="mb-1 block text-[11px] text-text-muted">{tHostmodalDisplayname} <span class="text-red-400">*</span></label>
-				<input type="text" bind:value={host.name} placeholder={tHostmodalDisplayname}
+				<label for="host-name" class="mb-1 block text-[11px] text-text-muted">{tHostmodalDisplayname} <span class="text-red-400">*</span></label>
+				<input id="host-name" type="text" bind:value={host.name} placeholder={tHostmodalDisplayname}
 					class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
 			<label class="flex cursor-pointer items-center gap-1.5 pb-1.5 text-[11px] whitespace-nowrap text-text-muted">
@@ -145,16 +145,16 @@
 		<!-- Connection + Endpoint -->
 		<div class="grid grid-cols-3 gap-3">
 			<div>
-				<label class="mb-1 block text-[11px] text-text-muted">{tHostmodalConnectiontype}</label>
-				<select bind:value={host.driver} onchange={handleSocketDefault}
+				<label for="host-driver" class="mb-1 block text-[11px] text-text-muted">{tHostmodalConnectiontype}</label>
+				<select id="host-driver" bind:value={host.driver} onchange={handleSocketDefault}
 					class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary focus:border-border-focus focus:outline-none">
 					<option value="socket">Socket</option>
 					<option value="ssh">SSH</option>
 				</select>
 			</div>
 			<div class="col-span-2">
-				<label class="mb-1 block text-[11px] text-text-muted">{host.driver === 'ssh' ? 'user@host:port' : '/var/run/docker.sock'}</label>
-				<input type="text" bind:value={host.endpoint}
+				<label for="host-endpoint" class="mb-1 block text-[11px] text-text-muted">{host.driver === 'ssh' ? 'user@host:port' : '/var/run/docker.sock'}</label>
+				<input id="host-endpoint" type="text" bind:value={host.endpoint}
 					placeholder={host.driver === 'ssh' ? 'root@192.168.1.100:22' : '/var/run/docker.sock'}
 					class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 			</div>
@@ -174,13 +174,13 @@
 					</div>
 				</div>
 				<div>
-					<label class="mb-1 block text-[10px] text-text-muted">{tHostmodalPrivatekey}</label>
-					<textarea bind:value={host.sshKey} rows={3} placeholder={tHostmodalClickgenerate}
+					<label for="host-ssh-key" class="mb-1 block text-[10px] text-text-muted">{tHostmodalPrivatekey}</label>
+					<textarea id="host-ssh-key" bind:value={host.sshKey} rows={3} placeholder={tHostmodalClickgenerate}
 						class="w-full resize-none rounded border border-border-secondary bg-black/30 px-2 py-1 font-mono text-[11px] text-green-400 placeholder:text-text-muted focus:border-border-focus focus:outline-none"></textarea>
 				</div>
 				<div>
-					<label class="mb-1 block text-[10px] text-text-muted">{tHostmodalPublickey}</label>
-					<input type="text" bind:value={host.sshPubKey} placeholder={tHostmodalClickgenerate}
+					<label for="host-ssh-pubkey" class="mb-1 block text-[10px] text-text-muted">{tHostmodalPublickey}</label>
+					<input id="host-ssh-pubkey" type="text" bind:value={host.sshPubKey} placeholder={tHostmodalClickgenerate}
 						class="w-full rounded border border-border-secondary bg-black/30 px-2 py-1 font-mono text-[11px] text-green-400 placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 				</div>
 				<div class="flex items-center gap-1 border-t border-border-secondary pt-2">
@@ -206,14 +206,14 @@
 
 		<!-- Tags -->
 		<div>
-			<label class="mb-1 block text-[11px] text-text-muted">{tHostmodalTags}</label>
-			<input type="text" value={(host.tags || []).join(', ')} onchange={handleTagsChange} placeholder="home, nas, prod"
+			<label for="host-tags" class="mb-1 block text-[11px] text-text-muted">{tHostmodalTags}</label>
+			<input id="host-tags" type="text" value={(host.tags || []).join(', ')} onchange={handleTagsChange} placeholder="home, nas, prod"
 				class="w-full rounded border border-border-secondary bg-surface-secondary px-3 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-border-focus focus:outline-none" />
 		</div>
 
 		<!-- Mount Points -->
 		<div>
-			<label class="mb-2 block text-[11px] font-medium text-text-muted">{tHostmodalMountpoints}</label>
+			<div class="mb-2 text-[11px] font-medium text-text-muted">{tHostmodalMountpoints}</div>
 			<div class="overflow-hidden rounded border border-border-secondary">
 				<table class="w-full text-[11px]">
 					<thead>

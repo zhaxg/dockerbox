@@ -491,7 +491,7 @@ const tTableActions = $derived(t("table.actions"));
 {#if confirmDialog.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<div class="w-96 rounded-lg border border-border-secondary bg-surface-primary p-6 shadow-xl">
-			<h3 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h3>
+			<h2 class="mb-2 text-lg font-semibold text-text-primary">{confirmDialog.title}</h2>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
 				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}</Button>

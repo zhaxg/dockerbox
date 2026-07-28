@@ -5,8 +5,6 @@
 // Client utilities
 export {
 	api,
-	apiRequest,
-	ApiRequestError,
 	getAccessToken,
 	getRefreshToken,
 	setTokens,
@@ -44,7 +42,6 @@ export {
 export {
 	listJobs,
 	getJob,
-	createJob,
 	createCopyJob,
 	createMoveJob,
 	createDeleteJob,

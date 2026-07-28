@@ -58,7 +58,6 @@ const tTableActions = $derived(t("table.actions"));
 	import { Spinner, Button, Badge } from '$lib/components/ui';
 	import LogModal from '$lib/components/LogModal.svelte';
 	import { hostsApi, type DockerHostsConfig } from '$lib/api/hosts';
-	import { api } from '$lib/api/client';
 	import { dockerApi } from '$lib/api/docker';
 	import { Play, RefreshCw, Eye, RotateCcw, Package, Plus, Search, Trash2, X, Maximize2, Minimize2, Save, Download, BrushCleaning } from 'lucide-svelte';
 	import type * as Monaco from 'monaco-editor';
@@ -141,7 +140,7 @@ const tTableActions = $derived(t("table.actions"));
 		return `transform: translate(${s.x}px, ${s.y}px)`;
 	}
 
-	let editorContainer: HTMLDivElement | null = null;
+	let editorContainer: HTMLDivElement | null = $state(null);
 	let monacoEditor: Monaco.editor.IStandaloneCodeEditor | null = null;
 	let monacoApi: typeof Monaco | null = null;
 
@@ -591,7 +590,7 @@ const tTableActions = $derived(t("table.actions"));
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<div class="flex flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary {importDrag.maximized ? 'fixed inset-3' : 'h-[60vh] w-[600px]'}" style={modalStyle(importDrag)}>
 			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-3 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, importDrag)}>
-				<h3 class="text-sm font-semibold text-text-primary">{tComposeScanimport + ' Compose ' + tComposeProject}</h3>
+				<h2 class="text-sm font-semibold text-text-primary">{tComposeScanimport + ' Compose ' + tComposeProject}</h2>
 				<div class="flex items-center gap-1">
 					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(importDrag)}>
 						{#if importDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
@@ -638,12 +637,12 @@ const tTableActions = $derived(t("table.actions"));
 {#if confirmDialog.open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<div class="w-96 rounded-lg bg-surface-primary p-6 shadow-xl border border-border-secondary" style={modalStyle(confirmDrag)}>
-			<h3 class="mb-2 text-lg font-semibold text-text-primary flex items-center gap-2">
+			<h2 class="mb-2 text-lg font-semibold text-text-primary flex items-center gap-2">
 				<span class="cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, confirmDrag)}>{confirmDialog.title}</span>
 				<button type="button" class="ml-auto rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(confirmDrag)}>
 					{#if confirmDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
 				</button>
-			</h3>
+			</h2>
 			<p class="mb-6 text-sm text-text-secondary">{confirmDialog.message}</p>
 			<div class="flex justify-end gap-2">
 				<Button variant="secondary" onclick={closeConfirm}>{tCommonCancel}</Button>
@@ -668,7 +667,7 @@ const tTableActions = $derived(t("table.actions"));
 		<div class="flex flex-col rounded-lg bg-surface-primary shadow-xl border border-border-secondary {editorDrag.maximized ? 'fixed inset-3' : 'h-[85vh] w-[900px]'}" style={modalStyle(editorDrag)}>
 			<!-- Header: title + drag + maximize + close -->
 			<div class="flex items-center justify-between border-b border-border-secondary px-4 py-2.5 cursor-move" role="button" tabindex="-1" onmousedown={(e) => onDragHeader(e, editorDrag)}>
-				<h3 class="text-sm font-semibold text-text-primary">{editorModal.mode === 'new' ? tComposeNew + ' Compose ' + tComposeProject : editorModal.projectName}</h3>
+				<h2 class="text-sm font-semibold text-text-primary">{editorModal.mode === 'new' ? tComposeNew + ' Compose ' + tComposeProject : editorModal.projectName}</h2>
 				<div class="flex items-center gap-1">
 					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={() => toggleMaximize(editorDrag)}>
 						{#if editorDrag.maximized}<Minimize2 size={12} />{:else}<Maximize2 size={12} />{/if}
