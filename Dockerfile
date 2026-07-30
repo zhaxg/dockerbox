@@ -46,7 +46,7 @@ COPY --from=frontend-builder /app/build ./internal/static/dist/
 # Build the binary with embedded static files
 # CGO_ENABLED=0 for static binary, ldflags for smaller size
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-w -s" \
+    -ldflags="-w -s -X main.version=v0.1.6" \
     -o /server \
     .
 
@@ -61,7 +61,8 @@ WORKDIR /app
 # - ca-certificates: HTTPS support
 # - tzdata: Timezone support
 # - wget: Health check
-RUN apk add --no-cache ca-certificates tzdata wget
+# - openssh-client: SSH connections to Docker hosts
+RUN apk add --no-cache ca-certificates tzdata wget openssh-client
 
 # Copy binary from builder
 COPY --from=backend-builder /server /app/server
