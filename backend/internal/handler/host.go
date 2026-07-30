@@ -93,6 +93,19 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate SSH configuration
+	if host.Driver == "ssh" {
+		if err := validateSSHConfig(host.Endpoint, host.SSHKey); err != nil {
+			writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
+			return
+		}
+		// Validate mount point paths
+		if err := validateMountPoints(host.Endpoint, host.SSHKey, host.MountPoints); err != nil {
+			writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
+			return
+		}
+	}
+
 	cfg := h.getConfig()
 	if cfg.DockerHosts == nil {
 		cfg.DockerHosts = &model.DockerHostsConfig{Hosts: make(map[string]*model.DockerHost)}
@@ -172,6 +185,31 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 				writeError(w, "A host with this endpoint already exists", model.ErrCodeValidationError, http.StatusConflict)
 				return
 			}
+		}
+	}
+
+	// Validate SSH configuration if driver is ssh
+	if existing.Driver == "ssh" {
+		endpoint := updates.Endpoint
+		if endpoint == "" {
+			endpoint = existing.Endpoint
+		}
+		sshKey := updates.SSHKey
+		if sshKey == "" {
+			sshKey = existing.SSHKey
+		}
+		if err := validateSSHConfig(endpoint, sshKey); err != nil {
+			writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
+			return
+		}
+		// Validate mount point paths
+		mountPoints := updates.MountPoints
+		if mountPoints == nil {
+			mountPoints = existing.MountPoints
+		}
+		if err := validateMountPoints(endpoint, sshKey, mountPoints); err != nil {
+			writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
+			return
 		}
 	}
 
@@ -532,4 +570,104 @@ func ensureSSHKey(hostID, sshKey, endpoint string) {
 	newLines = append(newLines, entry)
 
 	os.WriteFile(configPath, []byte(strings.Join(newLines, "\n")), 0600)
+}
+
+// validateSSHConfig validates SSH endpoint format and key.
+func validateSSHConfig(endpoint, sshKey string) error {
+	// Validate endpoint format: should be user@host or user@host:port
+	if !strings.Contains(endpoint, "@") {
+		return fmt.Errorf("SSH endpoint must be in user@host:port format (e.g., root@192.168.1.100:22)")
+	}
+
+	parts := strings.SplitN(endpoint, "@", 2)
+	user := parts[0]
+	hostPort := parts[1]
+
+	if user == "" {
+		return fmt.Errorf("SSH user is required in endpoint")
+	}
+
+	// Parse host:port
+	host := hostPort
+	port := "22"
+	if idx := strings.LastIndex(hostPort, ":"); idx > 0 {
+		host = hostPort[:idx]
+		port = hostPort[idx+1:]
+		// Validate port is numeric
+		if _, err := fmt.Sscanf(port, "%d"); err != nil {
+			return fmt.Errorf("SSH port must be a number")
+		}
+	}
+
+	if host == "" {
+		return fmt.Errorf("SSH host is required in endpoint")
+	}
+
+	// Validate SSH key is provided
+	if sshKey == "" {
+		return fmt.Errorf("SSH private key is required")
+	}
+
+	// Validate key format
+	trimmedKey := strings.TrimSpace(sshKey)
+	if !strings.Contains(trimmedKey, "PRIVATE KEY") {
+		return fmt.Errorf("SSH key must be a valid private key (PEM format)")
+	}
+
+	return nil
+}
+
+// validateMountPoints validates that mount point paths exist on the remote host.
+func validateMountPoints(endpoint, sshKey string, mountPoints map[string]*model.HostMountPoint) error {
+	if mountPoints == nil || sshKey == "" {
+		return nil
+	}
+
+	// Connect via SSH and check paths
+	config := &ssh.ClientConfig{
+		User:            strings.SplitN(endpoint, "@", 2)[0],
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(parseSSHKey(sshKey))},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
+	}
+
+	// Parse host:port
+	hostPort := strings.SplitN(endpoint, "@", 2)[1]
+	host := hostPort
+	port := "22"
+	if idx := strings.LastIndex(hostPort, ":"); idx > 0 {
+		host = hostPort[:idx]
+		port = hostPort[idx+1:]
+	}
+
+	conn, err := ssh.Dial("tcp", host+":"+port, config)
+	if err != nil {
+		return fmt.Errorf("cannot validate mount points: SSH connection failed - %v", err)
+	}
+	defer conn.Close()
+
+	// Check each mount point path
+	for name, mp := range mountPoints {
+		if mp.Path == "" {
+			continue
+		}
+		session, err := conn.NewSession()
+		if err != nil {
+			return fmt.Errorf("cannot validate path for %s: %v", name, err)
+		}
+		// Check if directory exists and create if not
+		err = session.Run(fmt.Sprintf("mkdir -p %s 2>/dev/null && test -d %s", mp.Path, mp.Path))
+		session.Close()
+		if err != nil {
+			return fmt.Errorf("mount point path '%s' for '%s' is not accessible or cannot be created", mp.Path, name)
+		}
+	}
+
+	return nil
+}
+
+// parseSSHKey parses an SSH private key string and returns a signer.
+func parseSSHKey(key string) ssh.Signer {
+	signer, _ := ssh.ParsePrivateKey([]byte(key))
+	return signer
 }

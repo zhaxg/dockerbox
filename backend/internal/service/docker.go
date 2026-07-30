@@ -209,10 +209,14 @@ func NewDockerService(cfg DockerServiceConfig) (*DockerService, error) {
 
 // GetSSHHost returns the SSH host string (e.g., "user@host:port") for remote connections.
 func (s *DockerService) GetSSHHost() string {
+	if s.sshHost == "" || s.sshKey == "" {
+		return ""
+	}
 	if strings.HasPrefix(s.sshHost, "ssh://") {
 		return strings.TrimPrefix(s.sshHost, "ssh://")
 	}
-	return ""
+	// Handle "user@host" format without ssh:// prefix
+	return s.sshHost
 }
 
 // GetSSHKey returns the SSH private key content.
@@ -466,21 +470,53 @@ func (s *DockerService) CreateComposeProject(ctx context.Context, name, composeC
 
 	// Determine project directory
 	projectDir := filepath.Join(basePath, name)
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
-		return &model.ComposeAction{Success: false, Message: "Failed to create project directory"}, err
-	}
 
-	// Write docker-compose.yml
-	composePath := filepath.Join(projectDir, "docker-compose.yml")
-	if err := os.WriteFile(composePath, []byte(composeContent), 0644); err != nil {
-		return &model.ComposeAction{Success: false, Message: "Failed to write compose file"}, err
-	}
+	// Check if using SSH (remote host)
+	if s.sshHost != "" && s.sshKey != "" {
+		// Remote host via SSH - create directory and files on remote host
+		// Create directory on remote host
+		_, err := s.sshExec(ctx, "mkdir -p "+projectDir)
+		if err != nil {
+			return &model.ComposeAction{Success: false, Message: "Failed to create project directory on remote host"}, err
+		}
 
-	// Write .env if provided
-	if envContent != "" {
-		envPath := filepath.Join(projectDir, ".env")
-		if err := os.WriteFile(envPath, []byte(envContent), 0644); err != nil {
-			return &model.ComposeAction{Success: false, Message: "Failed to write env file"}, err
+		// Write docker-compose.yml via SFTP
+		sftpClient, err := s.newSFTPClient()
+		if err != nil {
+			return &model.ComposeAction{Success: false, Message: "Failed to create SFTP connection"}, err
+		}
+		defer sftpClient.Close()
+
+		composePath := projectDir + "/docker-compose.yml"
+		if err := s.writeFileViaSFTP(sftpClient, composePath, composeContent); err != nil {
+			return &model.ComposeAction{Success: false, Message: "Failed to write compose file"}, err
+		}
+
+		// Write .env if provided
+		if envContent != "" {
+			envPath := projectDir + "/.env"
+			if err := s.writeFileViaSFTP(sftpClient, envPath, envContent); err != nil {
+				return &model.ComposeAction{Success: false, Message: "Failed to write env file"}, err
+			}
+		}
+	} else {
+		// Local host - use local filesystem
+		if err := os.MkdirAll(projectDir, 0755); err != nil {
+			return &model.ComposeAction{Success: false, Message: "Failed to create project directory"}, err
+		}
+
+		// Write docker-compose.yml
+		composePath := filepath.Join(projectDir, "docker-compose.yml")
+		if err := os.WriteFile(composePath, []byte(composeContent), 0644); err != nil {
+			return &model.ComposeAction{Success: false, Message: "Failed to write compose file"}, err
+		}
+
+		// Write .env if provided
+		if envContent != "" {
+			envPath := filepath.Join(projectDir, ".env")
+			if err := os.WriteFile(envPath, []byte(envContent), 0644); err != nil {
+				return &model.ComposeAction{Success: false, Message: "Failed to write env file"}, err
+			}
 		}
 	}
 
@@ -488,6 +524,44 @@ func (s *DockerService) CreateComposeProject(ctx context.Context, name, composeC
 		Success: true,
 		Message: fmt.Sprintf("Project %s created at %s", name, projectDir),
 	}, nil
+}
+
+// writeFileViaSFTP writes content to a remote file via SFTP.
+func (s *DockerService) writeFileViaSFTP(sftpClient *sftp.Client, remotePath, content string) error {
+	f, err := sftpClient.Create(remotePath)
+	if err != nil {
+		return fmt.Errorf("failed to create remote file %s: %w", remotePath, err)
+	}
+	defer f.Close()
+
+	if _, err := f.Write([]byte(content)); err != nil {
+		return fmt.Errorf("failed to write to remote file %s: %w", remotePath, err)
+	}
+
+	return nil
+}
+
+// readFileViaSFTP reads a remote file via SFTP.
+func (s *DockerService) readFileViaSFTP(sftpClient *sftp.Client, remotePath string) (string, error) {
+	f, err := sftpClient.Open(remotePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open remote file %s: %w", remotePath, err)
+	}
+	defer f.Close()
+
+	var content []byte
+	buf := make([]byte, 4096)
+	for {
+		n, err := f.Read(buf)
+		if n > 0 {
+			content = append(content, buf[:n]...)
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	return string(content), nil
 }
 
 // GetComposeUpArgs detects container state and returns the appropriate compose command.
@@ -621,13 +695,28 @@ func (s *DockerService) ComposeLogs(ctx context.Context, projectPath string, tai
 }
 
 // GetComposeFile reads a docker-compose file.
-// GetComposeFile reads compose file content. Tries local first, then Docker API.
+// GetComposeFile reads compose file content. Tries local/SFTP first, then Docker API.
 func (s *DockerService) GetComposeFile(ctx context.Context, projectPath string) (string, error) {
-	// Try local first
-	for _, name := range []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"} {
-		p := projectPath + "/" + name
-		if content, err := readFileContent(p); err == nil {
-			return content, nil
+	// Check if using SSH (remote host)
+	if s.sshHost != "" && s.sshKey != "" {
+		// Remote host via SFTP
+		sftpClient, err := s.newSFTPClient()
+		if err == nil {
+			defer sftpClient.Close()
+			for _, name := range []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"} {
+				p := projectPath + "/" + name
+				if content, err := s.readFileViaSFTP(sftpClient, p); err == nil {
+					return content, nil
+				}
+			}
+		}
+	} else {
+		// Local host - try local first
+		for _, name := range []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"} {
+			p := projectPath + "/" + name
+			if content, err := readFileContent(p); err == nil {
+				return content, nil
+			}
 		}
 	}
 
@@ -669,11 +758,29 @@ func (s *DockerService) GetComposeFile(ctx context.Context, projectPath string) 
 
 // SaveComposeFile saves a docker-compose file.
 func (s *DockerService) SaveComposeFile(projectPath string, content string) error {
+	// Check if using SSH (remote host)
+	if s.sshHost != "" && s.sshKey != "" {
+		// Remote host via SFTP
+		sftpClient, err := s.newSFTPClient()
+		if err != nil {
+			return fmt.Errorf("failed to create SFTP connection: %w", err)
+		}
+		defer sftpClient.Close()
+		return s.writeFileViaSFTP(sftpClient, projectPath+"/docker-compose.yml", content)
+	}
+	// Local host
 	return writeFileContent(projectPath+"/docker-compose.yml", content)
 }
 
 // DeleteComposeProject removes a compose project directory.
 func (s *DockerService) DeleteComposeProject(projectPath string) error {
+	// Check if using SSH (remote host)
+	if s.sshHost != "" && s.sshKey != "" {
+		// Remote host via SSH - use rm -rf
+		_, err := s.sshExec(context.Background(), "rm -rf "+projectPath)
+		return err
+	}
+	// Local host
 	return os.RemoveAll(projectPath)
 }
 

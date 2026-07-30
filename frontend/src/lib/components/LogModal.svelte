@@ -75,9 +75,9 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="flex flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary {maximized ? 'fixed inset-3' : 'h-[70vh] w-[700px]'}" style={modalStyle()}>
-			<div class="flex items-center justify-between px-3 py-2 cursor-move" role="button" tabindex="-1" onmousedown={onDragHeader}>
+	<div id="log-modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+		<div id="log-modal-container" class="flex flex-col rounded-lg bg-surface-primary p-3 shadow-xl border border-border-secondary {maximized ? 'fixed inset-3' : 'h-[70vh] w-[700px]'}" style={modalStyle()}>
+			<div id="log-modal-header" class="flex items-center justify-between px-3 py-2 cursor-move" role="button" tabindex="-1" onmousedown={onDragHeader}>
 				<h3 class="text-sm font-semibold text-text-primary">{name}</h3>
 				<div class="flex items-center gap-1">
 					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={toggleMaximize}>
@@ -86,11 +86,11 @@
 					<button type="button" class="rounded p-1 text-text-secondary transition-colors hover:text-text-primary" onclick={onClose}><X size={16} /></button>
 				</div>
 			</div>
-			<div bind:this={contentEl} class="flex-1 overflow-auto rounded-md bg-black p-3">
-				<pre class="whitespace-pre font-mono text-xs overflow-x-auto" style="color: #00ff00">{content}</pre>
+			<div id="log-modal-content-wrapper" class="min-h-0 flex-1 flex flex-col overflow-auto rounded-md bg-black p-3">
+				<pre id="log-modal-content" class="whitespace-pre font-mono text-xs overflow-x-auto flex-1" style="color: #00ff00">{content}</pre>
 			</div>
 			{#if loading && onAbort}
-				<div class="flex justify-end border-t border-border-secondary px-4 py-3">
+				<div id="log-modal-footer" class="flex justify-end border-t border-border-secondary px-4 py-3">
 					<button type="button" class="inline-flex items-center gap-1 rounded bg-red-500/15 px-3 py-1 text-xs text-red-400 hover:bg-red-500/25 transition-colors" onclick={onAbort}>{tComposeAbort}</button>
 				</div>
 			{/if}

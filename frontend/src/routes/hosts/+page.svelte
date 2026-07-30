@@ -276,6 +276,23 @@ const tTableActions = $derived(t("table.actions"));
 			return null;
 		}
 		if (saving) return null;
+
+		// Validate SSH configuration
+		if (modal.host.driver === 'ssh') {
+			if (!modal.host.endpoint || !modal.host.endpoint.includes('@')) {
+				showToast('SSH 连接格式必须为: user@host:port (如 root@192.168.1.100:22)', 'err');
+				return null;
+			}
+			if (!modal.host.sshKey) {
+				showToast('SSH 连接需要提供私钥', 'err');
+				return null;
+			}
+			if (!modal.host.sshKey.includes('PRIVATE KEY')) {
+				showToast('SSH 私钥格式无效 (需要 PEM 格式)', 'err');
+				return null;
+			}
+		}
+
 		saving = true;
 		try {
 			const saveData = { ...modal.host, isDefault: modal.isDefault };
@@ -317,10 +334,11 @@ const tTableActions = $derived(t("table.actions"));
 		testLoading = true;
 		try {
 			const result = await hostsApi.test(savedId);
-			showToast(
-				result.status === 'ok' ? tHostsConnectsuccess + ': ' + result.message : tHostsConnectfailed + ': ' + result.message,
-				result.status === 'ok' ? 'ok' : 'err'
-			);
+			if (result.status === 'ok') {
+				showToast(tHostsConnectsuccess + ': ' + result.message, 'ok');
+			} else {
+				showToast(tHostsConnectfailed + ': ' + result.message, 'err');
+			}
 		} catch (e) {
 			showToast(tHostsConnectfailed + ': ' + String(e), 'err');
 		} finally {
