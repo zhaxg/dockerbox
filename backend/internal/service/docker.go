@@ -164,12 +164,27 @@ func NewDockerService(cfg DockerServiceConfig) (*DockerService, error) {
 	// Use TCP/SSH host if provided, otherwise use socket
 	if cfg.Host != "" {
 		if strings.HasPrefix(cfg.Host, "ssh://") {
-			// SSH connection - use connhelper
-			helper, err := connhelper.GetConnectionHelper(cfg.Host)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create SSH connection helper: %w", err)
+			if cfg.SSHKey != "" {
+				// SSH with explicit key - write key to temp file and use custom dialer
+				keyFile := WriteSSHKeyTemp(cfg.SSHKey)
+				if keyFile == "" {
+					return nil, fmt.Errorf("failed to write SSH key to temp file")
+				}
+				// Build SSH flags with explicit identity
+				sshFlags := []string{"-i", keyFile, "-o", "StrictHostKeyChecking=no"}
+				helper, err := connhelper.GetConnectionHelperWithSSHOpts(cfg.Host, sshFlags)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create SSH connection helper: %w", err)
+				}
+				opts = append(opts, client.WithHost(helper.Host), client.WithDialContext(helper.Dialer))
+			} else {
+				// SSH without explicit key - use default
+				helper, err := connhelper.GetConnectionHelper(cfg.Host)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create SSH connection helper: %w", err)
+				}
+				opts = append(opts, client.WithHost(helper.Host), client.WithDialContext(helper.Dialer))
 			}
-			opts = append(opts, client.WithHost(helper.Host), client.WithDialContext(helper.Dialer))
 		} else {
 			opts = append(opts, client.WithHost(cfg.Host))
 		}
