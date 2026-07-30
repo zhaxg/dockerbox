@@ -26,10 +26,50 @@ import (
 	"dockerbox/backend/internal/websocket"
 )
 
+// version is injected at build time via -ldflags "-X main.version=v0.1.6"
+var version = "dev"
+
+// aliasFlag provides an alias for an existing bool flag pointer.
+type aliasFlag struct {
+	target *bool
+}
+
+func (f *aliasFlag) String() string { return "false" }
+func (f *aliasFlag) Set(val string) error {
+	*f.target = true
+	return nil
+}
+func (f *aliasFlag) IsBoolFlag() bool { return true }
+
+// aliasStrFlag provides an alias for an existing string flag pointer.
+type aliasStrFlag struct {
+	target *string
+}
+
+func (f *aliasStrFlag) String() string {
+	if f.target == nil {
+		return ""
+	}
+	return *f.target
+}
+func (f *aliasStrFlag) Set(val string) error {
+	*f.target = val
+	return nil
+}
+
 func main() {
 	// Parse command line flags
-	configPath := flag.String("config", "", "Path to configuration file")
+	configPath := flag.String("config", "", "Path to configuration file (shorthand: -c)")
+	showVersion := flag.Bool("v", false, "Print version and exit (also -version)")
+	flag.Var(&aliasFlag{target: showVersion}, "version", "Print version and exit (shorthand: -v)")
+	flag.Var(&aliasStrFlag{target: configPath}, "c", "Path to configuration file (shorthand: -config)")
 	flag.Parse()
+
+	// Handle -v / -version: print version and exit
+	if *showVersion {
+		fmt.Printf("DockerBox %s\n", version)
+		return
+	}
 
 	// Configure zerolog
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix

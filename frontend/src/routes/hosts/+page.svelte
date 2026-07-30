@@ -18,6 +18,9 @@ const tHostsConnectsuccess = $derived(t("hosts.connectSuccess"));
 const tHostsConnectfailed = $derived(t("hosts.connectFailed"));
 const tHostsDeletehost = $derived(t("hosts.deleteHost"));
 const tHostsDeleteconfirm = $derived(t("hosts.deleteConfirm"));
+const tHostsNameexists = $derived(t("hosts.nameExists"));
+const tHostsEndpointexists = $derived(t("hosts.endpointExists"));
+const tHostsSavefailed = $derived(t("hosts.saveFailed"));
 const tHostmodalMaindirpath = $derived(t("hostModal.mainDirPath"));
 const tTableName = $derived(t("table.name"));
 const tTableEndpoint = $derived(t("table.endpoint"));
@@ -60,6 +63,7 @@ const tTableActions = $derived(t("table.actions"));
 		onConfirm: () => {}
 	});
 	let testLoading = $state(false);
+	let saving = $state(false);
 	let copied = $state<Record<string, boolean>>({});
 	let genKeyLoading = $state(false);
 	let hostStats = $state<
@@ -189,6 +193,7 @@ const tTableActions = $derived(t("table.actions"));
 
 	function closeModal() {
 		modal.open = false;
+		saving = false;
 	}
 
 	function addMountPoint() {
@@ -270,8 +275,10 @@ const tTableActions = $derived(t("table.actions"));
 			showToast(tHostmodalMaindirpath, 'err');
 			return null;
 		}
-		const saveData = { ...modal.host, isDefault: modal.isDefault };
+		if (saving) return null;
+		saving = true;
 		try {
+			const saveData = { ...modal.host, isDefault: modal.isDefault };
 			if (modal.mode === 'add') {
 				const result = await hostsApi.create<{id: string, host: any}>(saveData);
 				if (result?.id) modal.host.id = result.id;
@@ -285,9 +292,18 @@ const tTableActions = $derived(t("table.actions"));
 					: hostsConfig.default;
 			await loadHosts();
 			return modal.host.id;
-		} catch (e) {
-			console.error(e);
+		} catch (e: any) {
+			const msg = e?.message || String(e);
+			if (msg.includes('name already exists')) {
+				showToast(tHostsNameexists, 'err');
+			} else if (msg.includes('endpoint already exists')) {
+				showToast(tHostsEndpointexists, 'err');
+			} else {
+				showToast(tHostsSavefailed + ': ' + msg, 'err');
+			}
 			return null;
+		} finally {
+			saving = false;
 		}
 	}
 
@@ -513,6 +529,7 @@ const tTableActions = $derived(t("table.actions"));
 	bind:host={modal.host}
 	bind:isDefault={modal.isDefault}
 	{testLoading}
+	{saving}
 	{genKeyLoading}
 	{copied}
 	onClose={closeModal}

@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./bin/dockerbox ."
+  cmd = "go build -ldflags \"-X main.version=dev\" -o ./bin/dockerbox ."
   bin = "./bin/dockerbox"
   full_bin = "CONFIG_PATH=./bin/config.yaml ./bin/dockerbox"
   include_dir = ["internal"]

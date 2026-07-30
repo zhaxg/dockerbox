@@ -45,7 +45,10 @@
     "connectFailed": "Connection failed",
     "cancel": "Cancel",
     "deleteConfirm": "Delete this host?",
-    "connectSuccess": "Connection successful"
+    "connectSuccess": "Connection successful",
+    "nameExists": "A host with this name already exists",
+    "endpointExists": "A host with this endpoint already exists",
+    "saveFailed": "Failed to save host"
   },
   "containers": {
     "title": "Containers",

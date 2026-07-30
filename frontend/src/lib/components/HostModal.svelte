@@ -40,6 +40,7 @@
 		}),
 		isDefault = $bindable(false),
 		testLoading = false,
+		saving = false,
 		genKeyLoading = false,
 		copied = {},
 		onClose,
@@ -60,6 +61,7 @@
 		host: any;
 		isDefault: boolean;
 		testLoading: boolean;
+		saving: boolean;
 		genKeyLoading: boolean;
 		copied: Record<string, boolean>;
 		onClose: () => void;
@@ -282,12 +284,13 @@
 	</div>
 
 	{#snippet footer()}
-		<Button variant="ghost" size="sm" onclick={onSaveAndTest} disabled={testLoading || !host.name || !host.endpoint}>
+		<Button variant="ghost" size="sm" onclick={onSaveAndTest} disabled={testLoading || saving || !host.name || !host.endpoint}>
 			{#if testLoading}<Spinner size={12} class="mr-1" />{:else}<Plug size={12} class="mr-1" />{/if}{tHostmodalTestconnection}
 		</Button>
 		<div class="flex items-center gap-2 px-1 py-1">
-			<Button variant="secondary" size="sm" onclick={onClose}>{tCommonCancel}</Button>
-			<Button variant="primary" size="sm" onclick={onSave} disabled={!host.name || !host.endpoint}>
+			<Button variant="secondary" size="sm" onclick={onClose} disabled={saving}>{tCommonCancel}</Button>
+			<Button variant="primary" size="sm" onclick={onSave} disabled={saving || !host.name || !host.endpoint}>
+				{#if saving}<Spinner size={12} class="mr-1" />{/if}
 				{mode === 'add' ? tHostmodalAdd : tCommonSave}
 			</Button>
 		</div>

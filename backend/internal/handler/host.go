@@ -97,6 +97,19 @@ func (h *HostHandler) CreateHost(w http.ResponseWriter, r *http.Request) {
 	if cfg.DockerHosts == nil {
 		cfg.DockerHosts = &model.DockerHostsConfig{Hosts: make(map[string]*model.DockerHost)}
 	}
+
+	// Check for duplicate name or endpoint
+	for _, existing := range cfg.DockerHosts.Hosts {
+		if existing.DisplayName == host.DisplayName {
+			writeError(w, "A host with this name already exists", model.ErrCodeValidationError, http.StatusConflict)
+			return
+		}
+		if existing.Endpoint == host.Endpoint {
+			writeError(w, "A host with this endpoint already exists", model.ErrCodeValidationError, http.StatusConflict)
+			return
+		}
+	}
+
 	hostID := generateHostID()
 	if _, exists := cfg.DockerHosts.Hosts[hostID]; exists {
 		writeError(w, "Host ID already exists", model.ErrCodeValidationError, http.StatusBadRequest)
@@ -143,6 +156,23 @@ func (h *HostHandler) UpdateHost(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		writeError(w, "Host not found", model.ErrCodeValidationError, http.StatusNotFound)
 		return
+	}
+
+	// Check for duplicate name or endpoint (excluding self)
+	if updates.DisplayName != "" || updates.Endpoint != "" {
+		for otherID, other := range cfg.DockerHosts.Hosts {
+			if otherID == id {
+				continue
+			}
+			if updates.DisplayName != "" && other.DisplayName == updates.DisplayName {
+				writeError(w, "A host with this name already exists", model.ErrCodeValidationError, http.StatusConflict)
+				return
+			}
+			if updates.Endpoint != "" && other.Endpoint == updates.Endpoint {
+				writeError(w, "A host with this endpoint already exists", model.ErrCodeValidationError, http.StatusConflict)
+				return
+			}
+		}
 	}
 
 	if updates.DisplayName != "" {

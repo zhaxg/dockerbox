@@ -849,6 +849,18 @@ const tSettingsTitle = $derived(t("settings.title"));
 						</div>
 					</section>
 				{/if}
+
+				<!-- About -->
+				<div class="flex items-center justify-center gap-2 py-6 text-xs text-text-muted">
+					<span>DockerBox v0.1.6</span>
+					<span>·</span>
+					<a
+						href="https://github.com/zhaxg/dockerbox"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-accent hover:underline"
+					>GitHub</a>
+				</div>
 			</div>
 		</main>
 	</div>

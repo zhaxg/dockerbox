@@ -45,7 +45,10 @@
     "connectFailed": "连接失败",
     "cancel": "取消",
     "deleteConfirm": "确定要删除这个主机吗？",
-    "connectSuccess": "连接成功"
+    "connectSuccess": "连接成功",
+    "nameExists": "已存在同名主机",
+    "endpointExists": "已存在相同端点的主机",
+    "saveFailed": "保存主机失败"
   },
   "containers": {
     "title": "容器",
