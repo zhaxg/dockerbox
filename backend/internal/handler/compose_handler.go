@@ -412,7 +412,7 @@ func (h *DockerHandler) ScanAvailableProjects(w http.ResponseWriter, r *http.Req
 		if sshHost != "" {
 			// SSH: one command to find all compose files
 			sshKey := svc.GetSSHKey()
-			discovered, err := sshScanComposeProjects(sshHost, sshKey, basePath)
+			discovered, err := sshScanComposeProjects(hostID, sshHost, sshKey, basePath)
 			if err != nil {
 				continue
 			}
@@ -468,9 +468,9 @@ func parseSSHHost(sshHost string) (host, port string) {
 }
 
 // sshScanComposeProjects scans a remote directory for compose projects in one SSH call.
-func sshScanComposeProjects(sshHost, sshKey, basePath string) ([]model.ComposeProject, error) {
+func sshScanComposeProjects(hostID, sshHost, sshKey, basePath string) ([]model.ComposeProject, error) {
 	host, port := parseSSHHost(sshHost)
-	keyFile := service.WriteSSHKeyTemp(sshKey)
+	keyFile := service.WriteSSHKeyTemp(hostID, sshKey)
 	defer os.Remove(keyFile)
 	
 	// One SSH call: find all compose files at depth 2

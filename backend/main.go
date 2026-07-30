@@ -199,7 +199,7 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 	var dockerService *service.DockerService
 	if cfg.DockerHosts != nil {
 		for id, host := range cfg.DockerHosts.Hosts {
-			hostCfg := service.DockerServiceConfig{}
+			hostCfg := service.DockerServiceConfig{HostID: id}
 			switch host.Driver {
 			case "tcp":
 				hostCfg.Host = "tcp://" + host.Endpoint
@@ -246,7 +246,7 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 		if cfg.DockerHosts != nil {
 			dockerHandler.SetDefaultHost(cfg.DockerHosts.Default)
 			for id, host := range cfg.DockerHosts.Hosts {
-				hostCfg := service.DockerServiceConfig{}
+				hostCfg := service.DockerServiceConfig{HostID: id}
 				switch host.Driver {
 				case "tcp":
 					hostCfg.Host = "tcp://" + host.Endpoint
@@ -316,7 +316,7 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 		if cfg.DockerHosts != nil {
 			sseHandler.SetDefaultHost(cfg.DockerHosts.Default)
 			for id, host := range cfg.DockerHosts.Hosts {
-				hostCfg := service.DockerServiceConfig{}
+				hostCfg := service.DockerServiceConfig{HostID: id}
 				switch host.Driver {
 				case "tcp":
 					hostCfg.Host = "tcp://" + host.Endpoint

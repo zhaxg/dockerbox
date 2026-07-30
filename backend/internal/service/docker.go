@@ -153,6 +153,7 @@ type DockerServiceConfig struct {
 	SocketPath string // e.g., /var/run/docker.sock
 	Host       string // e.g., tcp://192.168.1.100:2375 (overrides SocketPath)
 	SSHKey     string // path to SSH private key for ssh:// connections
+	HostID     string // host identifier for SSH key file naming
 }
 
 // NewDockerService creates a new Docker service.
@@ -166,7 +167,7 @@ func NewDockerService(cfg DockerServiceConfig) (*DockerService, error) {
 		if strings.HasPrefix(cfg.Host, "ssh://") {
 			if cfg.SSHKey != "" {
 				// SSH with explicit key - write key to temp file and use custom dialer
-				keyFile := WriteSSHKeyTemp(cfg.SSHKey)
+				keyFile := WriteSSHKeyTemp(cfg.HostID, cfg.SSHKey)
 				if keyFile == "" {
 					return nil, fmt.Errorf("failed to write SSH key to temp file")
 				}

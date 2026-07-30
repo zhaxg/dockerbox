@@ -253,8 +253,8 @@ func (h *HostHandler) DeleteHost(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"message": "Host deleted"}, http.StatusOK)
 }
 
-func buildDockerCfg(target *model.DockerHost) service.DockerServiceConfig {
-	cfg := service.DockerServiceConfig{}
+func buildDockerCfg(hostID string, target *model.DockerHost) service.DockerServiceConfig {
+	cfg := service.DockerServiceConfig{HostID: hostID}
 	switch target.Driver {
 	case "tcp":
 		cfg.Host = "tcp://" + target.Endpoint
@@ -288,7 +288,7 @@ func (h *HostHandler) GetHostStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := map[string]interface{}{"status": "offline", "total": 0, "running": 0, "stopped": 0}
-	dockerCfg := buildDockerCfg(target)
+	dockerCfg := buildDockerCfg(id, target)
 	dockerSvc, err := service.NewDockerService(dockerCfg)
 	if err != nil {
 		result["message"] = err.Error()
@@ -330,7 +330,7 @@ func (h *HostHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dockerCfg := buildDockerCfg(target)
+	dockerCfg := buildDockerCfg(id, target)
 
 	dockerSvc, err := service.NewDockerService(dockerCfg)
 	if err != nil {

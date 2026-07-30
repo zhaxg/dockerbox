@@ -4,6 +4,7 @@ import (
 		"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"io"
 	"regexp"
@@ -78,7 +79,7 @@ func (r *ComposeRunner) Start(id string, hostID string, sshHost string, sshKey s
 				host = host[:idx]
 			}
 		}
-		keyFile := WriteSSHKeyTemp(sshKey)
+		keyFile := WriteSSHKeyTemp(hostID, sshKey)
 		sshArgs := []string{"-i", keyFile, "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-p", port, host, "cd "+workDir+" && PODMAN_COMPOSE_WARNING_LOGS=false "+runtime+" compose "+strings.Join(args, " ")}
 		cmd = exec.CommandContext(ctx, "ssh", sshArgs...)
 	} else {
@@ -334,13 +335,13 @@ func (r *ComposeRunner) StartRedeploy(id string, hostID string, sshHost string, 
 	r.runs[id] = run
 	r.mu.Unlock()
 
-	go r.executeRedeploy(run, workDir, sshHost, sshKey)
+	go r.executeRedeploy(run, workDir, sshHost, sshKey, hostID)
 
 	return run
 }
 
 // executeRedeploy runs down -> pull -> up sequentially.
-func (r *ComposeRunner) executeRedeploy(run *ComposeRun, workDir string, sshHost string, sshKey string) {
+func (r *ComposeRunner) executeRedeploy(run *ComposeRun, workDir string, sshHost string, sshKey string, hostID string) {
 	defer close(run.Done)
 	defer func() {
 		if run.logMgr != nil {
@@ -385,7 +386,7 @@ func (r *ComposeRunner) executeRedeploy(run *ComposeRun, workDir string, sshHost
 					host = host[:idx]
 				}
 			}
-			keyFile := WriteSSHKeyTemp(sshKey)
+			keyFile := WriteSSHKeyTemp(hostID, sshKey)
 			defer os.Remove(keyFile)
 			sshArgs := []string{"-i", keyFile, "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-p", port, host, "cd " + workDir + " && PODMAN_COMPOSE_WARNING_LOGS=false " + run.runtime + " compose " + strings.Join(step.args, " ")}
 			cmd = exec.CommandContext(context.Background(), "ssh", sshArgs...)
@@ -519,13 +520,13 @@ func (r *ComposeRunner) StartLogs(id string, hostID string, sshHost string, sshK
 	r.runs[id] = run
 	r.mu.Unlock()
 
-	go r.executeLogs(run, workDir, sshHost, sshKey)
+	go r.executeLogs(run, workDir, sshHost, sshKey, hostID)
 
 	return run
 }
 
 // executeLogs runs docker compose logs -f --tail 200 and streams output.
-func (r *ComposeRunner) executeLogs(run *ComposeRun, workDir string, sshHost string, sshKey string) {
+func (r *ComposeRunner) executeLogs(run *ComposeRun, workDir string, sshHost string, sshKey string, hostID string) {
 	defer close(run.Done)
 	defer func() {
 		run.mu.Lock()
@@ -551,7 +552,7 @@ func (r *ComposeRunner) executeLogs(run *ComposeRun, workDir string, sshHost str
 				host = host[:idx]
 			}
 		}
-		keyFile := WriteSSHKeyTemp(sshKey)
+		keyFile := WriteSSHKeyTemp(hostID, sshKey)
 		sshArgs := []string{"-i", keyFile, "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-p", port, host, "cd " + workDir + " && PODMAN_COMPOSE_WARNING_LOGS=false " + run.runtime + " compose logs -f --tail 200"}
 		cmd = exec.CommandContext(context.Background(), "ssh", sshArgs...)
 	} else {
@@ -637,16 +638,13 @@ func (r *ComposeRunner) executeLogs(run *ComposeRun, workDir string, sshHost str
 }
 
 // writeSSHKey writes the SSH key to a temp file and returns the path.
-func WriteSSHKeyTemp(key string) string {
+func WriteSSHKeyTemp(hostID, key string) string {
 	if key == "" {
 		return ""
 	}
-	tmpFile, err := os.CreateTemp("", "boxbox-ssh-*")
-	if err != nil {
+	keyPath := filepath.Join(os.TempDir(), "boxbox-ssh-"+hostID)
+	if err := os.WriteFile(keyPath, []byte(key), 0600); err != nil {
 		return ""
 	}
-	tmpFile.WriteString(key)
-	tmpFile.Close()
-	os.Chmod(tmpFile.Name(), 0600)
-	return tmpFile.Name()
+	return keyPath
 }
