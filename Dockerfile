@@ -45,8 +45,9 @@ COPY --from=frontend-builder /app/build ./internal/static/dist/
 
 # Build the binary with embedded static files
 # CGO_ENABLED=0 for static binary, ldflags for smaller size
+ARG VERSION=dev
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-w -s -X main.version=v0.1.6" \
+    -ldflags="-w -s -X main.version=${VERSION}" \
     -o /server \
     .
 
