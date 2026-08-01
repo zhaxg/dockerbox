@@ -38,6 +38,9 @@ const tComposeRedeploy = $derived(t("compose.restartProject"));
 const tComposePrune = $derived(t("compose.prune"));
 const tComposePruneconfirm = $derived(t("compose.pruneConfirm"));
 const tComposeStopanddeletewithvolume = $derived(t("compose.stopAndDeleteWithVolume"));
+const tComposeDeleteproject = $derived(t("compose.deleteProject"));
+const tComposeDeleteconfirm = $derived(t("compose.deleteConfirm"));
+const tComposeStopanddelete = $derived(t("compose.stopAndDelete"));
 const tComposeDeploying = $derived(t("compose.deploying"));
 const tComposeDeploycomplete = $derived(t("compose.deployComplete"));
 const tComposeDeployfailed = $derived(t("compose.deployFailed"));
@@ -433,6 +436,22 @@ const tTableActions = $derived(t("table.actions"));
 			try {
 				const m = await import('monaco-editor');
 				monacoApi = m.default || m;
+				// Configure Monaco web workers using blob: URLs (CSP blocks data: URLs)
+				if (!self.MonacoEnvironment) {
+					self.MonacoEnvironment = {
+						getWorker: async function (_workerId: string, label: string) {
+							const workerPaths: Record<string, string> = {
+								json: '/monaco/json.worker.js'
+							};
+							const path = workerPaths[label] || '/monaco/editor.worker.js';
+							const resp = await fetch(path);
+							const code = await resp.text();
+							const blob = new Blob([code], { type: 'application/javascript' });
+							const blobUrl = URL.createObjectURL(blob);
+							return new Worker(blobUrl, { name: label });
+						}
+					};
+				}
 			} catch (e) { console.error(e); return; }
 		}
 		// Wait for DOM to render the modal

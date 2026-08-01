@@ -189,7 +189,7 @@ const tSettingsTitle = $derived(t("settings.title"));
 
 	const navButtonClass =
 		'group flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3 py-2 text-left transition-colors duration-100 hover:bg-surface-secondary';
-	const activeNavClass = 'bg-selection text-white hover:bg-selection-hover';
+	const activeNavClass = 'bg-selection text-text-primary hover:bg-selection-hover';
 	const inactiveNavClass = 'text-text-secondary hover:text-text-primary';
 	const toolbarButtonClass =
 		'flex h-7 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-text-secondary transition-all duration-100 hover:bg-surface-elevated hover:text-text-primary';

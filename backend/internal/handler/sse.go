@@ -52,14 +52,14 @@ func (h *SSEHandler) getCollector(r *http.Request) *service.CollectorBackground 
 	if hostID == "" {
 		hostID = r.URL.Query().Get("host")
 	}
-	if hostID == "" {
-		hostID = r.URL.Query().Get("host")
-	}
 	if hostID != "" {
 		if c, ok := h.hostCollectors[hostID]; ok {
 			return c
 		}
+		// Host specified but collector not found — don't silently fall back
+		return nil
 	}
+	// No host specified — use default
 	if h.defaultHostID != "" {
 		if c, ok := h.hostCollectors[h.defaultHostID]; ok {
 			return c
@@ -74,14 +74,14 @@ func (h *SSEHandler) getDockerService(r *http.Request) *service.DockerService {
 	if hostID == "" {
 		hostID = r.URL.Query().Get("host")
 	}
-	if hostID == "" {
-		hostID = r.URL.Query().Get("host")
-	}
 	if hostID != "" {
 		if svc, ok := h.services[hostID]; ok {
 			return svc
 		}
+		// Host specified but service not found — don't silently fall back
+		return nil
 	}
+	// No host specified — use default
 	if h.defaultHostID != "" {
 		if svc, ok := h.services[h.defaultHostID]; ok {
 			return svc
@@ -133,6 +133,10 @@ func (h *SSEHandler) StreamStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	docker := h.getDockerService(r)
+	if docker == nil {
+		http.Error(w, "Host not found or unavailable", http.StatusNotFound)
+		return
+	}
 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -175,6 +179,10 @@ func (h *SSEHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	docker := h.getDockerService(r)
+	if docker == nil {
+		http.Error(w, "Host not found or unavailable", http.StatusNotFound)
+		return
+	}
 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()

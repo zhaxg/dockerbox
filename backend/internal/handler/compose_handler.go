@@ -22,7 +22,12 @@ func (h *DockerHandler) ListComposeProjects(w http.ResponseWriter, r *http.Reque
 		hostID = h.defaultHostID
 	}
 
-	projects, err := h.getService(r).ListComposeProjects(r.Context())
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	projects, err := svc.ListComposeProjects(r.Context())
 	if err != nil {
 		writeError(w, "Failed to list compose projects", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -105,6 +110,10 @@ func (h *DockerHandler) CreateComposeProject(w http.ResponseWriter, r *http.Requ
 	}
 
 	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
 	result, err := svc.CreateComposeProject(r.Context(), req.Name, req.ComposeContent, req.EnvContent, req.BasePath)
 	if err != nil {
 		writeError(w, result.Message, model.ErrCodeInternalError, http.StatusInternalServerError)
@@ -133,6 +142,10 @@ func (h *DockerHandler) ComposeUp(w http.ResponseWriter, r *http.Request) {
 
 	// Detect actual container state, pick the right command
 	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
 	args, msg := svc.GetComposeUpArgs(r.Context(), id)
 
 	// Log the action
@@ -177,6 +190,10 @@ func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
 
 	// Synchronous stop — avoids runner race with concurrent up
 	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
 
 	// Log the action
 	if lm, err := service.OpenLog(getHostID(r), id); err == nil {
@@ -223,7 +240,12 @@ func (h *DockerHandler) ComposeRestart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	runner := service.GetComposeRunner()
-	runner.Start(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"restart"}, path)
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	runner.Start(id, getHostID(r), svc.GetSSHHost(), svc.GetSSHKey(), svc.Runtime(), []string{"restart"}, path)
 
 	writeJSON(w, map[string]string{"status": "started", "message": "Compose restart started"}, http.StatusOK)
 }
@@ -242,8 +264,14 @@ func (h *DockerHandler) ComposeRedeploy(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+
 	runner := service.GetComposeRunner()
-	runner.StartRedeploy(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), path)
+	runner.StartRedeploy(id, getHostID(r), svc.GetSSHHost(), svc.GetSSHKey(), svc.Runtime(), path)
 
 	writeJSON(w, map[string]string{"status": "started", "message": "Redeploy started"}, http.StatusOK)
 }
@@ -281,7 +309,12 @@ func (h *DockerHandler) GetComposeFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content, err := h.getService(r).GetComposeFile(r.Context(), path)
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	content, err := svc.GetComposeFile(r.Context(), path)
 	if err != nil {
 		writeError(w, "Failed to get compose file", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -312,7 +345,12 @@ func (h *DockerHandler) SaveComposeFile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.getService(r).SaveComposeFile(path, req.Content); err != nil {
+	svc2 := h.getService(r)
+	if svc2 == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	if err := svc2.SaveComposeFile(path, req.Content); err != nil {
 		writeError(w, "Failed to save compose file", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -344,7 +382,12 @@ func (h *DockerHandler) DeleteComposeProject(w http.ResponseWriter, r *http.Requ
 
 	// Run docker compose down to stop and remove containers
 	runner := service.GetComposeRunner()
-	runner.Start(id, getHostID(r), h.getService(r).GetSSHHost(), h.getService(r).GetSSHKey(), h.getService(r).Runtime(), []string{"down", "-v"}, path)
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	runner.Start(id, getHostID(r), svc.GetSSHHost(), svc.GetSSHKey(), svc.Runtime(), []string{"down", "-v"}, path)
 
 	// Remove from compose store
 	hostID := getHostID(r)
@@ -398,6 +441,10 @@ func (h *DockerHandler) ScanAvailableProjects(w http.ResponseWriter, r *http.Req
 	}
 	// Also exclude projects discovered from container labels
 	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
 	if projects, err := svc.ListComposeProjects(r.Context()); err == nil {
 		for _, p := range projects {
 			existingMap[p.Name] = true
@@ -520,6 +567,10 @@ func (h *DockerHandler) ComposeClean(w http.ResponseWriter, r *http.Request) {
 	}
 
 	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
 
 	// Log the action
 	if lm, err := service.OpenLog(getHostID(r), id); err == nil {

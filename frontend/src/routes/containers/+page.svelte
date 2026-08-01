@@ -220,6 +220,7 @@ const tTableActions = $derived(t("table.actions"));
 
 	async function loadContainers() {
 		loading = true;
+		containers = [];
 		try {
 			const data = await dockerApi.get<{ containers: ContainerInfo[] }>('/docker/containers');
 			containers = data.containers || [];
@@ -235,24 +236,9 @@ const tTableActions = $derived(t("table.actions"));
 		if (!token) return;
 		const hostId = localStorage.getItem('currentHostId') || '';
 		eventSource = new EventSource(`/api/v1/sse/stats?token=${token}&host=${hostId}`);
-		eventSource.addEventListener('stats', (event) => {
-			try {
-				const data = JSON.parse(event.data);
-				if (data.containers) {
-					for (const update of data.containers) {
-						const idx = containers.findIndex((c) => c.id === update.id);
-						if (idx !== -1) {
-							containers[idx] = {
-								...containers[idx],
-								cpu: update.cpu ?? containers[idx].cpu,
-								memory: update.memory ?? containers[idx].memory,
-								network: update.network ?? containers[idx].network
-							};
-						}
-					}
-				}
-			} catch {}
-		});
+		// Backend /sse/stats sends aggregate container/image counts only,
+		// not per-container CPU/mem data. Per-container stats are fetched
+		// during loadContainers(). No action needed here.
 	}
 
 	function showConfirm(title: string, message: string, onConfirm: () => void) {

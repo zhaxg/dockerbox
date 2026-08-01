@@ -61,12 +61,14 @@ func (h *DockerHandler) SetDefaultHost(hostID string) {
 
 // getService returns the DockerService for the current request's host.
 // Requires hostId in request — use requireHostID middleware.
+// Returns nil if the requested hostId has no registered service (caller must check).
 func (h *DockerHandler) getService(r *http.Request) *service.DockerService {
 	hostID := getHostID(r)
 	if svc, ok := h.services[hostID]; ok {
 		return svc
 	}
-	return h.dockerService
+	// Don't silently fall back to default — return nil so caller can return proper error
+	return nil
 }
 
 // getComposePaths returns compose scan directories for the current request's host.
@@ -81,11 +83,14 @@ func (h *DockerHandler) getComposePaths(r *http.Request) []string {
 // resolveProjectPath resolves a project ID to its file system path using the request's host service.
 func (h *DockerHandler) resolveProjectPath(ctx context.Context, r *http.Request, id string) (string, error) {
 	// Check container labels first
-	projects, err := h.getService(r).ListComposeProjects(ctx)
-	if err == nil {
-		for _, p := range projects {
-			if p.ID == id {
-				return p.Path, nil
+	svc := h.getService(r)
+	if svc != nil {
+		projects, err := svc.ListComposeProjects(ctx)
+		if err == nil {
+			for _, p := range projects {
+				if p.ID == id {
+					return p.Path, nil
+				}
 			}
 		}
 	}
@@ -165,7 +170,12 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 // GetHostIP returns the Docker host's IP address.
 // ListContainers returns all Docker containers.
 func (h *DockerHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
-	containers, err := h.getService(r).ListContainers(r.Context())
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	containers, err := svc.ListContainers(r.Context())
 	if err != nil {
 		writeError(w, "Failed to list containers", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -177,7 +187,7 @@ func (h *DockerHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				cpu, mem, net, err := h.getService(r).GetStats(r.Context(), containers[idx].ID)
+				cpu, mem, net, err := svc.GetStats(r.Context(), containers[idx].ID)
 				if err == nil {
 					containers[idx].CPU = cpu
 					containers[idx].Memory = mem
@@ -199,7 +209,12 @@ func (h *DockerHandler) GetContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	container, err := h.getService(r).GetContainer(r.Context(), id)
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	container, err := svc.GetContainer(r.Context(), id)
 	if err != nil {
 		writeError(w, "Failed to get container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -216,7 +231,12 @@ func (h *DockerHandler) InspectContainer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	info, err := h.getService(r).GetContainer(r.Context(), id)
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	info, err := svc.GetContainer(r.Context(), id)
 	if err != nil {
 		writeError(w, "Failed to inspect container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -233,7 +253,12 @@ func (h *DockerHandler) StartContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.getService(r).StartContainer(r.Context(), id); err != nil {
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	if err := svc.StartContainer(r.Context(), id); err != nil {
 		writeError(w, "Failed to start container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -249,7 +274,12 @@ func (h *DockerHandler) StopContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.getService(r).StopContainer(r.Context(), id); err != nil {
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	if err := svc.StopContainer(r.Context(), id); err != nil {
 		writeError(w, "Failed to stop container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -265,7 +295,12 @@ func (h *DockerHandler) RestartContainer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.getService(r).RestartContainer(r.Context(), id); err != nil {
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	if err := svc.RestartContainer(r.Context(), id); err != nil {
 		writeError(w, "Failed to restart container", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
 	}
@@ -289,7 +324,12 @@ func (h *DockerHandler) GetContainerLogs(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	logs, err := h.getService(r).GetContainerLogs(r.Context(), id, tail)
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	logs, err := svc.GetContainerLogs(r.Context(), id, tail)
 	if err != nil {
 		writeError(w, "Failed to get container logs", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -301,7 +341,12 @@ func (h *DockerHandler) GetContainerLogs(w http.ResponseWriter, r *http.Request)
 // GetStats returns resource usage statistics for a container.
 // PruneImages removes unused Docker images.
 func (h *DockerHandler) PruneImages(w http.ResponseWriter, r *http.Request) {
-	reclaimed, err := h.getService(r).PruneImages(r.Context())
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	reclaimed, err := svc.PruneImages(r.Context())
 	if err != nil {
 		writeError(w, "Failed to prune images", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -322,7 +367,12 @@ func (h *DockerHandler) PruneImages(w http.ResponseWriter, r *http.Request) {
 
 // PruneNetworks removes unused Docker networks.
 func (h *DockerHandler) PruneNetworks(w http.ResponseWriter, r *http.Request) {
-	reclaimed, err := h.getService(r).PruneNetworks(r.Context())
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	reclaimed, err := svc.PruneNetworks(r.Context())
 	if err != nil {
 		writeError(w, "Failed to prune networks", model.ErrCodeInternalError, http.StatusInternalServerError)
 		return
@@ -372,6 +422,10 @@ func (h *DockerHandler) ExecWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	svc := h.getService(r)
+	if svc == nil {
+		conn.WriteMessage(websocket.TextMessage, []byte("Error: host not found or unavailable"))
+		return
+	}
 	shell := svc.DetectShell(r.Context(), id)
 	execID, err := svc.CreateExec(r.Context(), id, []string{shell, "-i"})
 	if err != nil {
