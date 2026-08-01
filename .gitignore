@@ -53,3 +53,5 @@ tmp/
 vendor/
 .vscode/
 backend/dockerbox
+dist/
+frontend/static/monaco/

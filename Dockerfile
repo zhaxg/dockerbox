@@ -63,7 +63,8 @@ WORKDIR /app
 # - tzdata: Timezone support
 # - wget: Health check
 # - openssh-client: SSH connections to Docker hosts
-RUN apk add --no-cache ca-certificates tzdata wget openssh-client
+# - docker-cli: Docker Compose operations on local socket
+RUN apk add --no-cache ca-certificates tzdata wget openssh-client docker-cli docker-cli-compose
 
 # Copy binary from builder
 COPY --from=backend-builder /server /app/server

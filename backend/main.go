@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -22,6 +23,8 @@ import (
 	"dockerbox/backend/internal/model"
 	"dockerbox/backend/internal/pkg/filesystem"
 	"dockerbox/backend/internal/service"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/api/types/container"
 	"dockerbox/backend/internal/static"
 	"dockerbox/backend/internal/websocket"
 )
@@ -55,6 +58,27 @@ func (f *aliasStrFlag) String() string {
 func (f *aliasStrFlag) Set(val string) error {
 	*f.target = val
 	return nil
+}
+
+// getOwnContainerID detects the current container ID by querying Docker API (Dockhand-style).
+func getOwnContainerID(dockerClient *client.Client) string {
+	// List all containers and find the one whose hostname matches ours
+	hostname, _ := os.Hostname()
+	if hostname == "" {
+		return ""
+	}
+	containers, err := dockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
+	if err != nil {
+		return ""
+	}
+	for _, c := range containers {
+		// Container name starts with /
+		name := strings.TrimPrefix(c.Names[0], "/")
+		if name == hostname || strings.HasPrefix(c.ID, hostname) {
+			return c.ID
+		}
+	}
+	return ""
 }
 
 func main() {
@@ -267,6 +291,21 @@ func initializeServer(ctx context.Context, cfg *model.ServerConfig) (*http.Serve
 				var hostComposePaths []string
 				if dockerMP, ok := host.MountPoints["docker"]; ok && dockerMP != nil {
 					hostComposePaths = append(hostComposePaths, dockerMP.Path)
+					// For local socket hosts, detect mount mapping from our own container's mounts
+					// (same approach as Dockhand: inspect self → get source=destination mapping)
+					if host.Driver == "socket" {
+						containerID := getOwnContainerID(svc.Client()); log.Info().Str("host", id).Str("cid", containerID).Msg("CID detect"); if containerID != "" {
+							if mounts, err := svc.Client().ContainerInspect(ctx, containerID); err == nil {
+								for _, m := range mounts.Mounts {
+									destClean := strings.TrimRight(m.Destination, "/"); pathClean := strings.TrimRight(dockerMP.Path, "/"); if destClean == pathClean || strings.HasPrefix(destClean, pathClean) {
+										dockerHandler.SetHostMountPath(id, m.Source+"="+m.Destination)
+										log.Info().Str("host", id).Str("source", m.Source).Str("dest", m.Destination).Msg("Detected mount mapping for path translation")
+										break
+									}
+								}
+							}
+						}
+					}
 				}
 				dockerHandler.SetComposePaths(id, hostComposePaths)
 			}
@@ -386,7 +425,7 @@ func createRouter(
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
+		w.Write([]byte(`{"status":"ok","version":"` + version + `"}`))
 	})
 
 	// API routes
@@ -395,7 +434,7 @@ func createRouter(
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok"}`))
+			w.Write([]byte(`{"status":"ok","version":"` + version + `"}`))
 		})
 		// Public routes (no auth required)
 		// Auth routes are rate-limited to prevent brute force attacks

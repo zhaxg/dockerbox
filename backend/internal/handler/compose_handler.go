@@ -140,6 +140,10 @@ func (h *DockerHandler) ComposeUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Translate host path to container path for local socket hosts
+	hostIDUp := getHostID(r)
+	path = h.translateToContainerPath(hostIDUp, path)
+
 	// Detect actual container state, pick the right command
 	svc := h.getService(r)
 	if svc == nil {
@@ -188,6 +192,10 @@ func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Translate host path to container path for local socket hosts
+	hostID := getHostID(r)
+	path = h.translateToContainerPath(hostID, path)
+
 	// Synchronous stop — avoids runner race with concurrent up
 	svc := h.getService(r)
 	if svc == nil {
@@ -201,6 +209,7 @@ func (h *DockerHandler) ComposeDown(w http.ResponseWriter, r *http.Request) {
 		lm.Close()
 	}
 
+	
 	result, err := svc.ComposeDown(r.Context(), path)
 	if err != nil {
 		if lm, err2 := service.OpenLog(getHostID(r), id); err2 == nil {
@@ -232,6 +241,10 @@ func (h *DockerHandler) ComposeRestart(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
+
+	// Translate host path to container path for local socket hosts
+	hostIDRestart := getHostID(r)
+	path = h.translateToContainerPath(hostIDRestart, path)
 
 	// Log the action
 	if lm, err := service.OpenLog(getHostID(r), id); err == nil {
@@ -309,6 +322,10 @@ func (h *DockerHandler) GetComposeFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Translate host path to container path for local socket hosts
+	hostIDFile := getHostID(r)
+	path = h.translateToContainerPath(hostIDFile, path)
+
 	svc := h.getService(r)
 	if svc == nil {
 		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
@@ -336,6 +353,10 @@ func (h *DockerHandler) SaveComposeFile(w http.ResponseWriter, r *http.Request) 
 		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
+
+	// Translate host path to container path for local socket hosts
+	hostIDSave := getHostID(r)
+	path = h.translateToContainerPath(hostIDSave, path)
 
 	var req struct {
 		Content string `json:"content"`
@@ -424,6 +445,85 @@ func (h *DockerHandler) CheckComposeName(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, map[string]bool{"exists": false}, http.StatusOK)
+}
+
+// ComposeImport imports selected discovered projects into the compose store.
+func (h *DockerHandler) ComposeImport(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Names []string `json:"names"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "Invalid request body", model.ErrCodeValidationError, http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Names) == 0 {
+		writeError(w, "No project names provided", model.ErrCodeValidationError, http.StatusBadRequest)
+		return
+	}
+
+	hostID := getHostID(r)
+	if hostID == "" {
+		hostID = h.defaultHostID
+	}
+
+	// Re-scan available projects to find their paths
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+
+	nameSet := make(map[string]bool, len(req.Names))
+	for _, n := range req.Names {
+		nameSet[n] = true
+	}
+
+	paths := h.getComposePaths(r)
+	sshHost := svc.GetSSHHost()
+	store := service.GetComposeStore()
+	imported := 0
+
+	for _, basePath := range paths {
+		if sshHost != "" {
+			sshKey := svc.GetSSHKey()
+			discovered, err := sshScanComposeProjects(hostID, sshHost, sshKey, basePath)
+			if err != nil {
+				continue
+			}
+			for _, d := range discovered {
+				if nameSet[d.Name] {
+					store.Add(hostID, d.Name, d.Path)
+					imported++
+					delete(nameSet, d.Name)
+				}
+			}
+		} else {
+			dirEntries, err := os.ReadDir(basePath)
+			if err != nil {
+				continue
+			}
+			for _, e := range dirEntries {
+				if !e.IsDir() || !nameSet[e.Name()] {
+					continue
+				}
+				composePath := filepath.Join(basePath, e.Name())
+				for _, fname := range []string{"docker-compose.yml", "compose.yml", "docker-compose.yaml", "compose.yaml"} {
+					if _, err := os.Stat(filepath.Join(composePath, fname)); err == nil {
+						store.Add(hostID, e.Name(), composePath)
+						imported++
+						delete(nameSet, e.Name())
+						break
+					}
+				}
+			}
+		}
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"imported": imported,
+		"message":  fmt.Sprintf("Imported %d project(s)", imported),
+	}, http.StatusOK)
 }
 
 // ScanAvailableProjects scans compose paths for projects not yet in the store.
@@ -565,6 +665,10 @@ func (h *DockerHandler) ComposeClean(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err.Error(), model.ErrCodeValidationError, http.StatusBadRequest)
 		return
 	}
+
+	// Translate host path to container path for local socket hosts
+	hostIDClean := getHostID(r)
+	path = h.translateToContainerPath(hostIDClean, path)
 
 	svc := h.getService(r)
 	if svc == nil {

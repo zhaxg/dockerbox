@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
@@ -21,6 +22,7 @@ type DockerHandler struct {
 	composePaths     []string               // default compose paths
 	services         map[string]*service.DockerService // host ID → service
 	hostComposePaths map[string][]string    // host ID → compose paths
+	hostMountPaths   map[string]string      // host ID → container mount base path (e.g. /opt/docker)
 	defaultHostID    string
 }
 
@@ -34,6 +36,7 @@ func NewDockerHandler(dockerService *service.DockerService, composePaths []strin
 		composePaths:     composePaths,
 		services:         make(map[string]*service.DockerService),
 		hostComposePaths: make(map[string][]string),
+		hostMountPaths:   make(map[string]string),
 	}
 }
 
@@ -110,6 +113,32 @@ func (h *DockerHandler) resolveProjectPath(ctx context.Context, r *http.Request,
 	return "", fmt.Errorf("project not found: %s", id)
 }
 
+// SetHostMountPath sets the container-side mount base path for a host (for local socket hosts).
+func (h *DockerHandler) SetHostMountPath(hostID string, containerPath string) {
+	h.hostMountPaths[hostID] = containerPath
+}
+
+// translateToContainerPath translates a host path to the container-internal path for local socket hosts.
+// Uses mount mappings detected at startup from the container's own mounts (Dockhand-style).
+// hostMountPaths stores "source=destination" pairs, e.g. "/vol1/1000/docker=/opt/docker"
+func (h *DockerHandler) translateToContainerPath(hostID string, hostPath string) string {
+	mountMap, ok := h.hostMountPaths[hostID]
+	if !ok || mountMap == "" {
+		return hostPath
+	}
+	parts := strings.SplitN(mountMap, "=", 2)
+	if len(parts) != 2 {
+		return hostPath
+	}
+	hostBase := strings.TrimRight(parts[0], "/")
+	containerBase := strings.TrimRight(parts[1], "/")
+	if strings.HasPrefix(hostPath, hostBase) {
+		rel := hostPath[len(hostBase):]
+		return containerBase + rel
+	}
+	return hostPath
+}
+
 // RegisterRoutes registers Docker routes on the given router.
 
 // requireHostID middleware enforces that every request carries a valid hostId.
@@ -146,6 +175,7 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/compose", func(r chi.Router) {
 		r.Get("/", h.ListComposeProjects)
 		r.Get("/available", h.ScanAvailableProjects)
+		r.Post("/import", h.ComposeImport)
 		r.Get("/check-name", h.CheckComposeName)
 		r.Post("/", h.CreateComposeProject)
 		r.Post("/{id}/up", h.ComposeUp)

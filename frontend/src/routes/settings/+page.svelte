@@ -2,10 +2,11 @@
 	/**
 	 * Settings page - workspace-style preferences screen matching the file browser shell.
 	 */
-	import { onDestroy, tick } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { authStore } from '$lib/stores/auth';
+	import { api } from '$lib/api/client';
 	import {
 		DEFAULT_ACCENT_COLOR,
 		isValidBackgroundImage,
@@ -105,6 +106,7 @@ const tSettingsTitle = $derived(t("settings.title"));
 	}
 	let activeCategory = $state<SettingsCategory>('all');
 	let searchQuery = $state('');
+	let appVersion = $state('dev');
 	let isApplyingSettings = $state(false);
 	let applyProgress = $state(0);
 	let applyProgressStatus = $state('');
@@ -199,6 +201,14 @@ const tSettingsTitle = $derived(t("settings.title"));
 		'flex items-start justify-between gap-4 border-b border-border-secondary bg-surface-primary/55 px-4 py-3';
 	const settingRowClass =
 		'flex min-h-12 items-center justify-between gap-4 border-b border-border-secondary px-4 py-2 last:border-b-0';
+
+	onMount(async () => {
+		try {
+			const resp = await fetch('/api/v1/health');
+			const data = await resp.json();
+			if (data.version) appVersion = data.version;
+		} catch {}
+	});
 
 	onDestroy(() => {
 		clearApplyProgressResetTimer();
@@ -852,7 +862,7 @@ const tSettingsTitle = $derived(t("settings.title"));
 
 				<!-- About -->
 				<div class="flex items-center justify-center gap-2 py-6 text-xs text-text-muted">
-					<span>DockerBox v0.1.6</span>
+					<span>DockerBox v{appVersion}</span>
 					<span>·</span>
 					<a
 						href="https://github.com/zhaxg/dockerbox"

@@ -120,14 +120,19 @@ func (s *DockerService) sshExec(ctx context.Context, cmd string) (string, error)
 
 // composeCommand returns the compose command for the given runtime.
 // For podman: uses "podman compose" with PODMAN_COMPOSE_WARNING_LOGS=false to suppress wrapper message.
-// For docker: uses "docker compose".
+// For docker: tries "docker compose" first, falls back to "docker-compose" standalone.
 func composeCommand(ctx context.Context, runtime string, args ...string) *exec.Cmd {
 	if runtime == "podman" {
 		cmd := exec.CommandContext(ctx, "podman", append([]string{"compose"}, args...)...)
 		cmd.Env = append(os.Environ(), "PODMAN_COMPOSE_WARNING_LOGS=false")
 		return cmd
 	}
-	return exec.CommandContext(ctx, "docker", append([]string{"compose"}, args...)...)
+	// Try "docker compose" (plugin) first
+	if err := exec.Command("docker", "compose", "version").Run(); err == nil {
+		return exec.CommandContext(ctx, "docker", append([]string{"compose"}, args...)...)
+	}
+	// Fall back to "docker-compose" (standalone binary)
+	return exec.CommandContext(ctx, "docker-compose", args...)
 }
 
 // DockerService handles Docker operations.
@@ -595,31 +600,50 @@ func (s *DockerService) GetComposeUpArgs(ctx context.Context, projectName string
 }
 
 func (s *DockerService) ComposeUp(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
+	if s.sshHost != "" && s.sshKey != "" {
+		cmdStr := "cd " + projectPath + " && " + s.runtime + " compose up -d"
+		result, sshErr := s.sshExec(ctx, cmdStr)
+		if sshErr != nil {
+			return &model.ComposeAction{Success: false, Message: "Failed to start compose project", Output: result}, sshErr
+		}
+		return &model.ComposeAction{Success: true, Message: "Compose project started", Output: result}, nil
+	}
 	cmd := composeCommand(ctx, s.runtime, "up", "-d")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return &model.ComposeAction{
-			Success: false,
-			Message: "Failed to start compose project",
-			Output:  string(output),
-		}, err
+		return &model.ComposeAction{Success: false, Message: "Failed to start compose project", Output: string(output)}, err
 	}
 
-	return &model.ComposeAction{
-		Success: true,
-		Message: "Compose project started",
-		Output:  string(output),
-	}, nil
+	return &model.ComposeAction{Success: true, Message: "Compose project started", Output: string(output)}, nil
 }
 
 // ComposeDown runs docker-compose down.
 func (s *DockerService) ComposeDown(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
+	var output []byte
+	var err error
+	if s.sshHost != "" && s.sshKey != "" {
+		// Remote host via SSH
+		cmdStr := "cd " + projectPath + " && " + s.runtime + " compose down"
+		result, sshErr := s.sshExec(ctx, cmdStr)
+		if sshErr != nil {
+			return &model.ComposeAction{
+				Success: false,
+				Message: "Failed to stop compose project",
+				Output:  result,
+			}, sshErr
+		}
+		return &model.ComposeAction{
+			Success: true,
+			Message: "Compose project stopped",
+			Output:  result,
+		}, nil
+	}
 	cmd := composeCommand(ctx, s.runtime, "down")
 	cmd.Dir = projectPath
 
-	output, err := cmd.CombinedOutput()
+	output, err = cmd.CombinedOutput()
 	if err != nil {
 		return &model.ComposeAction{
 			Success: false,
@@ -637,50 +661,59 @@ func (s *DockerService) ComposeDown(ctx context.Context, projectPath string) (*m
 
 // ComposeClean stops and removes containers + volumes.
 func (s *DockerService) ComposeClean(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
+	if s.sshHost != "" && s.sshKey != "" {
+		cmdStr := "cd " + projectPath + " && " + s.runtime + " compose down -v"
+		result, sshErr := s.sshExec(ctx, cmdStr)
+		if sshErr != nil {
+			return &model.ComposeAction{Success: false, Message: "Failed to clean compose project", Output: result}, sshErr
+		}
+		return &model.ComposeAction{Success: true, Message: "Compose project cleaned", Output: result}, nil
+	}
 	cmd := composeCommand(ctx, s.runtime, "down", "-v")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return &model.ComposeAction{
-			Success: false,
-			Message: "Failed to clean compose project",
-			Output:  string(output),
-		}, err
+		return &model.ComposeAction{Success: false, Message: "Failed to clean compose project", Output: string(output)}, err
 	}
 
-	return &model.ComposeAction{
-		Success: true,
-		Message: "Compose project cleaned",
-		Output:  string(output),
-	}, nil
+	return &model.ComposeAction{Success: true, Message: "Compose project cleaned", Output: string(output)}, nil
 }
 
 // ComposeRestart runs docker-compose restart.
 func (s *DockerService) ComposeRestart(ctx context.Context, projectPath string) (*model.ComposeAction, error) {
+	if s.sshHost != "" && s.sshKey != "" {
+		cmdStr := "cd " + projectPath + " && " + s.runtime + " compose restart"
+		result, sshErr := s.sshExec(ctx, cmdStr)
+		if sshErr != nil {
+			return &model.ComposeAction{Success: false, Message: "Failed to restart compose project", Output: result}, sshErr
+		}
+		return &model.ComposeAction{Success: true, Message: "Compose project restarted", Output: result}, nil
+	}
 	cmd := composeCommand(ctx, s.runtime, "restart")
 	cmd.Dir = projectPath
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return &model.ComposeAction{
-			Success: false,
-			Message: "Failed to restart compose project",
-			Output:  string(output),
-		}, err
+		return &model.ComposeAction{Success: false, Message: "Failed to restart compose project", Output: string(output)}, err
 	}
 
-	return &model.ComposeAction{
-		Success: true,
-		Message: "Compose project restarted",
-		Output:  string(output),
-	}, nil
+	return &model.ComposeAction{Success: true, Message: "Compose project restarted", Output: string(output)}, nil
 }
 
 // ComposeLogs returns docker-compose logs.
 func (s *DockerService) ComposeLogs(ctx context.Context, projectPath string, tail int) ([]string, error) {
 	if tail <= 0 {
 		tail = 100
+	}
+
+	if s.sshHost != "" && s.sshKey != "" {
+		cmdStr := "cd " + projectPath + " && " + s.runtime + " compose logs --tail " + fmt.Sprintf("%d", tail)
+		result, err := s.sshExec(ctx, cmdStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get compose logs: %w", err)
+		}
+		return strings.Split(result, "\n"), nil
 	}
 
 	cmd := composeCommand(ctx, s.runtime, "logs", "--tail", fmt.Sprintf("%d", tail))
