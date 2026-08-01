@@ -224,10 +224,33 @@ const tTableActions = $derived(t("table.actions"));
 		try {
 			const data = await dockerApi.get<{ containers: ContainerInfo[] }>('/docker/containers');
 			containers = data.containers || [];
+			// Fetch stats separately (non-blocking, updates in-place)
+			loadContainerStats();
 		} catch (e) {
 			console.error(e);
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function loadContainerStats() {
+		try {
+			const data = await dockerApi.get<{ stats: Array<{ id: string; cpu: number; memory: { usage: number; limit: number; percent: number }; network: { rxBytes: number; txBytes: number } }> }>('/docker/containers/stats');
+			if (data.stats) {
+				for (const s of data.stats) {
+					const idx = containers.findIndex((c) => c.id === s.id);
+					if (idx !== -1) {
+						containers[idx] = {
+							...containers[idx],
+							cpu: s.cpu,
+							memory: s.memory,
+							network: s.network
+						};
+					}
+				}
+			}
+		} catch (e) {
+			console.error(e);
 		}
 	}
 
@@ -430,7 +453,7 @@ const tTableActions = $derived(t("table.actions"));
 	}
 	function formatTraffic(rx: number, tx: number): string {
 		if (!rx && !tx) return '-';
-		return `↓${formatBytes(rx)} ↑${formatBytes(tx)}`;
+		return `${formatBytes(rx)} ${formatBytes(tx)}`;
 	}
 
 	// Derive the host address for port links based on connection type
@@ -531,7 +554,14 @@ const tTableActions = $derived(t("table.actions"));
 								{formatBytes(container.memory?.usage || 0)}
 							</td>
 							<td class="{tdClass} text-text-secondary tabular-nums text-[12px]">
-								{formatTraffic(container.network?.rxBytes || 0, container.network?.txBytes || 0)}
+								{#if container.network?.rxBytes || container.network?.txBytes}
+									<span class="inline-flex items-center gap-2">
+										<span class="inline-flex items-center gap-0.5"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" class="shrink-0 text-[12px] text-green-400"><path d="M5.293 15.707a1 1 0 011.414-1.414L11 18.586V3l.005-.102a1 1 0 011.99 0L13 3v15.586l4.293-4.293.076-.068a1 1 0 011.406 1.406l-.068.076-6 6a1 1 0 01-1.414 0l-6-6z"/></svg>{formatBytes(container.network?.rxBytes || 0)}</span>
+										<span class="inline-flex items-center gap-0.5"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" class="shrink-0 text-[12px] text-blue-400"><path d="M18.707 8.293a1 1 0 11-1.414 1.414L13 5.414V21l-.005.102a1 1 0 01-1.99 0L11 21V5.414L6.707 9.707l-.076.068A1 1 0 015.225 8.37l.068-.076 6-6a1 1 0 011.414 0l6 6z"/></svg>{formatBytes(container.network?.txBytes || 0)}</span>
+									</span>
+								{:else}
+									-
+								{/if}
 							</td>
 							<td class="{tdClass}">
 								{#if [...new Map((container.ports || []).filter((p) => p.hostPort && p.hostPort !== '0').map((p) => [p.hostPort, p])).values()].length > 0}

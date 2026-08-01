@@ -157,6 +157,7 @@ func (h *DockerHandler) RegisterRoutes(r chi.Router) {
 	// Container routes
 	r.Route("/containers", func(r chi.Router) {
 		r.Get("/", h.ListContainers)
+		r.Get("/stats", h.GetContainerStats)
 		r.Get("/{id}", h.GetContainer)
 		r.Get("/{id}/inspect", h.InspectContainer)
 		r.Post("/{id}/start", h.StartContainer)
@@ -211,24 +212,50 @@ func (h *DockerHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeJSON(w, map[string]interface{}{"containers": containers}, http.StatusOK)
+}
+
+// GetContainerStats returns resource usage stats for all running containers.
+func (h *DockerHandler) GetContainerStats(w http.ResponseWriter, r *http.Request) {
+	svc := h.getService(r)
+	if svc == nil {
+		writeError(w, "Host not found or unavailable", model.ErrCodeNotFound, http.StatusNotFound)
+		return
+	}
+	containers, err := svc.ListContainers(r.Context())
+	if err != nil {
+		writeError(w, "Failed to list containers", model.ErrCodeInternalError, http.StatusInternalServerError)
+		return
+	}
+
+	type containerStats struct {
+		ID      string              `json:"id"`
+		CPU     float64             `json:"cpu"`
+		Memory  model.MemoryUsage   `json:"memory"`
+		Network model.NetworkTraffic `json:"network"`
+	}
+
+	var results []containerStats
 	var wg sync.WaitGroup
-	for i := range containers {
-		if containers[i].State == "running" {
+	var mu sync.Mutex
+
+	for _, c := range containers {
+		if c.State == "running" {
 			wg.Add(1)
-			go func(idx int) {
+			go func(containerID string) {
 				defer wg.Done()
-				cpu, mem, net, err := svc.GetStats(r.Context(), containers[idx].ID)
+				cpu, mem, net, err := svc.GetStats(r.Context(), containerID)
 				if err == nil {
-					containers[idx].CPU = cpu
-					containers[idx].Memory = mem
-					containers[idx].Network = net
+					mu.Lock()
+					results = append(results, containerStats{ID: containerID, CPU: cpu, Memory: mem, Network: net})
+					mu.Unlock()
 				}
-			}(i)
+			}(c.ID)
 		}
 	}
 	wg.Wait()
 
-	writeJSON(w, map[string]interface{}{"containers": containers}, http.StatusOK)
+	writeJSON(w, map[string]interface{}{"stats": results}, http.StatusOK)
 }
 
 // GetContainer returns a single Docker container.

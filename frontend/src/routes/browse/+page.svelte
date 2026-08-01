@@ -568,11 +568,20 @@ const tFilesTitle = $derived(t("files.title"));
 			const dirs = items.filter((i) => i.isDir);
 			const files = items.filter((i) => !i.isDir);
 
-			for (const item of dirs) {
-				jobsStore.upsertJob(await createDeleteJob(item.path));
-			}
-			for (const item of files) {
-				await deleteFile(item.path);
+			// For remote hosts (hostId set), use direct delete API for all items
+			// Job system only supports local filesystem
+			const isRemote = !!localStorage.getItem('currentHostId');
+			if (isRemote) {
+				for (const item of items) {
+					await deleteFile(item.path, true);
+				}
+			} else {
+				for (const item of dirs) {
+					jobsStore.upsertJob(await createDeleteJob(item.path));
+				}
+				for (const item of files) {
+					await deleteFile(item.path);
+				}
 			}
 
 			selectedPaths = new Set();

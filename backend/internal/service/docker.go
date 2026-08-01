@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -25,7 +26,7 @@ import (
 	"dockerbox/backend/internal/model"
 )
 
-// newSFTPClient creates an SFTP client over SSH.
+// newSFTPClient creates an SFTP client over SSH (internal, for initial creation).
 func (s *DockerService) newSFTPClient() (*sftp.Client, error) {
 	if s.sshKey == "" || s.sshHost == "" {
 		return nil, fmt.Errorf("no SSH config for SFTP: key=%d host=%s", len(s.sshKey), s.sshHost)
@@ -141,6 +142,10 @@ type DockerService struct {
 	sshKey  string // SSH private key content
 	sshHost string // user@host:port
 	runtime string // "docker" or "podman"
+	// Cached SFTP connection for file operations
+	sftpMu      sync.Mutex
+	sftpClient  *sftp.Client
+	sftpSSHConn *ssh.Client
 }
 
 // Client returns the underlying Docker API client.
@@ -227,6 +232,57 @@ func (s *DockerService) GetSSHHost() string {
 // GetSSHKey returns the SSH private key content.
 func (s *DockerService) GetSSHKey() string {
 	return s.sshKey
+}
+
+// getSFTPClient returns a cached SFTP client, creating one if needed.
+func (s *DockerService) getSFTPClient() (*sftp.Client, error) {
+	s.sftpMu.Lock()
+	defer s.sftpMu.Unlock()
+
+	// Return existing client if available
+	if s.sftpClient != nil {
+		return s.sftpClient, nil
+	}
+
+	// Create new connection
+	host := strings.TrimPrefix(s.sshHost, "ssh://")
+	parts := strings.SplitN(host, ":", 2)
+	addr := parts[0]
+	port := "22"
+	if len(parts) > 1 {
+		port = parts[1]
+	}
+
+	signer, err := ssh.ParsePrivateKey([]byte(s.sshKey))
+	if err != nil {
+		return nil, fmt.Errorf("parse SSH key: %w", err)
+	}
+
+	config := &ssh.ClientConfig{
+		User:            strings.Split(addr, "@")[0],
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
+	}
+
+	sshAddr := strings.SplitN(addr, "@", 2)
+	if len(sshAddr) > 1 {
+		addr = sshAddr[1]
+	}
+	conn, err := ssh.Dial("tcp", addr+":"+port, config)
+	if err != nil {
+		return nil, fmt.Errorf("ssh dial %s:%s: %w", addr, port, err)
+	}
+
+	c, err := sftp.NewClient(conn)
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("sftp new client: %w", err)
+	}
+
+	s.sftpSSHConn = conn
+	s.sftpClient = c
+	return c, nil
 }
 
 // GetDockerInfo returns the Docker server version string.
@@ -486,11 +542,10 @@ func (s *DockerService) CreateComposeProject(ctx context.Context, name, composeC
 		}
 
 		// Write docker-compose.yml via SFTP
-		sftpClient, err := s.newSFTPClient()
+		sftpClient, err := s.getSFTPClient()
 		if err != nil {
 			return &model.ComposeAction{Success: false, Message: "Failed to create SFTP connection"}, err
 		}
-		defer sftpClient.Close()
 
 		composePath := projectDir + "/docker-compose.yml"
 		if err := s.writeFileViaSFTP(sftpClient, composePath, composeContent); err != nil {
@@ -733,9 +788,8 @@ func (s *DockerService) GetComposeFile(ctx context.Context, projectPath string) 
 	// Check if using SSH (remote host)
 	if s.sshHost != "" && s.sshKey != "" {
 		// Remote host via SFTP
-		sftpClient, err := s.newSFTPClient()
+		sftpClient, err := s.getSFTPClient()
 		if err == nil {
-			defer sftpClient.Close()
 			for _, name := range []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"} {
 				p := projectPath + "/" + name
 				if content, err := s.readFileViaSFTP(sftpClient, p); err == nil {
@@ -794,11 +848,10 @@ func (s *DockerService) SaveComposeFile(projectPath string, content string) erro
 	// Check if using SSH (remote host)
 	if s.sshHost != "" && s.sshKey != "" {
 		// Remote host via SFTP
-		sftpClient, err := s.newSFTPClient()
+		sftpClient, err := s.getSFTPClient()
 		if err != nil {
 			return fmt.Errorf("failed to create SFTP connection: %w", err)
 		}
-		defer sftpClient.Close()
 		return s.writeFileViaSFTP(sftpClient, projectPath+"/docker-compose.yml", content)
 	}
 	// Local host
@@ -1145,11 +1198,10 @@ func findCommonParent(paths []string) string {
 
 // ListFilesViaDocker lists files via SFTP.
 func (s *DockerService) ListFilesViaDocker(ctx context.Context, hostPath string) ([]model.FileInfo, error) {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 		return nil, err
 	}
-	defer c.Close()
 
 	entries, err := c.ReadDir(hostPath)
 	if err != nil {
@@ -1171,11 +1223,10 @@ func (s *DockerService) ListFilesViaDocker(ctx context.Context, hostPath string)
 }
 // ReadFileViaDocker reads a file via SFTP.
 func (s *DockerService) ReadFileViaDocker(ctx context.Context, hostPath string) ([]byte, error) {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 		return nil, err
 	}
-	defer c.Close()
 
 	f, err := c.Open(hostPath)
 	if err != nil {
@@ -1192,11 +1243,10 @@ func (s *DockerService) ReadFileViaDocker(ctx context.Context, hostPath string) 
 
 // ReadFileRangeViaSFTP reads a byte range from a remote file via SFTP (for Range requests).
 func (s *DockerService) ReadFileRangeViaSFTP(ctx context.Context, hostPath string, offset int64, length int64) ([]byte, error) {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 		return nil, err
 	}
-	defer c.Close()
 
 	f, err := c.Open(hostPath)
 	if err != nil {
@@ -1214,11 +1264,10 @@ func (s *DockerService) ReadFileRangeViaSFTP(ctx context.Context, hostPath strin
 
 // GetFileSizeViaSFTP returns file size via SFTP.
 func (s *DockerService) GetFileSizeViaSFTP(ctx context.Context, hostPath string) (int64, error) {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 			return 0, err
 	}
-	defer c.Close()
 
 	info, err := c.Stat(hostPath)
 	if err != nil {
@@ -1229,11 +1278,10 @@ func (s *DockerService) GetFileSizeViaSFTP(ctx context.Context, hostPath string)
 
 // WriteFileViaSFTP uploads local data to a remote file via SFTP.
 func (s *DockerService) WriteFileViaSFTP(ctx context.Context, hostPath string, data []byte) error {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 		return err
 	}
-	defer c.Close()
 
 	// Ensure parent directory exists
 	parent := hostPath[:len(hostPath)-len(hostPath[strings.LastIndex(hostPath, "/"):])]
@@ -1255,11 +1303,10 @@ func (s *DockerService) WriteFileViaSFTP(ctx context.Context, hostPath string, d
 
 // RemoveViaSFTP deletes a file or directory via SFTP.
 func (s *DockerService) RemoveViaSFTP(ctx context.Context, hostPath string) error {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 		return err
 	}
-	defer c.Close()
 
 	info, err := c.Stat(hostPath)
 	if err != nil {
@@ -1293,31 +1340,28 @@ func removeDirSFTP(c *sftp.Client, dir string) error {
 
 // RenameViaSFTP renames a file or directory via SFTP.
 func (s *DockerService) RenameViaSFTP(ctx context.Context, oldPath, newPath string) error {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 		return err
 	}
-	defer c.Close()
 	return c.Rename(oldPath, newPath)
 }
 
 // MkdirViaSFTP creates a directory via SFTP.
 func (s *DockerService) MkdirViaSFTP(ctx context.Context, hostPath string) error {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 		return err
 	}
-	defer c.Close()
 	return c.MkdirAll(hostPath)
 }
 
 // GetFileInfoViaDocker gets file info via SFTP.
 func (s *DockerService) GetFileInfoViaDocker(ctx context.Context, hostPath string) (*model.FileInfo, error) {
-	c, err := s.newSFTPClient()
+	c, err := s.getSFTPClient()
 	if err != nil {
 		return nil, err
 	}
-	defer c.Close()
 
 	info, err := c.Stat(hostPath)
 	if err != nil {
