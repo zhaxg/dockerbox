@@ -114,13 +114,6 @@
 		}
 	});
 
-	$effect(() => {
-		if (editor && !loading) {
-			editor.setValue(composeContent);
-			dirty = false;
-		}
-	});
-
 	async function handleSave() {
 		if (isNew) {
 			// Create new project

@@ -14,16 +14,16 @@ import (
 	"sync"
 	"time"
 
+	"dockerbox/backend/internal/model"
+	"github.com/docker/cli/cli/connhelper"
 	"github.com/docker/docker/api/types"
-	"strconv"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-		"github.com/docker/cli/cli/connhelper"
-	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"dockerbox/backend/internal/model"
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
+	"strconv"
 )
 
 // newSFTPClient creates an SFTP client over SSH (internal, for initial creation).
@@ -143,9 +143,10 @@ type DockerService struct {
 	sshHost string // user@host:port
 	runtime string // "docker" or "podman"
 	// Cached SFTP connection for file operations
-	sftpMu      sync.Mutex
-	sftpClient  *sftp.Client
-	sftpSSHConn *ssh.Client
+	sftpMu       sync.Mutex
+	sftpClient   *sftp.Client
+	sftpSSHConn  *ssh.Client
+	sftpLastUsed time.Time
 }
 
 // Client returns the underlying Docker API client.
@@ -234,14 +235,25 @@ func (s *DockerService) GetSSHKey() string {
 	return s.sshKey
 }
 
+// sftpMaxIdle bounds the lifetime of a cached SFTP connection.
+// Idle SSH connections to remote hosts die (NAT/keepalive timeouts), and a dead
+// cached client makes every subsequent SFTP op fail. Recreate after idle time.
+const sftpMaxIdle = 5 * time.Minute
+
 // getSFTPClient returns a cached SFTP client, creating one if needed.
 func (s *DockerService) getSFTPClient() (*sftp.Client, error) {
 	s.sftpMu.Lock()
 	defer s.sftpMu.Unlock()
 
-	// Return existing client if available
-	if s.sftpClient != nil {
+	// Reuse only fresh connections; drop stale/idle ones so the next op redials.
+	if s.sftpClient != nil && time.Since(s.sftpLastUsed) < sftpMaxIdle {
+		s.sftpLastUsed = time.Now()
 		return s.sftpClient, nil
+	}
+	if s.sftpClient != nil {
+		s.sftpClient.Close()
+		s.sftpSSHConn.Close()
+		s.sftpClient, s.sftpSSHConn = nil, nil
 	}
 
 	// Create new connection
@@ -282,7 +294,19 @@ func (s *DockerService) getSFTPClient() (*sftp.Client, error) {
 
 	s.sftpSSHConn = conn
 	s.sftpClient = c
+	s.sftpLastUsed = time.Now()
 	return c, nil
+}
+
+// invalidateSFTP drops the cached SFTP connection so the next op redials.
+func (s *DockerService) invalidateSFTP() {
+	s.sftpMu.Lock()
+	defer s.sftpMu.Unlock()
+	if s.sftpClient != nil {
+		s.sftpClient.Close()
+		s.sftpSSHConn.Close()
+		s.sftpClient, s.sftpSSHConn = nil, nil
+	}
 }
 
 // GetDockerInfo returns the Docker server version string.
@@ -790,7 +814,7 @@ func (s *DockerService) GetComposeFile(ctx context.Context, projectPath string) 
 		// Remote host via SFTP
 		sftpClient, err := s.getSFTPClient()
 		if err == nil {
-			for _, name := range []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"} {
+			for _, name := range composeFileNames {
 				p := projectPath + "/" + name
 				if content, err := s.readFileViaSFTP(sftpClient, p); err == nil {
 					return content, nil
@@ -799,7 +823,7 @@ func (s *DockerService) GetComposeFile(ctx context.Context, projectPath string) 
 		}
 	} else {
 		// Local host - try local first
-		for _, name := range []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"} {
+		for _, name := range composeFileNames {
 			p := projectPath + "/" + name
 			if content, err := readFileContent(p); err == nil {
 				return content, nil
@@ -827,7 +851,7 @@ func (s *DockerService) GetComposeFile(ctx context.Context, projectPath string) 
 					return *files[firstFile], nil
 				}
 			} else {
-				for _, name := range []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"} {
+				for _, name := range composeFileNames {
 					path := projectPath + "/" + name
 					files := map[string]*string{path: new(string)}
 					s.ReadComposeFilesViaDocker(ctx, files)
@@ -843,19 +867,48 @@ func (s *DockerService) GetComposeFile(ctx context.Context, projectPath string) 
 	return "", fmt.Errorf("compose file not found at %s", projectPath)
 }
 
+// composeFileNames lists compose file names in the discovery order
+// used by the Compose CLI.
+var composeFileNames = []string{"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"}
+
 // SaveComposeFile saves a docker-compose file.
+// Writes to the existing compose file name when present (matches GetComposeFile
+// discovery) instead of always creating docker-compose.yml. Retries once with a
+// fresh connection on failure: a cached SFTP conn can die between ops.
 func (s *DockerService) SaveComposeFile(projectPath string, content string) error {
 	// Check if using SSH (remote host)
 	if s.sshHost != "" && s.sshKey != "" {
-		// Remote host via SFTP
 		sftpClient, err := s.getSFTPClient()
 		if err != nil {
 			return fmt.Errorf("failed to create SFTP connection: %w", err)
 		}
-		return s.writeFileViaSFTP(sftpClient, projectPath+"/docker-compose.yml", content)
+		path := projectPath + "/docker-compose.yml"
+		for _, name := range composeFileNames {
+			if _, err := sftpClient.Stat(projectPath + "/" + name); err == nil {
+				path = projectPath + "/" + name
+				break
+			}
+		}
+		if err := s.writeFileViaSFTP(sftpClient, path, content); err != nil {
+			// Retry once with a fresh connection in case the cached one died.
+			s.invalidateSFTP()
+			sftpClient, err2 := s.getSFTPClient()
+			if err2 != nil {
+				return err
+			}
+			return s.writeFileViaSFTP(sftpClient, path, content)
+		}
+		return nil
 	}
 	// Local host
-	return writeFileContent(projectPath+"/docker-compose.yml", content)
+	path := projectPath + "/docker-compose.yml"
+	for _, name := range composeFileNames {
+		if _, err := os.Stat(filepath.Join(projectPath, name)); err == nil {
+			path = filepath.Join(projectPath, name)
+			break
+		}
+	}
+	return writeFileContent(path, content)
 }
 
 // DeleteComposeProject removes a compose project directory.
@@ -1194,8 +1247,6 @@ func findCommonParent(paths []string) string {
 	return common
 }
 
-
-
 // ListFilesViaDocker lists files via SFTP.
 func (s *DockerService) ListFilesViaDocker(ctx context.Context, hostPath string) ([]model.FileInfo, error) {
 	c, err := s.getSFTPClient()
@@ -1221,6 +1272,7 @@ func (s *DockerService) ListFilesViaDocker(ctx context.Context, hostPath string)
 	}
 	return files, nil
 }
+
 // ReadFileViaDocker reads a file via SFTP.
 func (s *DockerService) ReadFileViaDocker(ctx context.Context, hostPath string) ([]byte, error) {
 	c, err := s.getSFTPClient()
@@ -1266,12 +1318,12 @@ func (s *DockerService) ReadFileRangeViaSFTP(ctx context.Context, hostPath strin
 func (s *DockerService) GetFileSizeViaSFTP(ctx context.Context, hostPath string) (int64, error) {
 	c, err := s.getSFTPClient()
 	if err != nil {
-			return 0, err
+		return 0, err
 	}
 
 	info, err := c.Stat(hostPath)
 	if err != nil {
-			return 0, err
+		return 0, err
 	}
 	return info.Size(), nil
 }
@@ -1377,6 +1429,7 @@ func (s *DockerService) GetFileInfoViaDocker(ctx context.Context, hostPath strin
 		Permissions: info.Mode().String(),
 	}, nil
 }
+
 // parseLsOutput parses `ls -la` output into FileInfo slice.
 func parseLsOutput(output string) []model.FileInfo {
 	var files []model.FileInfo
